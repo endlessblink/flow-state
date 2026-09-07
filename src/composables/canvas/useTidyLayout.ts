@@ -83,6 +83,20 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     // all get the canonical single-row treatment so the Tidy button always does
     // something visible regardless of the user's group naming.
     const visibleGroups = getPersistedVisibleGroups()
+    // Membership compares both sides in the current rendered coordinate space.
+    // Keep persisted groups separate for canonical writes and undo snapshots.
+    const spatialGroups = visibleGroups.map((group) => {
+      const position = options.getNodePosition?.(`section-${group.id}`)
+      const size = options.getNodeSize?.(`section-${group.id}`)
+      return {
+        ...group,
+        position: {
+          ...group.position,
+          ...(position ?? {}),
+          ...(size && Number.isFinite(size.width) && size.width > 0 ? { width: size.width } : {}),
+        },
+      }
+    })
 
     // Adoption is a visible-canvas recovery operation. Vue Flow may already
     // render a card at its current absolute position while its persisted
@@ -93,7 +107,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       const visualPosition = options.getNodePosition?.(task.id)
       return visualPosition ? { ...task, canvasPosition: visualPosition } : task
     })
-    const adoptedParents = collectDayGroupAdoptions(tasksForSpatialAdoption, visibleGroups, { mode: 'spatial' })
+    const adoptedParents = collectDayGroupAdoptions(tasksForSpatialAdoption, spatialGroups, { mode: 'spatial' })
 
     // A card can be far outside every rendered group after a failed drop or
     // reload with stale parent metadata. Once Tidy is explicitly invoked,
@@ -110,7 +124,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     )
     const isInsideVisibleGroupColumn = (task: typeof taskStore.rawTasks[number]) => {
       const position = options.getNodePosition?.(task.id) ?? task.canvasPosition
-      return Boolean(position && visibleGroups.some((group) => (
+      return Boolean(position && spatialGroups.some((group) => (
         position.x >= group.position.x
         && position.x <= group.position.x + group.position.width
       )))

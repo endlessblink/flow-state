@@ -683,6 +683,31 @@ describe('useTidyLayout', () => {
     )
   })
 
+  it.each([520, 850])('adopts from live group columns, including resized width at x=%s', (x) => {
+    const today = makeGroup('Today', 0)
+    const monday = makeGroup('Monday', 500)
+    const originalTodayPosition = { ...today.position }
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, monday])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
+      { id: 'aligned', parentId: monday.id, dueDate: x === 520 ? '2026-05-04' : undefined,
+        canvasPosition: { x, y: 900 }, createdAt: '2026-04-01T00:00:00Z' },
+      { id: 'pinned', isPinned: true, canvasPosition: { x, y: 1000 } },
+      { id: 'dismissed', canvasDismissed: true, canvasPosition: { x, y: 1100 } },
+    ] as any)
+
+    const { taskMoves, release } = useTidyLayout({
+      getNodePosition: (id) => id === `section-${today.id}` ? { x: 500, y: 0 }
+        : id === `section-${monday.id}` ? { x: 0, y: 0 } : undefined,
+      getNodeSize: (id) => id === `section-${today.id}` ? { width: 400, height: 200 } : undefined,
+    }).tidyDayGroups()
+    release()
+
+    expect(taskMoves).toHaveLength(1)
+    expect(taskMoves[0]).toMatchObject({ taskId: 'aligned', parentId: today.id })
+    expect(updateTask).toHaveBeenCalledWith('aligned', expect.objectContaining({ parentId: today.id }), 'DRAG')
+    expect(today.position).toEqual(originalTodayPosition)
+  })
+
   // TASK-1809b: reorderColumn must return moves synchronously (for instant paint)
   // and defer task persistence into commit(), so the wrapper can let the drag
   // handler's write land first and reorder still wins last-write-wins.

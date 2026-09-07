@@ -1299,6 +1299,77 @@ test.describe('local canvas geometry regressions', () => {
     expect(afterReload.tasks.find((task) => task.id === 'dated-loose-task')!.parentId).toBe(persistedTodayGroup.id)
   })
 
+  test('tidy adopts a same-day card below the rendered column when saved group positions lag', async ({ page }) => {
+    await page.waitForFunction(() => {
+      const root = document.querySelector('#app') as any
+      return root?.__vue_app__?._context.config.globalProperties.$pinia._s.get('canvas')?._hasInitializedOnce === true
+    }, { timeout: 30_000 })
+    await page.context().setOffline(true)
+    const today = await page.evaluate(() => {
+      const now = new Date()
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    })
+    await seedCanvas(page, [
+      { id: 'lag-today', name: 'Today', x: 100, y: 200, height: 200 },
+      { id: 'lag-tomorrow', name: 'Tomorrow', x: 700, y: 200, height: 200 },
+    ], [
+      { id: 'lag-card', title: 'Same-day card below the visible column', parentId: 'lag-tomorrow', dueDate: today, x: 720, y: 1000 },
+    ], { sync: false, refreshOnMissing: false })
+    const before = await readGeometry(page)
+    const todayId = before.groups.find(group => group.name === 'Today')!.id
+    const tomorrowId = before.groups.find(group => group.name === 'Tomorrow')!.id
+    await page.evaluate(({ todayId, tomorrowId }) => {
+      const root = document.querySelector('#app') as any
+      const findCanvas = (vnode: any): any => {
+        if (!vnode) return undefined
+        if (vnode.component?.type?.__name === 'CanvasView') return vnode.component
+        return (Array.isArray(vnode.children) ? vnode.children : []).map(findCanvas).find(Boolean)
+          ?? findCanvas(vnode.component?.subTree)
+      }
+      const canvas = findCanvas(root.__vue_app__._instance.subTree)
+      const nodes = canvas.setupState.getNodes?.value ?? canvas.setupState.getNodes
+      // Reproduce the boundary after a visible move: group positions in Vue
+      // Flow changed, while persisted group positions have not caught up.
+      nodes.find((node: any) => node.id === `section-${todayId}`).position = { x: 700, y: 200 }
+      nodes.find((node: any) => node.id === `section-${tomorrowId}`).position = { x: 100, y: 200 }
+      const card = nodes.find((node: any) => node.id === 'lag-card')
+      card.parentNode = undefined
+      card.position = { x: 720, y: 1000 }
+    }, { todayId, tomorrowId })
+    await expect.poll(() => page.evaluate((todayId) => {
+      const frame = document.querySelector(`[data-id="section-${todayId}"]`)?.getBoundingClientRect()
+      const card = document.querySelector('[data-task-id="lag-card"]')?.getBoundingClientRect()
+      return !!frame && !!card && card.left >= frame.left && card.left < frame.right && card.top > frame.bottom
+    }, todayId)).toBe(true)
+    await clickToolbar(page, /tidy|layout/)
+    await expect.poll(async () => (await readGeometry(page)).tasks.find(task => task.id === 'lag-card')?.parentId)
+      .toBe(todayId)
+    const containsCard = () => page.evaluate(() => {
+      // Canonical hydration remaps the fixture's non-UUID group ID. Resolve
+      // the current identity instead of retaining the pre-reload seed ID.
+      const root = document.querySelector('#app') as any
+      const canvasStore = root.__vue_app__._context.config.globalProperties.$pinia._s.get('canvas')
+      const currentTodayId = canvasStore.groups.find((group: any) => group.name === 'Today')?.id
+      const frame = document.querySelector(`[data-id="section-${currentTodayId}"]`)?.getBoundingClientRect()
+      const card = document.querySelector('[data-task-id="lag-card"]')?.getBoundingClientRect()
+      return {
+        contains: !!frame && !!card && card.left >= frame.left && card.right <= frame.right
+          && card.top >= frame.top && card.bottom <= frame.bottom,
+        frame: frame?.toJSON(), card: card?.toJSON(),
+      }
+    })
+    await expect.poll(containsCard).toMatchObject({ contains: true })
+    await page.context().setOffline(false)
+    await page.reload()
+    await setupCanvas(page)
+    await expect.poll(async () => {
+      const geometry = await readGeometry(page)
+      const group = geometry.groups.find(group => group.name === 'Today')
+      return !!group && geometry.tasks.find(task => task.id === 'lag-card')?.parentId === group.id
+    }).toBe(true)
+    await expect.poll(containsCard).toMatchObject({ contains: true })
+  })
+
   test('tidy encloses rendered overdue cards when the overdue preference is enabled', async ({ page }) => {
     const ids = ['visible-overdue-a', 'visible-overdue-b', 'visible-overdue-c']
     await seedCanvas(page, [

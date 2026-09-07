@@ -30,4 +30,10 @@ describe('TASK-2068 focused task timeline', () => {
     expect(timelineSource).toContain('visibleNextTask')
     expect(timelineSource).not.toContain('v-for="task in tasks"')
   })
+
+  it('does not repeat timeline status above the task sequence', () => {
+    expect(timelineSource).not.toContain('class="task-focus-heading"')
+    expect(timelineSource).not.toContain('class="task-focus-position"')
+    expect(timelineSource).toContain('class="task-focus-controls"')
+  })
 })

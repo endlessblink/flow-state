@@ -187,8 +187,6 @@
   },
   "kanban": {
     "focus_timeline": "Focused task timeline",
-    "current_sequence": "Current sequence",
-    "one_task_at_a_time": "One task at a time",
     "focus_previous_named": "Go to previous task: {title}",
     "focus_next_named": "Go to next task: {title}",
     "task_number": "Task {number}",

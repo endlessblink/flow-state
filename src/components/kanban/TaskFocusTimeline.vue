@@ -6,16 +6,6 @@
     @keydown.left.prevent="movePrevious"
     @keydown.right.prevent="moveNext"
   >
-    <header class="task-focus-heading">
-      <div>
-        <span class="task-focus-kicker">{{ t('kanban.current_sequence') }}</span>
-        <h3>{{ t('kanban.one_task_at_a_time') }}</h3>
-      </div>
-      <span v-if="tasks.length" class="task-focus-position">
-        {{ activeIndex + 1 }} / {{ tasks.length }}
-      </span>
-    </header>
-
     <div v-if="activeTask" class="task-focus-window">
       <div class="task-focus-track">
         <button

@@ -24,6 +24,14 @@
 
 **Acceptance**: Establish what counts as the first work session (for example, first actual activity after login/unlock each local day) and use the Electron system-activity boundary to start the configured work timer without requiring a manual Start click. Coordinate with FEATURE-2021's existing return-after-absence behavior so both triggers share timer protections and never create duplicate sessions. Preserve an active work/break timer and deliberate pause/stop, avoid retriggering on app reload or update, and provide a clear preference to control the behavior. Cover cold startup, unlock, overnight rollover, an already-running timer, and repeated activity events with regression tests; verify automatic start and timer read-back in the installed Electron app.
 
+### TASK-2083: Automatically sort each Canvas day by priority and filter from the sidebar (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (2026-09-07) | **Sequence**: After TASK-2082; depends on TASK-2080's shared priority ordering. Keep the current regression delivery first.
+
+**User request**: Automatically sort tasks by priority within each day and filter Canvas tasks by priority from the sidebar.
+
+**Acceptance**: Provide an automatic priority-sort option for Canvas day groups, using TASK-2080's shared highest-to-lowest rank with deterministic ordering for equal or unset priorities. Keep ordering current when tasks are added, moved between days, or reprioritized, and preserve the selected mode after reload. Add sidebar priority filters with consistent labels, colors, and ordering, plus an easy clear/reset action. Filtering must not change task dates, group membership, or saved positions; Tidy and Rotate must preserve hidden tasks. Cover sorting, priority changes, filter combinations, clearing filters, and reload persistence with regression tests, and verify the behavior in the delivered Electron app.
+
 ### BUG-2079: Daily offline/reconnect hunt collides with a developer Vite server (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-05) | **Failure class**: E2E runtime isolation

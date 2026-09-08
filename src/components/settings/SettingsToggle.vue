@@ -104,6 +104,13 @@ const emit = defineEmits<{
   left: calc(100% - 1.125rem);
 }
 
+
+/* Focus state for keyboard accessibility */
+.toggle-interaction input:focus-visible + .toggle-slider {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
 /* Hover effect */
 .toggle-label:hover .toggle-slider {
   background: var(--glass-bg-tint);

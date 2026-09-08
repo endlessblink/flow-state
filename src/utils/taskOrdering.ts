@@ -42,6 +42,25 @@ export function sortTasksBySharedOrder(tasks: Task[], positions?: Map<string, Po
   return [...tasks].sort((first, second) => compareTasksBySharedOrder(first, second, positions))
 }
 
+/** Replace only the visible slots in shared manual order, leaving filtered-out tasks in place. */
+export function mergeVisibleTaskOrder(
+  tasks: Task[],
+  orderedVisibleIds: string[],
+  visibleIds: Set<string>,
+): Task[] {
+  const ordered = sortTasksBySharedOrder(tasks)
+  const byId = new Map(ordered.map(task => [task.id, task]))
+  const replacements = orderedVisibleIds.map(id => byId.get(id)).filter((task): task is Task => !!task)
+  let replacementIndex = 0
+
+  return ordered.map((task, order) => ({
+    ...(visibleIds.has(task.id) && replacements[replacementIndex]
+      ? replacements[replacementIndex++]
+      : task),
+    order,
+  }))
+}
+
 export function orderTasksByCanvasPosition(tasks: Task[], positions?: Map<string, Position>): Task[] {
   return [...tasks].sort((first, second) => {
     const firstPosition = taskPosition(first, positions)

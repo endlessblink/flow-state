@@ -16,7 +16,7 @@
         <SidebarSmartViews />
         <SidebarDurationSection />
         <SidebarProjectsSection />
-        <SidebarLanesSection />
+        <SidebarPriorityFilter v-if="route.name === 'board'" />
       </div>
 
       <SidebarActivityFeed />
@@ -27,6 +27,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { useUIStore } from '@/stores/ui'
 import { useWorkspaceStore } from '@/stores/workspace'
 import SidebarHeader from '@/components/sidebar/SidebarHeader.vue'
@@ -35,12 +36,13 @@ import SidebarQuickTaskInput from '@/components/sidebar/SidebarQuickTaskInput.vu
 import SidebarSmartViews from '@/components/sidebar/SidebarSmartViews.vue'
 import SidebarDurationSection from '@/components/sidebar/SidebarDurationSection.vue'
 import SidebarProjectsSection from '@/components/sidebar/SidebarProjectsSection.vue'
-import SidebarLanesSection from '@/components/sidebar/SidebarLanesSection.vue'
+import SidebarPriorityFilter from '@/components/sidebar/SidebarPriorityFilter.vue'
 import SidebarUserFooter from '@/components/sidebar/SidebarUserFooter.vue'
 import SidebarActivityFeed from '@/components/workspace/SidebarActivityFeed.vue'
 
 const uiStore = useUIStore()
 const workspaceStore = useWorkspaceStore()
+const route = useRoute()
 
 // Quick Task Input ref (for forwarding focusQuickTask)
 const quickTaskInput = ref<InstanceType<typeof SidebarQuickTaskInput> | null>(null)

@@ -87,5 +87,6 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     dragDiagPath: () => electron_1.ipcRenderer.invoke('diag:dragLogPath'),
     rendererHeartbeat: (heartbeat) => electron_1.ipcRenderer.invoke('diag:rendererHeartbeat', heartbeat),
     runtimeLogPath: () => electron_1.ipcRenderer.invoke('diag:runtimeLogPath'),
+    appendTaskCompletionDiag: (line) => electron_1.ipcRenderer.invoke('diag:appendTaskCompletion', line),
 });
 //# sourceMappingURL=preload.js.map

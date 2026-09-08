@@ -202,15 +202,19 @@ wait_for_direct_health_version() {
   health_attempt=0
   while [ "$health_attempt" -lt 300 ]; do
     provenance_probe=$(curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null || true)
-    normalized_provenance=$(printf '%s' "$provenance_probe" | tr -d '[:space:]')
-    if printf '%s' "$normalized_provenance" | \
-      grep -F "\"appVersion\":\"$expected_health_version\"" >/dev/null; then
-      return 0
-    fi
+    # BUG-2071: use the shell itself for this exact JSON-token check. The
+    # packaged retry launched a healthy replacement but the inherited grep
+    # invocation still failed its match and rolled it back after 60 seconds.
+    # Strip insignificant JSON whitespace, then require the complete quoted
+    # appVersion token so a partial version or another field cannot pass.
+    provenance_compact=$(printf '%s' "$provenance_probe" | tr -d '[:space:]')
+    case "$provenance_compact" in
+      *'"appVersion":"'"$expected_health_version"'"'*) return 0 ;;
+    esac
     health_attempt=$((health_attempt + 1))
     sleep 0.2
   done
-  echo "direct readiness expected=$expected_health_version response=$provenance_probe"
+  echo "direct readiness expected=[$expected_health_version] response=$provenance_probe"
   return 1
 }
 i=0

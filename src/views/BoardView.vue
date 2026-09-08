@@ -98,6 +98,7 @@
           @delete-task="handleDeleteTask"
           @context-menu="handleContextMenu"
           @add-task="handleTimelineAddTask"
+          @reorder-tasks="handleTimelineReorder"
         />
       </div>
     </div>
@@ -149,6 +150,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { usePersistentRef } from '@/composables/usePersistentRef'
+import { useMessage } from 'naive-ui'
 import { useTaskStore } from '@/stores/tasks'
 import { isDoneForNowAlreadyCompletedError } from '@/services/tasks/doneForNow'
 import type { Task } from '@/stores/tasks'
@@ -163,7 +165,9 @@ import { useBoardModals } from '@/composables/board/useBoardModals'
 import { useBoardContextMenu } from '@/composables/board/useBoardContextMenu'
 import { getDateFromColumnKey, useBoardActions } from '@/composables/board/useBoardActions'
 import { useBoardState, sortTasksForBoard, type BoardSortOption } from '@/composables/board/useBoardState'
+import { useBoardPriorityFilter } from '@/composables/board/useBoardPriorityFilter'
 import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete'
+import { mergeVisibleTaskOrder } from '@/utils/taskOrdering'
 
 import './BoardView.css'
 
@@ -186,6 +190,7 @@ const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const uiStore = useUIStore()
 const settingsStore = useSettingsStore()
+const message = useMessage()
 
 
 // Provide progressive disclosure state for TaskCard components
@@ -251,7 +256,7 @@ const currentDensity = computed(() => settingsStore.boardDensity)
 // Keep the filter bar visible so the Board controls remain discoverable and usable on startup.
 const showFilters = usePersistentRef<boolean>('flowstate:board-show-filters', true, 'board-show-filters')
 const boardSortOption = usePersistentRef<BoardSortOption>('flowstate:board-sort-option', 'manual', 'board-sort-option')
-const priorityFilter = usePersistentRef<string>('flowstate:board-priority-filter', '', 'board-priority-filter')
+const priorityFilter = useBoardPriorityFilter()
 const recurringFilter = usePersistentRef<'all' | 'recurring' | 'non_recurring'>('flowstate:board-recurring-filter', 'all', 'board-recurring-filter')
 const setRecurringFilter = (value: string) => {
   if (value === 'all' || value === 'recurring' || value === 'non_recurring') {
@@ -347,6 +352,26 @@ const handleAddTaskToGroup = (groupKey: string, _groupBy: string) => {
 }
 
 const handleTimelineAddTask = () => openQuickTaskCreate('todo', '', 'list')
+
+const handleTimelineReorder = async (taskIds: string[]) => {
+  const allTasks = taskStore.rawTasks || taskStore.tasks
+  const visibleIds = new Set(allFilteredTasks.value.map(task => task.id))
+  const reorderedTasks = mergeVisibleTaskOrder(allTasks, taskIds, visibleIds)
+  const originalOrder = new Map(allTasks.map(task => [task.id, task.order]))
+  const updates = reorderedTasks
+    .filter(task => originalOrder.get(task.id) !== task.order)
+    .map(task => ({ id: task.id, updates: { order: task.order } }))
+
+  if (!updates.length) return
+
+  try {
+    await taskStore.bulkUpdateTasksWithUndo(updates, 'Reorder focused timeline')
+    boardSortOption.value = 'manual'
+  } catch (error) {
+    console.error('Failed to save focused timeline order:', error)
+    message.error(t('kanban.reorder_failed'))
+  }
+}
 
 // Load saved settings on mount
 onMounted(() => {

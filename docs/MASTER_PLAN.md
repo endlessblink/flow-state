@@ -100,6 +100,26 @@
 
 **Completed evidence**: Vitest now starts in `Asia/Jerusalem` through a cross-platform Node runner; the Board test no longer mutates `TZ` after worker startup. The focused runner/Board tests passed from a parent `TZ=UTC`, and the full unit suite passed (401 files, 4,779 tests, 3 skipped). This changes test-process setup only; Board date behavior remains unchanged.
 
+### TASK-2069: Complete the focused timeline workflow in the sidebar and Board (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (2026-09-08)
+
+**Goal**: Remove the unused sidebar Task Lanes block, use that sidebar area for a Board-only priority filter, and let users organize the focused timeline without returning to the legacy lane UI.
+
+**Validated implementation plan** (`$sure`: HIGH / PASS):
+
+- [ ] Write failing sidebar contracts proving `SidebarLanesSection` is no longer rendered, the lane store and Lane route remain available, and the replacement priority control appears only on the Board route.
+- [ ] Add a module-scoped `useBoardPriorityFilter` composable backed by one persistent ref; migrate `BoardView` and the new `SidebarPriorityFilter` to that shared state and prove same-window updates plus restart persistence.
+- [ ] Write failing focused-timeline tests for a default-hidden reorder mode, drag ordering, `Alt+Left` / `Alt+Right` keyboard moves, moved-item focus retention, and active-task identity retention.
+- [ ] Add an on-demand compact reorder strip to `TaskFocusTimeline`; keep the normal view limited to previous → active → next and emit ordered filtered task IDs only after a deliberate reorder.
+- [ ] Merge reordered filtered IDs into their original slots in the complete manual sequence, normalize `order` values without changing `canvasPosition`, switch to Manual sort on commit, and persist once through `bulkUpdateTasksWithUndo` with rollback and visible error feedback.
+- [ ] Add regressions for filtered-out task stability, missing/equal legacy order values, undo, persistence failure, priority changes during reorder, and other shared-order consumers.
+- [ ] Run focused unit/component tests, typecheck, targeted lint, and populated Board E2E for sidebar filtering plus mouse and keyboard reorder.
+- [ ] Capture and independently review LTR and RTL Electron screenshots proving the lane block is gone, the priority filter occupies its sidebar position, and all-task reorder controls remain hidden until requested.
+- [ ] Bump the Electron version, build and deploy the updater, verify the public manifest and artifact, update this task's failure-class evidence, commit only scoped files, pull/rebase, push, and confirm main matches origin.
+
+**Safety boundaries**: Remove only the legacy sidebar entrypoint—not lane data, routes, store, or AI commands. The priority control must not render outside Board. Reordering must preserve hidden-task relative positions, remain undoable, and never mutate Canvas geometry.
+
 ### ~~TASK-2068: Replace Board lanes with a focused task timeline~~ (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-09-07)

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Task } from '@/types/tasks'
-import { mergeVisibleTaskOrder } from '@/utils/taskOrdering'
+import { mergeVisibleTaskOrder, sortTasksBySharedOrder } from '@/utils/taskOrdering'
 
 const task = (id: string, order: number): Task => ({
   id,
@@ -28,5 +28,23 @@ describe('TASK-2069 focused timeline ordering', () => {
 
     expect(result.map(item => item.id)).toEqual(['c', 'b', 'a'])
     expect(result.map(item => item.order)).toEqual([0, 1, 2])
+  })
+
+  it('uses one canonical order for timeline changes and changes made in other views', () => {
+    const initial = [task('a', 0), task('b', 1), task('c', 2)]
+    const reorderedInTimeline = mergeVisibleTaskOrder(
+      initial,
+      ['c', 'a', 'b'],
+      new Set(['a', 'b', 'c']),
+    )
+
+    expect(sortTasksBySharedOrder(reorderedInTimeline).map(item => item.id)).toEqual(['c', 'a', 'b'])
+
+    const reorderedElsewhere = reorderedInTimeline.map(item => ({
+      ...item,
+      order: item.id === 'b' ? 0 : item.id === 'c' ? 1 : 2,
+    }))
+
+    expect(sortTasksBySharedOrder(reorderedElsewhere).map(item => item.id)).toEqual(['b', 'c', 'a'])
   })
 })

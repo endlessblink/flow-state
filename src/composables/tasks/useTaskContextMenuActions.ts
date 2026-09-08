@@ -21,7 +21,12 @@ function flashTaskCard(taskId: string): void {
 }
 
 export function useTaskContextMenuActions(
-    props: { task: Task | null; contextTask?: Task | null; selectedCount?: number },
+    props: {
+        task: Task | null
+        contextTask?: Task | null
+        selectedCount?: number
+        context?: 'calendar' | 'board' | 'list' | 'canvas'
+    },
     emit: (event: string, ...args: unknown[]) => void
 ) {
     const taskStore = useTaskStore()
@@ -475,8 +480,13 @@ export function useTaskContextMenuActions(
         const taskId = currentTask.value?.id
         const taskTitle = currentTask.value?.title
         const isBatch = isBatchOperation.value
-        const workDuration = (currentTask.value as (Task & { calendarDuration?: number }) | null)?.calendarDuration
-            ?? timerStore.settings.workDuration
+        // Calendar occurrences may intentionally override the Pomodoro length.
+        // Task surfaces must always use the user's canonical work duration even
+        // when a task snapshot happens to carry stale calendar metadata.
+        const workDuration = props.context === 'calendar'
+            ? (currentTask.value as (Task & { calendarDuration?: number }) | null)?.calendarDuration
+                ?? timerStore.settings.workDuration
+            : timerStore.settings.workDuration
 
         // BUG-1095: Close menu FIRST to prevent "stuck" menu
         emit('close')

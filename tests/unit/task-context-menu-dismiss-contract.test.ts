@@ -14,6 +14,7 @@ const updateTaskWithUndo = vi.fn()
 const getTask = vi.fn()
 const requestSync = vi.fn()
 const appendTaskCompletionDiag = vi.fn()
+const startTimer = vi.fn()
 
 vi.mock('@/stores/tasks', () => ({
   useTaskStore: () => ({
@@ -27,7 +28,7 @@ vi.mock('@/stores/tasks', () => ({
 }))
 
 vi.mock('@/stores/timer', () => ({
-  useTimerStore: () => ({ settings: { workDuration: 25 }, startTimer: vi.fn() })
+  useTimerStore: () => ({ settings: { workDuration: 20 * 60 }, startTimer })
 }))
 
 vi.mock('@/stores/canvas', () => ({
@@ -64,13 +65,14 @@ const task = {
   updatedAt: new Date()
 } as Task
 
-const mountMenu = () => mount(TaskContextMenu, {
+const mountMenu = (props: Partial<InstanceType<typeof TaskContextMenu>['$props']> = {}) => mount(TaskContextMenu, {
   attachTo: document.body,
   props: {
     isVisible: true,
     x: 40,
     y: 60,
-    task
+    task,
+    ...props
   },
   global: {
     plugins: [createPinia()],
@@ -110,6 +112,32 @@ afterEach(() => {
 })
 
 describe('TaskContextMenu outside dismissal contract', () => {
+  it('starts a Board task with the canonical Pomodoro duration even when the task carries calendar metadata', async () => {
+    const wrapper = mountMenu({
+      context: 'board',
+      task: { ...task, calendarDuration: 5 * 60 } as Task
+    })
+    wrappers.push(wrapper)
+
+    await document.body.querySelector<HTMLButtonElement>('.menu-item--timer')?.click()
+    await flushPromises()
+
+    expect(startTimer).toHaveBeenCalledWith('task-1', 20 * 60, false)
+  })
+
+  it('preserves an explicit calendar duration only inside the calendar context', async () => {
+    const wrapper = mountMenu({
+      context: 'calendar',
+      task: { ...task, calendarDuration: 5 * 60 } as Task
+    })
+    wrappers.push(wrapper)
+
+    await document.body.querySelector<HTMLButtonElement>('.menu-item--timer')?.click()
+    await flushPromises()
+
+    expect(startTimer).toHaveBeenCalledWith('task-1', 5 * 60, false)
+  })
+
   it('USER REPRO: clicking Mark as Done runs the task completion mutation before the menu is dismissed', async () => {
     const wrapper = mountMenu()
     wrappers.push(wrapper)

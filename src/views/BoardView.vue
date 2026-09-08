@@ -126,6 +126,7 @@
       :x="contextMenuX"
       :y="contextMenuY"
       :task="contextMenuTask"
+      context="board"
       :compact-mode="currentDensity === 'ultrathin'"
       @close="closeContextMenu"
       @edit="handleEditTask"

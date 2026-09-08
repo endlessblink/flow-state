@@ -114,6 +114,7 @@ describe('useTaskContextMenuActions duplicateTask', () => {
     const emit = vi.fn()
 
     const { startTimer: startContextTimer } = useTaskContextMenuActions({
+      context: 'calendar',
       task: {
         id: 'task-1',
         title: 'Calendar Task',

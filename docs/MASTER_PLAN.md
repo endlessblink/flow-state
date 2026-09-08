@@ -1,5 +1,13 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2084: Keep focused timeline ordering shared and start the normal Pomodoro cycle (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-08)
+
+**User repro**: Reordering the focused timeline must change the same task order used by List and other ordered views, in both directions. Starting a task from the focused timeline context menu must start the configured 20-minute work session, then continue through the standard configured 5-minute break flow.
+
+**Acceptance**: Persist only the canonical task `order` from timeline reordering and consume it in every shared-order view. A Board/timeline context-menu start ignores calendar-only duration metadata and uses the timer work setting; Calendar retains explicit block durations. Prove the shared bidirectional ordering contract, the 20-minute entry path, and the existing completed-work-to-5-minute-break lifecycle; ship and verify the Electron update.
+
 ### TASK-2080: Use distinct, consistent priority colors and ordering everywhere (📋 PLANNED)
 
 **Priority**: P1 | **Status**: 📋 PLANNED (2026-09-07) | **Sequence**: Next after the current Tidy, Rotate, and sync regression delivery (BUG-2076).

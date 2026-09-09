@@ -2,40 +2,40 @@
   <div class="task-row__actions">
     <button
       class="task-row__action-btn task-row__action-btn--ai"
-      title="AI Smart Suggest (Ctrl+.)"
-      aria-label="AI smart suggest"
+      :title="$t('task.ai_suggest') + ' (Ctrl+.)'"
+      :aria-label="$t('task.ai_suggest')"
       @click.stop="$emit('aiSuggest', $event)"
     >
       <Zap :size="14" />
     </button>
     <button
       class="task-row__action-btn task-row__action-btn--focus"
-      title="Focus Mode (F)"
-      aria-label="Enter focus mode"
+      :title="$t('task.focus_mode') + ' (F)'"
+      :aria-label="$t('task.focus_mode')"
       @click.stop="$emit('focusMode')"
     >
       <Eye :size="14" />
     </button>
     <button
       class="task-row__action-btn"
-      title="Start Timer"
-      aria-label="Start timer"
+      :title="$t('task.start_timer')"
+      :aria-label="$t('task.start_timer')"
       @click.stop="$emit('startTimer')"
     >
       <Play :size="14" />
     </button>
     <button
       class="task-row__action-btn"
-      title="Edit Task"
-      aria-label="Edit task"
+      :title="$t('task.edit_task')"
+      :aria-label="$t('task.edit_task')"
       @click.stop="$emit('edit')"
     >
       <Edit :size="14" />
     </button>
     <button
       class="task-row__action-btn"
-      title="Duplicate Task"
-      aria-label="Duplicate task"
+      :title="$t('task.duplicate_task')"
+      :aria-label="$t('task.duplicate_task')"
       @click.stop="$emit('duplicate')"
     >
       <Copy :size="14" />

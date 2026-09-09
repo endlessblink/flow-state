@@ -520,11 +520,14 @@ const buildExternalEventTooltip = (ext: { title: string; isAllDay: boolean; star
   align-items: center;
   gap: var(--space-1);
   opacity: 0;
+  pointer-events: none;
   transition: opacity var(--duration-fast);
 }
 
-.slot-task:hover .task-actions {
+.slot-task:hover .task-actions,
+.slot-task:focus-within .task-actions {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .task-meta {

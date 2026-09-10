@@ -1,5 +1,37 @@
 # FlowState MASTER_PLAN.md
 
+### ~~TASK-2087~~: Remove the duplicate Board List mode and clarify main navigation (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-09-10)
+
+**User request**: Keep Board focused on Kanban because Catalog already owns the full list workflow, and make the crowded main navigation easier to scan with recognizable icons.
+
+**Acceptance**: Remove List from the Board mode switcher and migrate a persisted legacy List selection to the default Priority Kanban. Preserve Priority, Due Date, and Category Kanban modes. Add consistent icons plus concise readable labels to every main navigation item, shorten the focused timeline's visible label to Timeline while retaining its full accessible name, verify LTR and RTL rendering, and deliver and verify the Electron update. This follow-up supersedes BUG-2085's temporary restoration of Board List mode.
+
+**Evidence**: Focused unit coverage passed 8/8, authenticated Chromium E2E passed 2/2, and fresh LTR/RTL visual review found the icon-and-label navigation readable on one line with no clipping. Electron 1.4.525 was built, published, read back from the public updater manifest, and pushed to `origin/main` at `b56ba6f8`.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Authenticated Board route E2E and fresh LTR/RTL screenshots | Yes |
+| Data shape / persisted row shape | Yes | Legacy persisted List preference regression coverage | Yes |
+| Renderer store/state | Yes | Board view-mode contract tests and route/render E2E | Yes |
+| Electron main/preload bridge | N/A | Navigation and Board modes are renderer-owned | N/A |
+| Localhost sidecar endpoint | N/A | No sidecar participates in Board navigation | N/A |
+| KDE polling/control path | N/A | No KDE integration participates in Board navigation | N/A |
+| Supabase persistence/realtime | N/A | View preference is local and task data was not changed | N/A |
+| Updater/runtime version | Yes | Public manifest and both 1.4.525 artifacts returned HTTP 200 with expected sizes | Yes |
+| Stale live process/cache state | Partial | New release is public; an already-running older desktop process still requires its normal update/restart | No |
+
+**Exact failure mode fixed**: The Board route exposed a duplicate List mode even though Catalog already owns the list workflow, and the main navigation used long text-only labels that crowded the header.
+
+**Explicitly not covered**: An already-running pre-1.4.525 desktop process remains unchanged until it installs the published update; narrow responsive hover and keyboard-only visual states were not separately screenshot-reviewed.
+
+**Regression added for reported repro**: Unit coverage asserts that only Priority, Due Date, and Category remain as Board modes and that a persisted legacy List selection migrates to Priority; authenticated route E2E asserts the independent Timeline view and icon-led navigation.
+
+**Live boundary proof**: The 1.4.525 updater manifest names the expected AppImage and Debian artifacts, both public artifact URLs return HTTP 200 with the manifest sizes, and fresh authenticated LTR/RTL captures show the released layout at the exact source commit.
+
 ### ~~BUG-2085~~: Restore Board Kanban and separate the focused timeline (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-09-10)

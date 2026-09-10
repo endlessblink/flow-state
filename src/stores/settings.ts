@@ -151,20 +151,27 @@ async function syncSettingsToSupabase(state: AppSettings) {
             console.warn('[SETTINGS] Supabase client not available — skipping sync')
             return
         }
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user?.id) {
+        // The auth store is hydrated by the app bootstrap and is the same
+        // identity source used by queued task/group writes. Calling getUser()
+        // here turns every debounced settings save into a network request to
+        // /auth/v1/user; repeated Canvas activity can then hit the auth rate
+        // limit and make healthy sync look broken.
+        const { useAuthStore } = await import('@/stores/auth')
+        const authStore = useAuthStore()
+        if (!authStore.user?.id) {
             console.warn('[SETTINGS] No authenticated user — will retry settings sync in 5s')
             // Auth not ready yet — retry once after 5 seconds
             setTimeout(async () => {
                 try {
                     const { supabase: sb } = await import('@/services/auth/supabase')
                     if (!sb) return
-                    const { data: { user: retryUser } } = await sb.auth.getUser()
-                    if (!retryUser?.id) {
+                    const { useAuthStore: getAuthStore } = await import('@/stores/auth')
+                    const retryUserId = getAuthStore().user?.id
+                    if (!retryUserId) {
                         console.warn('[SETTINGS] Retry: still no authenticated user — giving up')
                         return
                     }
-                    await doSettingsUpsert(sb, retryUser.id, state)
+                    await doSettingsUpsert(sb, retryUserId, state)
                 } catch (e) {
                     console.warn('[SETTINGS] Retry failed:', e)
                 }
@@ -172,7 +179,7 @@ async function syncSettingsToSupabase(state: AppSettings) {
             return
         }
 
-        await doSettingsUpsert(supabase, user.id, state)
+        await doSettingsUpsert(supabase, authStore.user.id, state)
     } catch (error) {
         console.warn('[SETTINGS] Failed to sync settings to Supabase:', error)
     }

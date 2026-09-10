@@ -30,6 +30,18 @@ describe('Canvas Tidy Vue Flow application', () => {
     expect(handleTidyLayout).toContain('}, pendingWrites)')
   })
 
+  it('reapplies the complete canonical plan after Vue Flow reconciles the forced sync', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/views/CanvasView.vue'), 'utf8')
+    const handleTidyLayout = source.slice(
+      source.indexOf('async function handleTidyLayout'),
+      source.indexOf('function getCanvasNodeSnapshot')
+    )
+
+    expect(handleTidyLayout).toContain('syncNodes(undefined, { force: true })')
+    expect(handleTidyLayout).toContain('nextTick(() => nextTick(() => {')
+    expect(handleTidyLayout).toContain('applyCanonicalMoves(groupMoves, taskMoves)')
+  })
+
   it('keeps retrying Tidy non-blockingly while canvas geometry hydrates', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/views/CanvasView.vue'), 'utf8')
     const handleTidyLayout = source.slice(

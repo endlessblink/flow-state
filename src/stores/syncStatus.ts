@@ -12,17 +12,26 @@ import { ref, computed, watch } from 'vue'
 import type { SyncStatus, WriteOperation } from '@/types/sync'
 import { syncState } from '@/composables/sync/useSyncOrchestrator'
 import { writesFailing, writeFailureMessage } from '@/composables/sync/writeHealth'
+import { classifyError } from '@/services/offline/retryStrategy'
 
 export const useSyncStatusStore = defineStore('syncStatus', () => {
   // Mirror the orchestrator state for reactive UI binding
   // We use a watcher to sync from the orchestrator's ref
   const queueStatus = ref<SyncStatus>('synced')
+  const failedOperations = ref<WriteOperation[]>([])
+  const permanentFailedCount = computed(() => failedOperations.value.filter(
+    (operation) => classifyError(operation.lastError ?? '') === 'permanent'
+  ).length)
   // TASK-1916/BUG-1913: the queue only covers queued writes — DIRECT db writes
   // failing (writeHealth) must also turn the indicator red, otherwise the app
   // says "All changes saved" while silently dropping edits.
-  const status = computed<SyncStatus>(() =>
-    writesFailing.value && queueStatus.value !== 'syncing' ? 'error' : queueStatus.value
-  )
+  const status = computed<SyncStatus>(() => {
+    if (writesFailing.value && queueStatus.value !== 'syncing') return 'error'
+    const onlyPermanentFailures = queueStatus.value === 'error'
+      && queueFailedCount.value > 0
+      && permanentFailedCount.value === queueFailedCount.value
+    return onlyPermanentFailures ? 'attention' : queueStatus.value
+  })
   const pendingCount = ref(0)
   const queueFailedCount = ref(0)
   const failedCount = computed(() => queueFailedCount.value + (writesFailing.value ? 1 : 0))
@@ -32,7 +41,6 @@ export const useSyncStatusStore = defineStore('syncStatus', () => {
     writesFailing.value ? (writeFailureMessage.value || queueLastError.value) : queueLastError.value
   )
   const isOnline = ref(true)
-  const failedOperations = ref<WriteOperation[]>([])
 
   // BUG-1411: Track whether data was loaded from IndexedDB cache (offline mode)
   const loadedFromCache = ref(false)
@@ -74,6 +82,8 @@ export const useSyncStatusStore = defineStore('syncStatus', () => {
         return 'CloudClock'
       case 'error':
         return 'CloudOff'
+      case 'attention':
+        return 'TriangleAlert'
       case 'offline':
         return 'WifiOff'
       default:
@@ -94,6 +104,8 @@ export const useSyncStatusStore = defineStore('syncStatus', () => {
         return 'text-amber-500'
       case 'error':
         return 'text-red-500'
+      case 'attention':
+        return 'text-amber-500'
       case 'offline':
         return 'text-gray-500'
       default:
@@ -126,6 +138,8 @@ export const useSyncStatusStore = defineStore('syncStatus', () => {
         return `${pendingCount.value} changes pending`
       case 'error':
         return `${failedCount.value} sync errors`
+      case 'attention':
+        return `${permanentFailedCount.value} local change${permanentFailedCount.value === 1 ? '' : 's'} needs review`
       case 'offline':
         return 'Offline - changes will sync when online'
       default:

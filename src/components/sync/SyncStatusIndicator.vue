@@ -39,6 +39,7 @@ import {
   CloudUpload,
   CloudCog,
   CloudOff,
+  TriangleAlert,
   WifiOff,
   Cloud
 } from 'lucide-vue-next'
@@ -68,6 +69,8 @@ const iconComponent = computed(() => {
       return CloudCog
     case 'error':
       return CloudOff
+    case 'attention':
+      return TriangleAlert
     case 'offline':
       return WifiOff
     default:
@@ -86,6 +89,8 @@ const statusClass = computed(() => {
       return 'status-pending'
     case 'error':
       return 'status-error'
+    case 'attention':
+      return 'status-attention'
     case 'offline':
       return 'status-offline'
     default:
@@ -100,10 +105,11 @@ const isSyncing = computed(() => status.value === 'syncing')
 const showBadge = computed(() => {
   return (status.value === 'pending' && pendingCount.value > 0) ||
          (status.value === 'error' && failedCount.value > 0)
+         || (status.value === 'attention' && failedCount.value > 0)
 })
 
 const badgeCount = computed(() => {
-  if (status.value === 'error') {
+  if (status.value === 'error' || status.value === 'attention') {
     return failedCount.value > 9 ? '9+' : failedCount.value
   }
   return pendingCount.value > 9 ? '9+' : pendingCount.value
@@ -123,7 +129,7 @@ const tooltipText = computed(() => {
 
 // Handle click - show popover for errors, force sync otherwise
 const handleClick = async () => {
-  if (status.value === 'error') {
+  if (status.value === 'error' || status.value === 'attention') {
     showPopover.value = !showPopover.value
   } else if (status.value === 'pending') {
     await syncStore.forceSync()
@@ -179,6 +185,10 @@ const handleClear = async () => {
   color: var(--color-warning);
 }
 
+.status-attention {
+  color: var(--color-warning);
+}
+
 .status-error {
   color: var(--color-danger);
 }
@@ -222,6 +232,10 @@ const handleClear = async () => {
 .status-pending .sync-badge {
   background: var(--color-warning);
   animation: pulse-amber 2s ease-in-out infinite;
+}
+
+.status-attention .sync-badge {
+  background: var(--color-warning);
 }
 
 .status-error .sync-badge {

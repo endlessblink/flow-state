@@ -33,11 +33,12 @@ describe('TASK-2068 focused task timeline', () => {
     expect(headerSource).toContain("'focused-timeline': t('views.timeline')")
   })
 
-  it('uses recognizable icons with readable labels in the main navigation', () => {
+  it('uses recognizable icon-only controls with accessible names in the main navigation', () => {
     expect(headerSource).toContain('class="view-tab-icon"')
     expect(headerSource).toContain('class="view-tab-label"')
     expect(headerSource).toContain("$t('views.timeline')")
     expect(headerSource).toContain(':aria-label="$t(\'kanban.focus_timeline\')"')
+    expect(headerSource).toMatch(/\.view-tab-label\s*\{[^}]*position:\s*absolute[^}]*clip:\s*rect\(0, 0, 0, 0\)/s)
     expect(headerSource).toMatch(/\.title-main\s*\{[^}]*white-space:\s*nowrap/s)
   })
 

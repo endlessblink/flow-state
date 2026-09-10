@@ -21,6 +21,11 @@ import { setActivePinia, createPinia } from "pinia";
 
 const mockUpsert = vi.fn();
 const mockGetUser = vi.fn();
+const mockAuthState = { user: { id: "user-abc-123" } as { id: string } | null };
+
+vi.mock("@/stores/auth", () => ({
+  useAuthStore: () => mockAuthState,
+}));
 
 // vi.mock is hoisted at compile time; this intercepts BOTH static and
 // dynamic `import('@/services/auth/supabase')` calls made by the store.
@@ -69,6 +74,7 @@ describe("Settings Supabase sync", () => {
 
     // Default: authenticated user present
     mockGetUser.mockResolvedValue({ data: { user: { id: "user-abc-123" } } });
+    mockAuthState.user = { id: "user-abc-123" };
     // Default: upsert succeeds
     mockUpsert.mockResolvedValue({ error: null });
   });
@@ -212,6 +218,18 @@ describe("Settings Supabase sync", () => {
   // 3. Success path — console.log
   // --------------------------------------------------------------------------
 
+  it("uses the hydrated auth identity without requesting /auth/v1/user", async () => {
+    mockGetUser.mockRejectedValue(new Error("remote auth validation was rate limited"));
+
+    const store = useSettingsStore();
+    store.saveToStorage();
+    await flushDebounce();
+
+    expect(mockGetUser).not.toHaveBeenCalled();
+    expect(mockUpsert).toHaveBeenCalledOnce();
+    expect(mockUpsert.mock.calls[0][0].user_id).toBe("user-abc-123");
+  });
+
   it("logs success message when upsert succeeds", async () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -256,9 +274,8 @@ describe("Settings Supabase sync", () => {
   // 5. Retry when no auth user
   // --------------------------------------------------------------------------
 
-  it("schedules a retry via setTimeout when getUser returns no user", async () => {
-    // First call: no user. Second call (retry): still no user.
-    mockGetUser.mockResolvedValue({ data: { user: null } });
+  it("schedules a retry via setTimeout when the hydrated auth store has no user", async () => {
+    mockAuthState.user = null;
 
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -283,16 +300,14 @@ describe("Settings Supabase sync", () => {
     warnSpy.mockRestore();
   });
 
-  it("calls upsert on the retry when the second getUser returns a valid user", async () => {
-    // First call: no user. Second call (retry): user present.
-    mockGetUser
-      .mockResolvedValueOnce({ data: { user: null } })
-      .mockResolvedValue({ data: { user: { id: "user-retry-123" } } });
+  it("calls upsert on the retry after the auth store hydrates a user", async () => {
+    mockAuthState.user = null;
 
     const store = useSettingsStore();
     store.saveToStorage();
 
     await vi.advanceTimersByTimeAsync(2500); // debounce
+    mockAuthState.user = { id: "user-retry-123" };
     await vi.advanceTimersByTimeAsync(5500); // retry
 
     expect(mockUpsert).toHaveBeenCalledOnce();
@@ -304,35 +319,15 @@ describe("Settings Supabase sync", () => {
   // 6. Skips when supabase client is null
   // --------------------------------------------------------------------------
 
-  it("returns without error when supabase module exports null client", async () => {
-    // Override the mock for this test only: supabase is null
-    vi.doMock("@/services/auth/supabase", () => ({ supabase: null }));
-
+  it("does not query remote auth while the local identity is unavailable", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-    // Re-use the already-created store; re-triggering saveToStorage is enough
-    // to schedule another debounced sync. The dynamic import inside the function
-    // will return the already-cached module (vi.mock is module-level), so we
-    // test the `if (!supabase)` guard by directly confirming no upsert is made
-    // when the existing mock's supabase would be null.
-    //
-    // Because vi.doMock does not retroactively replace a hoisted vi.mock in the
-    // same module registry for this test run, we verify the null-guard indirectly:
-    // if mockGetUser were never called, upsert must also never be called.
-    mockGetUser.mockReset(); // ensure it's not called if guard fires early
-
-    // Provide a null-returning dynamic import by re-patching at the mock level
-    // Use the existing mock but simulate null by not providing getUser at all
-    // (this exercises the `if (!supabase)` branch path when supabase is falsy)
-    // The simplest reliable approach: verify that when getUser throws (client
-    // unavailable scenario), upsert is never called.
-    mockGetUser.mockRejectedValue(new Error("Client not available"));
+    mockAuthState.user = null;
 
     const store = useSettingsStore();
     store.saveToStorage();
     await flushDebounce();
 
-    // Upsert must never be reached
+    expect(mockGetUser).not.toHaveBeenCalled();
     expect(mockUpsert).not.toHaveBeenCalled();
 
     warnSpy.mockRestore();

@@ -785,13 +785,16 @@ const startLongBreak = async () => {
 }
 
 .view-tab {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1_5);
+  justify-content: center;
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-muted);
-  padding: var(--space-3) var(--space-4);
+  width: 44px;
+  height: 44px;
+  padding: 0;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   border-radius: var(--radius-md) var(--radius-md) 0 0;
@@ -802,6 +805,18 @@ const startLongBreak = async () => {
 
 .view-tab-icon {
   flex: 0 0 auto;
+}
+
+.view-tab-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .view-tab:hover {
@@ -822,13 +837,15 @@ const startLongBreak = async () => {
 }
 
 .tab-badge {
+  position: absolute;
+  top: 2px;
+  inset-inline-end: 1px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 var(--space-1_5);
-  margin-inline-start: var(--space-1_5);
+  min-width: 16px;
+  height: 16px;
+  padding: 0 var(--space-1);
   background: var(--surface-tertiary);
   border-radius: var(--radius-md);
   font-size: var(--text-xs);

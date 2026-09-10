@@ -1,14 +1,14 @@
 # FlowState MASTER_PLAN.md
 
-### ~~TASK-2087~~: Remove the duplicate Board List mode and clarify main navigation (✅ DONE)
+### TASK-2087: Remove the duplicate Board List mode and clarify main navigation (🔄 IN PROGRESS)
 
-**Priority**: P1 | **Status**: ✅ DONE (2026-09-10)
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-10)
 
 **User request**: Keep Board focused on Kanban because Catalog already owns the full list workflow, and make the crowded main navigation easier to scan with recognizable icons.
 
-**Acceptance**: Remove List from the Board mode switcher and migrate a persisted legacy List selection to the default Priority Kanban. Preserve Priority, Due Date, and Category Kanban modes. Add consistent icons plus concise readable labels to every main navigation item, shorten the focused timeline's visible label to Timeline while retaining its full accessible name, verify LTR and RTL rendering, and deliver and verify the Electron update. This follow-up supersedes BUG-2085's temporary restoration of Board List mode.
+**Acceptance**: Remove List from the Board mode switcher and migrate a persisted legacy List selection to the default Priority Kanban. Preserve Priority, Due Date, and Category Kanban modes. Use consistent icon-only main navigation controls with accessible names and hover titles, verify LTR and RTL rendering, and deliver and verify the Electron update. This follow-up supersedes BUG-2085's temporary restoration of Board List mode.
 
-**Evidence**: Focused unit coverage passed 8/8, authenticated Chromium E2E passed 2/2, and fresh LTR/RTL visual review found the icon-and-label navigation readable on one line with no clipping. Electron 1.4.525 was built, published, read back from the public updater manifest, and pushed to `origin/main` at `b56ba6f8`.
+**Evidence**: The Board/List removal and independent Timeline route shipped in 1.4.525. The requested icon-only follow-up has focused contract coverage and is being delivered with 1.4.527; installed LTR/RTL visual read-back remains pending.
 
 **Failure-class matrix**:
 
@@ -24,7 +24,7 @@
 | Updater/runtime version | Yes | Public manifest and both 1.4.525 artifacts returned HTTP 200 with expected sizes | Yes |
 | Stale live process/cache state | Partial | New release is public; an already-running older desktop process still requires its normal update/restart | No |
 
-**Exact failure mode fixed**: The Board route exposed a duplicate List mode even though Catalog already owns the list workflow, and the main navigation used long text-only labels that crowded the header.
+**Exact failure mode fixed**: The Board route exposed a duplicate List mode even though Catalog already owns the list workflow, and visible text labels crowded the main navigation despite every destination having a recognizable icon.
 
 **Explicitly not covered**: An already-running pre-1.4.525 desktop process remains unchanged until it installs the published update; narrow responsive hover and keyboard-only visual states were not separately screenshot-reviewed.
 
@@ -92,7 +92,9 @@
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-03)
 
-**2026-09-10 sync/Tidy follow-up — complete for 1.4.526 release**: Live Electron 1.4.525 is authenticated and its local API is healthy, but its own device receipt contains one failed queued task update reported as `auth`; stale browser/PWA receipts can also remain marked online because the local API trusted persisted `is_online` without aging by `last_seen_at`. Device receipts now reuse the central retry classifier, so authoritative-projection failures report as `permanent` instead of sign-in/auth, and `/api/sync/devices` now reports receipts older than 30 minutes as offline. The Tidy toolbar handler now retries the user's click for a bounded hydration window instead of dropping it after a single 250ms retry when Canvas geometry loads late. Focused regressions pass in the release worktree (18), sync popover/convergence checks pass (8), type-check passes, the full deploy gate passes (414 files / 4856 passed / 6 skipped), Electron artifacts validate, and the updater manifest reads back version `1.4.526` from `https://in-theflow.com/updates/electron/latest-linux.yml`. Installed restart/read-back and the user's exact queued edit disposition remain unverified; no live queue entry was discarded.
+**2026-09-10 1.4.527 regression follow-up — in_progress**: The installed 1.4.526 repro showed all 21 Today tasks present in the store and renderer and all 21 included in Tidy's 35-task plan, with the planned Today frame sized to contain them. This rules out eligibility and task-ID loss: a later renderer projection was overriding the atomic layout result. Tidy now reasserts the complete canonical group/task plan after projection reconciliation. A permanently failed orphaned queued edit remains preserved but is shown as amber local attention instead of a red active-sync failure; direct or retryable write failures remain red. Settings persistence reuses the hydrated authenticated user instead of repeatedly calling the auth endpoint. Focused regressions pass (39), the full unit suite, type-check, lint, and locked Electron package pass. Publication and installed visual read-back are pending; no queued edit was discarded.
+
+**2026-09-10 sync/Tidy follow-up — manual_action_required**: Live Electron 1.4.525 is authenticated and its local API is healthy, but its own device receipt contains one failed queued task update reported as `auth`; read-back confirmed the update targets a task that no longer exists remotely. Device receipts now reuse the central retry classifier, so authoritative-projection failures report as `permanent` instead of sign-in/auth, stale receipt rows age offline after 30 minutes, and Tidy retries the user's click for a bounded five-second hydration window instead of dropping it after one retry. Focused regressions pass (73), all unit tests pass (4,859 with six skipped), consistency and Electron guards pass, type-check and lint pass, the 1.4.526 Electron package validates, and the public updater manifest advertises 1.4.526 with both artifacts. Installed restart/read-back and the user's exact queued edit disposition remain unverified; no live queue entry was discarded. The mandatory restore E2E gate was blocked before application behavior by an invalid HS256 test-fixture JWT.
 
 **2026-09-07 installed follow-up — in_progress**: Installed artifact checksum and live provenance confirm 1.4.517; the earlier manual-update instruction is superseded. The user confirms Rotate now works, but Tidy still misses aligned same-day cards and the saved update for task `b3158b01-db84-4e61-93d5-fa76d2beb737` still shows the authoritative-projection error. Live desktop inspection confirms cards continue below Today and the queued update remains visible; no saved edit was discarded. Reproduced a Tidy coordinate mismatch: adoption compared rendered task positions with stale persisted group positions/width. Adoption now compares both in rendered coordinates while preserving canonical writes and undo. Focused tests pass (44), source lint and typecheck pass. Browser reload verification and Electron delivery are underway. The specific live task's remote existence remains unverified; read-only DevTools inspection paused when the desktop changed concurrently.
 

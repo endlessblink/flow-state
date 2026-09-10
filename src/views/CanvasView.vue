@@ -802,9 +802,14 @@ async function handleTidyLayout(hydrationRetriesRemaining = TIDY_HYDRATION_MAX_R
   // a programmatic reparent/restack.
   releaseOnDoubleNextTick(release, () => {
     syncNodes(undefined, { force: true })
-    if (import.meta.env.DEV) {
-      nextTick(() => nextTick(() => logPostTidySanity(groupMoves, taskMoves)))
-    }
+    // Vue Flow's forced store projection can reconcile child transforms after
+    // the first atomic apply. Reassert the complete plan once that projection
+    // has settled so every visible card—not only the first mounted subset—uses
+    // the same parent-relative geometry and the frame keeps its planned height.
+    nextTick(() => nextTick(() => {
+      applyCanonicalMoves(groupMoves, taskMoves)
+      if (import.meta.env.DEV) logPostTidySanity(groupMoves, taskMoves)
+    }))
   }, pendingWrites)
 }
 

@@ -176,6 +176,7 @@ export type SyncStatus =
   | 'syncing'   // Currently syncing changes
   | 'pending'   // Changes waiting to sync
   | 'error'     // Sync failed (requires attention)
+  | 'attention' // Local work is preserved but cannot be retried automatically
   | 'offline'   // Network unavailable
 
 /**

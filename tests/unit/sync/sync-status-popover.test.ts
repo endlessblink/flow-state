@@ -133,6 +133,52 @@ describe('sync status auth-error watchdog', () => {
     expect(document.body.textContent).not.toContain('cannot be retried because the task no longer exists')
   })
 
+  it('shows permanent quarantined work as attention instead of an active sync error', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const { syncState } = await import('@/composables/sync/useSyncOrchestrator')
+    const { useSyncStatusStore } = await import('@/stores/syncStatus')
+    const { default: SyncStatusIndicator } = await import('@/components/sync/SyncStatusIndicator.vue')
+    const failedOperation = {
+      id: 44,
+      entityType: 'task' as const,
+      entityId: 'task-missing-remotely',
+      operation: 'update' as const,
+      payload: { title: 'Still local' },
+      status: 'failed' as const,
+      retryCount: 3,
+      createdAt: Date.now(),
+      lastError: 'Task no longer exists in the authoritative projection; local update preserved for manual resolution',
+    }
+    syncState.value = {
+      status: 'error',
+      pendingCount: 0,
+      failedCount: 1,
+      lastSyncAt: undefined,
+      lastError: failedOperation.lastError,
+      isOnline: true,
+      failedOperations: [failedOperation],
+    }
+
+    const store = useSyncStatusStore()
+    expect(store.status).toBe('attention')
+    expect(store.statusText).toBe('1 local change needs review')
+
+    wrapper = mount(SyncStatusIndicator, {
+      attachTo: document.body,
+      global: {
+        plugins: [pinia],
+        stubs: { Teleport: false },
+      },
+    })
+    await nextTick()
+
+    expect(wrapper.get('.sync-indicator').classes()).toContain('status-attention')
+    await wrapper.get('.sync-indicator').trigger('click')
+    await nextTick()
+    expect(document.body.textContent).toContain('Needs attention')
+  })
+
   it('requires explicit confirmation before discarding failed local changes', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)

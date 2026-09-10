@@ -68,7 +68,7 @@
     </Transition>
 
     <!-- SCROLL CONTAINER FOR KANBAN BOARD -->
-    <div class="kanban-scroll-container scroll-container" :class="{ 'list-mode': currentViewType === 'list' }">
+    <div class="kanban-scroll-container scroll-container">
       <div class="kanban-board" @click="closeContextMenu">
         <TaskFocusTimeline
           v-if="isTimelineView"
@@ -99,25 +99,6 @@
             @move-task="handleListMoveTask"
             @add-task="handleAddTask"
             @context-menu="handleContextMenu"
-          />
-        </template>
-
-        <!-- TASK-1334: List view renders TaskList directly -->
-        <template v-else-if="currentViewType === 'list'">
-          <TaskList
-            :tasks="allFilteredTasks"
-            :groups="listViewGroups"
-            group-by="project"
-            :density="currentDensity === 'ultrathin' ? 'compact' : currentDensity"
-            @select="handleSelectTask"
-            @toggle-complete="handleToggleComplete"
-            @start-timer="handleStartTimer"
-            @edit="handleEditTask"
-            @update-task="handleListUpdateTask"
-            @context-menu="handleContextMenu"
-            @move-task="handleListMoveTask"
-            @delete-selected="handleDeleteSelected"
-            @add-task-to-group="handleAddTaskToGroup"
           />
         </template>
 
@@ -215,7 +196,6 @@ import { storeToRefs } from 'pinia'
 import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useMessage } from 'naive-ui'
 import { useTaskStore } from '@/stores/tasks'
-import { isDoneForNowAlreadyCompletedError } from '@/services/tasks/doneForNow'
 import type { Task } from '@/stores/tasks'
 import type { TaskAttachment, TaskPriority } from '@/types/tasks'
 import { useTimerStore } from '@/stores/timer'
@@ -236,12 +216,11 @@ import './BoardView.css'
 
 import KanbanSwimlane from '@/components/kanban/KanbanSwimlane.vue'
 import TaskFocusTimeline from '@/components/kanban/TaskFocusTimeline.vue'
-import TaskList from '@/components/tasks/TaskList.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
-import { CheckCircle, Circle, SlidersHorizontal, Flag, Calendar, FolderOpen, List } from 'lucide-vue-next'
+import { CheckCircle, Circle, SlidersHorizontal, Flag, Calendar, FolderOpen } from 'lucide-vue-next'
 
 import FilterControls from '@/components/base/FilterControls.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
@@ -340,13 +319,13 @@ const boardSortOptions = computed(() => [
   { value: 'priority_desc' as const, label: 'Priority: High to Low' }
 ])
 
-// View Type Switcher (priority, date, category, list) (TASK-1215: Tauri-aware persistence)
+// View Type Switcher (TASK-1215: Tauri-aware persistence)
 const currentViewType = usePersistentRef<'priority' | 'date' | 'category' | 'list'>('flowstate:board-view-type', 'priority', 'board-view-type')
+if (currentViewType.value === 'list') currentViewType.value = 'priority'
 const viewTypeOptions = computed(() => [
   { value: 'priority' as const, label: t('filters.group_priority'), icon: Flag },
   { value: 'date' as const, label: t('filters.group_due_date'), icon: Calendar },
-  { value: 'category' as const, label: t('filters.group_category'), icon: FolderOpen },
-  { value: 'list' as const, label: t('filters.group_list'), icon: List }
+  { value: 'category' as const, label: t('filters.group_category'), icon: FolderOpen }
 ])
 
 // TASK-1552: Assignment filter (shared singleton — same ref as FilterControls dropdown)
@@ -372,62 +351,6 @@ const allFilteredTasks = computed(() => {
     .filter(boardTaskMatchesLocalFilters)
   return sortTasksForBoard(filteredTasks, boardSortOption.value)
 })
-
-// TASK-1334: Groups for list view (group by project)
-const listViewGroups = computed(() => {
-  const projectMap = new Map<string, { key: string; title: string; tasks: Task[]; parentTasks: Task[] }>()
-
-  for (const task of allFilteredTasks.value) {
-    const projectId = task.projectId || '__uncategorized__'
-    if (!projectMap.has(projectId)) {
-      const project = taskStore.projects.find(p => p.id === projectId)
-      projectMap.set(projectId, {
-        key: projectId,
-        title: project?.name || 'Uncategorized',
-        tasks: [],
-        parentTasks: []
-      })
-    }
-    projectMap.get(projectId)!.tasks.push(task)
-  }
-
-  const groups = Array.from(projectMap.values())
-  // TaskList renders from parentTasks, not tasks
-  groups.forEach(g => { g.parentTasks = [...g.tasks] })
-  return groups
-})
-
-// TASK-1334: Handle inline task updates from list view
-const handleListUpdateTask = (taskId: string, updates: Partial<Task>) => {
-  return taskStore.updateTaskWithUndo(taskId, updates)
-}
-
-// Event handlers for TaskList in list view mode
-const handleToggleComplete = async (taskId: string) => {
-  const task = taskStore.getTask(taskId)
-  if (!task) return
-  // Recurring tasks use "done for now" to avoid clone-on-complete conflicts
-  if (task.status !== 'done' && task.recurrenceRule) {
-    try {
-      await taskStore.doneForNow(taskId)
-    } catch (error) {
-      if (!isDoneForNowAlreadyCompletedError(error)) throw error
-      await taskStore.initializeFromDatabase()
-    }
-    return
-  }
-  const newStatus = task.status === 'done' ? 'todo' : 'done'
-  await taskStore.updateTaskWithUndo(taskId, { status: newStatus })
-}
-
-const handleDeleteSelected = async (taskIds: string[]) => {
-  await taskStore.bulkDeleteTasksWithUndo(taskIds)
-}
-
-const handleAddTaskToGroup = (groupKey: string, _groupBy: string) => {
-  // Open QuickTaskCreate with the project pre-filled
-  openQuickTaskCreate('todo', groupKey === '__uncategorized__' ? '' : groupKey, 'list')
-}
 
 const handleTimelineAddTask = () => openQuickTaskCreate('todo', '', 'list')
 

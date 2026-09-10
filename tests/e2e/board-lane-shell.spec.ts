@@ -30,6 +30,7 @@ const seedBoardViews = async (page: import('@playwright/test').Page, locale = 'e
     localStorage.setItem('flowstate-welcome-seen', 'true')
     localStorage.setItem('flowstate-guest-tasks', JSON.stringify(tasks))
     localStorage.setItem('flowstate-app-locale', locale)
+    localStorage.setItem('flowstate:board-view-type', 'list')
   }, { locale })
 }
 
@@ -40,6 +41,17 @@ test('BUG-2085 restores the Board Kanban and separates the focused timeline', as
 
   await expect(page.locator('.kanban-column').first()).toBeVisible({ timeout: 30_000 })
   await expect(page.locator('.task-focus-timeline')).toHaveCount(0)
+  await expect(page.locator('.view-type-switcher button')).toHaveCount(3)
+  await expect(page.locator('.view-type-switcher')).toContainText('Priority')
+  await expect(page.locator('.view-type-switcher')).toContainText('Due Date')
+  await expect(page.locator('.view-type-switcher')).toContainText('Category')
+  await expect(page.locator('.view-type-switcher')).not.toContainText('List')
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('flowstate:board-view-type'))).toBe('priority')
+
+  const mainNavigation = page.locator('.view-tabs')
+  await expect(mainNavigation.locator('.view-tab-icon')).toHaveCount(6)
+  await expect(mainNavigation.locator('.view-tab-label')).toHaveCount(6)
+  await expect(page.getByRole('link', { name: 'Focused task timeline', exact: true })).toContainText('Timeline')
 
   await page.getByRole('link', { name: 'Focused task timeline', exact: true }).click()
   await expect(page).toHaveURL(/#\/timeline$/)

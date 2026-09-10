@@ -223,28 +223,92 @@
           to="/canvas"
           class="view-tab"
           active-class="active"
+          :title="$t('views.canvas')"
+          :aria-label="$t('views.canvas')"
         >
-          {{ $t('views.canvas') }}
+          <LayoutDashboard
+            class="view-tab-icon"
+            :size="16"
+            :stroke-width="1.7"
+            aria-hidden="true"
+          />
+          <span class="view-tab-label">{{ $t('views.canvas') }}</span>
         </router-link>
-        <router-link to="/calendar" class="view-tab" active-class="active">
-          {{ $t('views.calendar') }}
+        <router-link
+          to="/calendar"
+          class="view-tab"
+          active-class="active"
+          :title="$t('views.calendar')"
+          :aria-label="$t('views.calendar')"
+        >
+          <CalendarDays
+            class="view-tab-icon"
+            :size="16"
+            :stroke-width="1.7"
+            aria-hidden="true"
+          />
+          <span class="view-tab-label">{{ $t('views.calendar') }}</span>
         </router-link>
-        <router-link to="/board" class="view-tab" active-class="active">
-          {{ $t('views.board') }}
+        <router-link
+          to="/board"
+          class="view-tab"
+          active-class="active"
+          :title="$t('views.board')"
+          :aria-label="$t('views.board')"
+        >
+          <Columns3
+            class="view-tab-icon"
+            :size="16"
+            :stroke-width="1.7"
+            aria-hidden="true"
+          />
+          <span class="view-tab-label">{{ $t('views.board') }}</span>
         </router-link>
-        <router-link to="/timeline" class="view-tab" active-class="active">
-          {{ $t('kanban.focus_timeline') }}
+        <router-link
+          to="/timeline"
+          class="view-tab"
+          active-class="active"
+          :title="$t('kanban.focus_timeline')"
+          :aria-label="$t('kanban.focus_timeline')"
+        >
+          <Clock3
+            class="view-tab-icon"
+            :size="16"
+            :stroke-width="1.7"
+            aria-hidden="true"
+          />
+          <span class="view-tab-label">{{ $t('views.timeline') }}</span>
         </router-link>
-        <router-link to="/catalog" class="view-tab" active-class="active">
-          {{ $t('views.catalog') }}
+        <router-link
+          to="/catalog"
+          class="view-tab"
+          active-class="active"
+          :title="$t('views.catalog')"
+          :aria-label="$t('views.catalog')"
+        >
+          <ListTree
+            class="view-tab-icon"
+            :size="16"
+            :stroke-width="1.7"
+            aria-hidden="true"
+          />
+          <span class="view-tab-label">{{ $t('views.catalog') }}</span>
         </router-link>
         <router-link
           v-if="isNavItemVisible('quick-sort')"
           to="/quick-sort"
           class="view-tab"
           active-class="active"
+          :title="$t('views.quick_sort')"
+          :aria-label="$t('views.quick_sort')"
         >
-          {{ $t('views.quick_sort') }}
+          <ArrowUpDown
+            class="view-tab-icon"
+            :size="16"
+            :stroke-width="1.7"
+            aria-hidden="true"
+          />
+          <span class="view-tab-label">{{ $t('views.quick_sort') }}</span>
           <span v-if="uncategorizedCount > 0" class="tab-badge">{{ uncategorizedCount }}</span>
         </router-link>
       </div>
@@ -262,7 +326,7 @@ import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { useTimerStore } from '@/stores/timer'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useUIStore } from '@/stores/ui'
-import { Timer, Play, Pause, Coffee, Square, Armchair, Sparkles, Keyboard, Search } from 'lucide-vue-next'
+import { Timer, Play, Pause, Coffee, Square, Armchair, Sparkles, Keyboard, Search, LayoutDashboard, CalendarDays, Columns3, Clock3, ListTree, ArrowUpDown } from 'lucide-vue-next'
 import TimeDisplay from '@/components/common/TimeDisplay.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import SyncStatusIndicator from '@/components/sync/SyncStatusIndicator.vue'
@@ -291,7 +355,7 @@ const routeNameToTitle = computed(() => ({
   'canvas': t('views.canvas'),
   'calendar': t('views.calendar'),
   'board': t('views.board'),
-  'focused-timeline': t('kanban.focus_timeline'),
+  'focused-timeline': t('views.timeline'),
   'catalog': t('views.catalog'),
   'all-tasks': t('views.all_tasks'),
   'quick-sort': t('views.quick_sort'),
@@ -476,6 +540,7 @@ const startLongBreak = async () => {
   color: var(--text-primary);
   margin: 0;
   line-height: 1.1;
+  white-space: nowrap;
 }
 
 .title-filter {
@@ -720,6 +785,9 @@ const startLongBreak = async () => {
 }
 
 .view-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1_5);
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-muted);
@@ -730,6 +798,10 @@ const startLongBreak = async () => {
   cursor: pointer;
   transition: all var(--duration-normal) var(--spring-smooth);
   text-decoration: none;
+}
+
+.view-tab-icon {
+  flex: 0 0 auto;
 }
 
 .view-tab:hover {

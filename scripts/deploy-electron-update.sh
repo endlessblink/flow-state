@@ -49,6 +49,15 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Skip switches are useful for local packaging diagnostics, but a published
+# release must never bypass either regression gate.
+if [ "$SKIP_DEPLOY" = false ] && [ "$DRY_RUN" = false ] && \
+   { [ "$SKIP_GUARD" = true ] || [ "$SKIP_TESTS" = true ]; }; then
+  echo -e "${RED}ERROR: Refusing production deploy with skipped regression gates.${NC}"
+  echo -e "${RED}Use --skip-deploy for a local diagnostic build.${NC}"
+  exit 1
+fi
+
 # Get version from package.json
 VERSION=$(node -p "require('./package.json').version")
 echo -e "${CYAN}=== FlowState Electron Deploy v${VERSION} ===${NC}"
@@ -82,7 +91,7 @@ fi
 # suite. The July 2026 regression hunt found 17 broken tests that sat unnoticed
 # because nothing forced them to run before a release; this makes the pipeline
 # physically refuse to ship a regression these tests can see (~3-5 min).
-# Emergency hotfix escape hatch: --skip-tests (loud, on your head).
+# Skip flags are restricted to local diagnostic builds by the production guard above.
 echo -e "\n${YELLOW}[1b/3] Full ship gate (type-check + unit suite)...${NC}"
 if [ "$SKIP_TESTS" = true ] || [ "$SKIP_GUARD" = true ]; then
   echo -e "${RED}  ⚠ SHIP GATE SKIPPED (--skip-tests/--skip-guard). This release is NOT regression-checked.${NC}"

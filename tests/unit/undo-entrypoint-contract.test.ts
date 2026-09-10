@@ -131,28 +131,9 @@ describe("undo-aware modal and context-menu entry points", () => {
     expect(source).not.toContain("taskStore.moveTaskToDate(taskId");
   });
 
-  it("keeps Board list-mode task mutations on undo-aware APIs", () => {
-    const source = readSource("src/views/BoardView.vue");
-
-    expect(source).toContain("return taskStore.updateTaskWithUndo(taskId, {");
-    expect(source).toContain(
-      "await taskStore.updateTaskWithUndo(taskId, { status: newStatus })",
-    );
-    expect(source).not.toContain("return taskStore.updateTask(taskId, {");
-    expect(source).not.toContain("taskStore.updateTask(taskId, updates)");
-    expect(source).not.toContain(
-      "await taskStore.updateTask(taskId, { status: newStatus })",
-    );
-  });
-
   it("BUG-1934: routes regular task-list multi-delete through one bulk undo operation", () => {
-    const board = readSource("src/views/BoardView.vue");
     const inbox = readSource("src/composables/inbox/useUnifiedInboxActions.ts");
     const allTasks = readSource("src/views/AllTasksView.vue");
-
-    expect(board).toContain("await taskStore.bulkDeleteTasksWithUndo(taskIds)");
-    expect(board).not.toContain("for (const id of taskIds)");
-    expect(board).not.toContain("doDeleteTask(id)");
 
     expect(inbox).toContain("await bulkDeleteTasksWithUndo(idsToDelete)");
     expect(inbox).not.toContain("idsToDelete.forEach(id =>");

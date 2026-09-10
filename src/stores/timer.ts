@@ -385,7 +385,7 @@ export const useTimerStore = defineStore("timer", () => {
     taskId: string,
     duration?: number,
     isBreak: boolean = false,
-    options: { silent?: boolean } = {},
+    options: { silent?: boolean; restartActiveWorkSession?: boolean } = {},
   ) => {
     // Starting any new session is an explicit answer to the pending break choice.
     clearPendingBreak();
@@ -402,7 +402,8 @@ export const useTimerStore = defineStore("timer", () => {
     if (
       currentSession.value?.isActive &&
       !currentSession.value.isBreak &&
-      !isBreak
+      !isBreak &&
+      !options.restartActiveWorkSession
     ) {
       if (currentSession.value.taskId !== taskId) {
         // Different task — switch association without resetting countdown

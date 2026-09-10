@@ -122,7 +122,9 @@ describe('TaskContextMenu outside dismissal contract', () => {
     await document.body.querySelector<HTMLButtonElement>('.menu-item--timer')?.click()
     await flushPromises()
 
-    expect(startTimer).toHaveBeenCalledWith('task-1', 20 * 60, false)
+    expect(startTimer).toHaveBeenCalledWith('task-1', 20 * 60, false, {
+      restartActiveWorkSession: true,
+    })
   })
 
   it('preserves an explicit calendar duration only inside the calendar context', async () => {
@@ -135,7 +137,9 @@ describe('TaskContextMenu outside dismissal contract', () => {
     await document.body.querySelector<HTMLButtonElement>('.menu-item--timer')?.click()
     await flushPromises()
 
-    expect(startTimer).toHaveBeenCalledWith('task-1', 5 * 60, false)
+    expect(startTimer).toHaveBeenCalledWith('task-1', 5 * 60, false, {
+      restartActiveWorkSession: true,
+    })
   })
 
   it('USER REPRO: clicking Mark as Done runs the task completion mutation before the menu is dismissed', async () => {

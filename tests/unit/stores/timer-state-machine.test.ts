@@ -409,6 +409,21 @@ describe('Timer State Machine — startTimer', () => {
     expect(store.currentSession!.remainingTime).toBeLessThanOrEqual(remainingAfter5s)
     expect(store.currentSession!.remainingTime).toBeGreaterThan(0)
   })
+
+  it('12b. explicit task start replaces an existing work session with a fresh Pomodoro', async () => {
+    const store = useTimerStore()
+    await flushPromises()
+
+    await store.startTimer('general', 1500, false)
+    await vi.advanceTimersByTimeAsync(5000)
+
+    await store.startTimer('task-002', 1200, false, { restartActiveWorkSession: true })
+    await flushPromises()
+
+    expect(store.currentSession?.taskId).toBe('task-002')
+    expect(store.currentSession?.duration).toBe(1200)
+    expect(store.currentSession?.remainingTime).toBe(1200)
+  })
 })
 
 // ============================================================================

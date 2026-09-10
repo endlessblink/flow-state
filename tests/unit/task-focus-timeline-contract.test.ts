@@ -16,7 +16,10 @@ const timelineStyles = readFileSync(resolve(root, 'src/components/kanban/TaskFoc
 describe('TASK-2068 focused task timeline', () => {
   it('keeps Kanban as the Board surface and mounts the timeline only when explicitly requested', () => {
     expect(boardSource).toContain('<KanbanSwimlane')
-    expect(boardSource).toContain("v-else-if=\"currentViewType === 'list'\"")
+    expect(boardSource).not.toContain("v-else-if=\"currentViewType === 'list'\"")
+    expect(boardSource).not.toContain("value: 'list' as const")
+    expect(boardSource).toContain("currentViewType.value === 'list'")
+    expect(boardSource).toContain("currentViewType.value = 'priority'")
     expect(boardSource).toContain('const isTimelineView = computed')
     expect(boardSource).toContain("displayMode: 'board'")
     expect(timelineViewSource).toContain('display-mode="timeline"')
@@ -27,7 +30,15 @@ describe('TASK-2068 focused task timeline', () => {
     expect(routerSource).toContain("name: 'focused-timeline'")
     expect(routerSource).toContain("component: () => import('@/views/FocusedTimelineView.vue')")
     expect(headerSource).toContain('to="/timeline"')
-    expect(headerSource).toContain("'focused-timeline': t('kanban.focus_timeline')")
+    expect(headerSource).toContain("'focused-timeline': t('views.timeline')")
+  })
+
+  it('uses recognizable icons with readable labels in the main navigation', () => {
+    expect(headerSource).toContain('class="view-tab-icon"')
+    expect(headerSource).toContain('class="view-tab-label"')
+    expect(headerSource).toContain("$t('views.timeline')")
+    expect(headerSource).toContain(':aria-label="$t(\'kanban.focus_timeline\')"')
+    expect(headerSource).toMatch(/\.title-main\s*\{[^}]*white-space:\s*nowrap/s)
   })
 
   it('centers one task with identifiable previous and next tasks', () => {

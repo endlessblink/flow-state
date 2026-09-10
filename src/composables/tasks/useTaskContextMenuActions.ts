@@ -500,7 +500,9 @@ export function useTaskContextMenuActions(
 
         if (taskId && !isBatch) {
             // BUG-1051: AWAIT for timer sync
-            await timerStore.startTimer(taskId, workDuration, false)
+            await timerStore.startTimer(taskId, workDuration, false, {
+                restartActiveWorkSession: true
+            })
         } else {
             console.warn('🎯 [CONTEXT-MENU] Timer not started:', {
                 hasTaskId: !!taskId,

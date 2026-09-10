@@ -65,4 +65,13 @@ describe('production deployment convergence gates', () => {
     expect(staticStep).toBeGreaterThan(pwaStep)
     expect(workflow.slice(pwaStep, staticStep)).toContain('./scripts/deploy/verify-build.sh dist')
   })
+
+  it('refuses to publish an Electron update when any regression gate is skipped', () => {
+    const script = readFileSync('scripts/deploy-electron-update.sh', 'utf8')
+
+    expect(script).toContain('Refusing production deploy with skipped regression gates')
+    expect(script).toContain('[ "$SKIP_DEPLOY" = false ]')
+    expect(script).toContain('[ "$DRY_RUN" = false ]')
+    expect(script).toContain('[ "$SKIP_GUARD" = true ] || [ "$SKIP_TESTS" = true ]')
+  })
 })

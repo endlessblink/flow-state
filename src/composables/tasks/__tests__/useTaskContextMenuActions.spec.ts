@@ -129,7 +129,9 @@ describe('useTaskContextMenuActions duplicateTask', () => {
 
     await startContextTimer()
 
-    expect(startTimer).toHaveBeenCalledWith('task-1', 45, false)
+    expect(startTimer).toHaveBeenCalledWith('task-1', 45, false, {
+      restartActiveWorkSession: true,
+    })
   })
 })
 

@@ -80,6 +80,29 @@ describe('device sync diagnostics', () => {
     expect(receipt.queue.failed).toBe(30)
   })
 
+  it('does not misclassify an authoritative-projection failure as authentication', async () => {
+    const receipt = await buildDeviceSyncReceipt({
+      deviceId: '0d619ffe-a177-4f6a-b890-c38f985d91cb',
+      runtime: 'electron',
+      appVersion: '1.4.525',
+      status: 'error',
+      isOnline: true,
+      operations: [{
+        id: 84678,
+        entityType: 'task',
+        operation: 'update',
+        entityId: 'missing-task',
+        payload: {},
+        status: 'failed',
+        retryCount: 0,
+        createdAt: Date.now(),
+        lastError: 'Task no longer exists in the authoritative projection; local update preserved for manual resolution',
+      }],
+    })
+
+    expect(receipt.operations[0]?.errorCode).toBe('permanent')
+  })
+
   it('keeps concurrent receipt projections bounded and redacted under stress', async () => {
     const receipts = await Promise.all(Array.from({ length: 100 }, (_, deviceIndex) => buildDeviceSyncReceipt({
       deviceId: `0d619ffe-a177-4f6a-b890-c38f985d9${String(deviceIndex).padStart(3, '0')}`,

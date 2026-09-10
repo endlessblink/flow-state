@@ -15,4 +15,10 @@ describe('device sync receipt Local API route', () => {
     expect(server).toContain("from('device_sync_receipts')")
     expect(server).toContain('handleGetDeviceSyncReceipts')
   })
+
+  it('does not report stale receipt rows as online', () => {
+    expect(server).toContain('DEVICE_SYNC_RECEIPT_ONLINE_WINDOW_MS = 30 * 60 * 1000')
+    expect(server).toContain('isOnline: row.is_online && !isStaleDeviceSyncReceipt(row.last_seen_at)')
+    expect(server).toContain('function isStaleDeviceSyncReceipt(lastSeenAt)')
+  })
 })

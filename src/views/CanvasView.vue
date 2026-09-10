@@ -770,20 +770,24 @@ function handleRotateDayGroups() {
   }, pendingWrites)
 }
 
-async function handleTidyLayout(isHydrationRetry = false) {
+const TIDY_HYDRATION_MAX_RETRIES = 20
+
+async function handleTidyLayout(hydrationRetriesRemaining = TIDY_HYDRATION_MAX_RETRIES) {
   // BUG-1899: Tidy plans from the CURRENT store — if the initial canvas load is
   // still in flight, it lays out a partial store (recorder-proven “3 rows” /
   // groups-skipped flake). Never block the click while those stores hydrate;
-  // retry once after the next persistence/realtime turn instead.
+  // keep retrying across slower persistence/realtime hydration turns instead.
   const hasUsableCanvasData = () =>
     (canvasStore._rawGroups ?? canvasStore.groups).some((group) => !!group.position)
     || taskStore.rawTasks.some((task) => !!task.canvasPosition)
 
   if (!hasUsableCanvasData()) {
-    if (!isHydrationRetry) {
-      window.setTimeout(() => { void handleTidyLayout(true) }, 250)
+    if (hydrationRetriesRemaining > 0) {
+      window.setTimeout(() => { void handleTidyLayout(hydrationRetriesRemaining - 1) }, 250)
+      console.warn('[TIDY] Canvas geometry is still hydrating; retrying without blocking the click')
+    } else {
+      console.error('[TIDY] Canvas geometry did not hydrate before the retry window expired')
     }
-    console.warn('[TIDY] Canvas geometry is still hydrating; retrying without blocking the click')
     return
   }
 

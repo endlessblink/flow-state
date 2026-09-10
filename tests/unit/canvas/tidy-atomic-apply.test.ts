@@ -30,14 +30,16 @@ describe('Canvas Tidy Vue Flow application', () => {
     expect(handleTidyLayout).toContain('}, pendingWrites)')
   })
 
-  it('does not block the Tidy click while canvas geometry hydrates', () => {
+  it('keeps retrying Tidy non-blockingly while canvas geometry hydrates', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/views/CanvasView.vue'), 'utf8')
     const handleTidyLayout = source.slice(
       source.indexOf('async function handleTidyLayout'),
       source.indexOf('function getCanvasNodeSnapshot')
     )
 
-    expect(handleTidyLayout).toContain('window.setTimeout(() => { void handleTidyLayout(true) }, 250)')
+    expect(handleTidyLayout).toContain('TIDY_HYDRATION_MAX_RETRIES')
+    expect(handleTidyLayout).toContain('window.setTimeout(() => { void handleTidyLayout(hydrationRetriesRemaining - 1) }, 250)')
+    expect(handleTidyLayout).toContain('if (hydrationRetriesRemaining > 0)')
     expect(handleTidyLayout).not.toContain('tidyWaitStart')
     expect(handleTidyLayout).not.toContain('Date.now() - tidyWaitStart')
   })

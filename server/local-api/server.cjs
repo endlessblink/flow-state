@@ -615,13 +615,22 @@ async function handleGetDeviceSyncReceipts(res) {
       runtime: row.runtime,
       appVersion: row.app_version,
       status: row.status,
-      isOnline: row.is_online,
+      isOnline: row.is_online && !isStaleDeviceSyncReceipt(row.last_seen_at),
       lastSyncAt: row.last_sync_at,
       queue: row.queue,
       operations: row.operations,
       lastSeenAt: row.last_seen_at,
     })),
   })
+}
+
+const DEVICE_SYNC_RECEIPT_ONLINE_WINDOW_MS = 30 * 60 * 1000
+
+function isStaleDeviceSyncReceipt(lastSeenAt) {
+  if (!lastSeenAt) return true
+  const lastSeenTime = new Date(lastSeenAt).getTime()
+  if (!Number.isFinite(lastSeenTime)) return true
+  return Date.now() - lastSeenTime > DEVICE_SYNC_RECEIPT_ONLINE_WINDOW_MS
 }
 
 function toSafeTask(record, detailed = false) {

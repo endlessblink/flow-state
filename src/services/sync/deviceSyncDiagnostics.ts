@@ -1,6 +1,7 @@
 import type { SyncStatus, WriteOperation } from '@/types/sync'
 import { supabase } from '@/services/auth/supabase'
 import { getWriteQueueDB } from '@/services/offline/writeQueueDB'
+import { classifyError as classifySyncError } from '@/services/offline/retryStrategy'
 import { isCapacitor, isElectron, isPWA } from '@/utils/platform'
 
 declare const __APP_VERSION__: string
@@ -22,11 +23,9 @@ interface BuildDeviceSyncReceiptInput {
 function classifyError(message?: string): string | null {
   if (!message) return null
   const normalized = message.toLowerCase()
-  if (/jwt|auth|session|sign.?in|token/.test(normalized)) return 'auth'
-  if (/network|fetch|offline|timeout|connection/.test(normalized)) return 'network'
-  if (/conflict|revision|version/.test(normalized)) return 'conflict'
   if (/row.level|rls|permission|policy|forbidden/.test(normalized)) return 'authorization'
-  return 'write'
+  const classification = classifySyncError(message)
+  return classification === 'unknown' ? 'write' : classification
 }
 
 async function sha256(value: string): Promise<string> {

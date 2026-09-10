@@ -8,7 +8,7 @@
     to="body"
   >
     <template #trigger>
-      <button class="sort-trigger" :title="t('filters.sort_label')">
+      <button class="sort-trigger" :title="t('filters.sort_label')" :aria-label="t('filters.sort_label')">
         <component :is="activeIcon" :size="13" />
         <span>{{ activeLabel }}</span>
         <ChevronDown :size="11" class="chevron-icon" :class="{ open: showMenu }" />

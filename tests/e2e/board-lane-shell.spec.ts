@@ -1,15 +1,15 @@
 import { expect, test } from '@playwright/test'
 
-const seedFocusedTimeline = async (page: import('@playwright/test').Page, locale = 'en') => {
+const seedBoardViews = async (page: import('@playwright/test').Page, locale = 'en') => {
   await page.goto('/src/main.ts', { waitUntil: 'domcontentloaded' })
   await page.evaluate(({ locale }) => {
     const now = new Date().toISOString()
     const titles = ['Shape the release', 'Build the focused timeline', 'Review the shipped experience']
     const priorities = ['medium', 'high', 'low']
     const tasks = titles.map((title, index) => ({
-      id: `task2068-synthetic-${index + 1}`,
+      id: `bug2085-synthetic-${index + 1}`,
       title,
-      description: 'Synthetic TASK-2068 acceptance data only.',
+      description: 'Synthetic BUG-2085 acceptance data only.',
       status: 'todo',
       priority: priorities[index],
       progress: 0,
@@ -33,11 +33,16 @@ const seedFocusedTimeline = async (page: import('@playwright/test').Page, locale
   }, { locale })
 }
 
-test('TASK-2068 renders the Board as a focused task sequence', async ({ page }) => {
-  await seedFocusedTimeline(page)
+test('BUG-2085 restores the Board Kanban and separates the focused timeline', async ({ page }) => {
+  await seedBoardViews(page)
   await page.goto('/#/board')
   await expect(page.locator('.board-view-wrapper')).toBeVisible({ timeout: 30_000 })
-  await page.locator('.view-type-btn').first().click()
+
+  await expect(page.locator('.kanban-column').first()).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('.task-focus-timeline')).toHaveCount(0)
+
+  await page.getByRole('link', { name: 'Focused task timeline', exact: true }).click()
+  await expect(page).toHaveURL(/#\/timeline$/)
 
   const timeline = page.locator('.task-focus-timeline')
   await expect(timeline).toBeVisible({ timeout: 30_000 })
@@ -53,17 +58,16 @@ test('TASK-2068 renders the Board as a focused task sequence', async ({ page }) 
   await expect(timeline.locator('.task-focus-card--previous')).toContainText('Shape the release')
   await expect(timeline.locator('.task-focus-card--next')).toContainText('Review the shipped experience')
 
-  await page.screenshot({ path: 'docs/previews/task-2068/board-focus-timeline-ltr.png', fullPage: true })
+  await page.screenshot({ path: 'test-results/bug-2085-board-focus-timeline-ltr.png', fullPage: true })
 })
 
-test('TASK-2068 keeps the timeline usable in RTL', async ({ page }) => {
-  await seedFocusedTimeline(page, 'he')
-  await page.goto('/#/board')
+test('BUG-2085 keeps the separate focused timeline usable in RTL', async ({ page }) => {
+  await seedBoardViews(page, 'he')
+  await page.goto('/#/timeline')
 
   const board = page.locator('.board-view-wrapper')
   await expect(board).toBeVisible({ timeout: 30_000 })
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
-  await page.locator('.view-type-btn').first().click()
   const timeline = page.locator('.task-focus-timeline')
   await expect(timeline).toBeVisible({ timeout: 30_000 })
   await timeline.getByRole('button', { name: 'המשימה הבאה', exact: true }).click()
@@ -71,5 +75,5 @@ test('TASK-2068 keeps the timeline usable in RTL', async ({ page }) => {
   await expect(timeline.locator('.task-focus-card--previous')).toBeVisible()
   await expect(timeline.locator('.task-focus-card--next')).toBeVisible()
 
-  await page.screenshot({ path: 'docs/previews/task-2068/board-focus-timeline-rtl.png', fullPage: true })
+  await page.screenshot({ path: 'test-results/bug-2085-board-focus-timeline-rtl.png', fullPage: true })
 })

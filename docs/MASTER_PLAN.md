@@ -1,5 +1,13 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2085: Restore Board Kanban and separate the focused timeline (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-10)
+
+**User repro**: The Board regressed from its Kanban lanes into the focused task timeline, leaving the Kanban presentation unavailable as the Board's primary surface.
+
+**Acceptance**: Restore the Board's priority, due-date, category, and list modes with Kanban lanes for every visual Board mode. Keep the focused task timeline's existing navigation, ordering, timer, create, edit, delete, and context-menu behavior, but expose it as its own top-level main view with an independent route and translated navigation label. Cover the actual route/render split with a regression test, verify both surfaces in the authenticated UI, and deliver and verify the Electron update.
+
 ### BUG-2084: Keep focused timeline ordering shared and start the normal Pomodoro cycle (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-08)

@@ -40,6 +40,12 @@ const router = createRouter({
       meta: { requiresAuth: false } // Temporarily disabled for development
     },
     {
+      path: '/timeline',
+      name: 'focused-timeline',
+      component: () => import('@/views/FocusedTimelineView.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
       path: '/calendar',
       name: 'calendar',
       component: () => import('@/views/CalendarView.vue'),

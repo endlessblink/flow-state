@@ -232,6 +232,9 @@
         <router-link to="/board" class="view-tab" active-class="active">
           {{ $t('views.board') }}
         </router-link>
+        <router-link to="/timeline" class="view-tab" active-class="active">
+          {{ $t('kanban.focus_timeline') }}
+        </router-link>
         <router-link to="/catalog" class="view-tab" active-class="active">
           {{ $t('views.catalog') }}
         </router-link>
@@ -288,6 +291,7 @@ const routeNameToTitle = computed(() => ({
   'canvas': t('views.canvas'),
   'calendar': t('views.calendar'),
   'board': t('views.board'),
+  'focused-timeline': t('kanban.focus_timeline'),
   'catalog': t('views.catalog'),
   'all-tasks': t('views.all_tasks'),
   'quick-sort': t('views.quick_sort'),

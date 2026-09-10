@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -6,15 +6,28 @@ const root = resolve(import.meta.dirname, '../..')
 const boardSource = readFileSync(resolve(root, 'src/views/BoardView.vue'), 'utf8')
 const sidebarSource = readFileSync(resolve(root, 'src/layouts/AppSidebar.vue'), 'utf8')
 const routerSource = readFileSync(resolve(root, 'src/router/index.ts'), 'utf8')
+const headerSource = readFileSync(resolve(root, 'src/layouts/AppHeader.vue'), 'utf8')
+const timelineViewPath = resolve(root, 'src/views/FocusedTimelineView.vue')
+const timelineViewSource = existsSync(timelineViewPath) ? readFileSync(timelineViewPath, 'utf8') : ''
 const laneStoreSource = readFileSync(resolve(root, 'src/stores/lanes.ts'), 'utf8')
 const timelineSource = readFileSync(resolve(root, 'src/components/kanban/TaskFocusTimeline.vue'), 'utf8')
 const timelineStyles = readFileSync(resolve(root, 'src/components/kanban/TaskFocusTimeline.css'), 'utf8')
 
 describe('TASK-2068 focused task timeline', () => {
-  it('uses the focused timeline for every visual Board mode while retaining List mode', () => {
-    expect(boardSource).toContain("v-if=\"currentViewType === 'list'\"")
-    expect(boardSource).toContain('<TaskFocusTimeline')
-    expect(boardSource).not.toContain('<KanbanSwimlane')
+  it('keeps Kanban as the Board surface and mounts the timeline only when explicitly requested', () => {
+    expect(boardSource).toContain('<KanbanSwimlane')
+    expect(boardSource).toContain("v-else-if=\"currentViewType === 'list'\"")
+    expect(boardSource).toContain('const isTimelineView = computed')
+    expect(boardSource).toContain("displayMode: 'board'")
+    expect(timelineViewSource).toContain('display-mode="timeline"')
+  })
+
+  it('exposes the focused timeline as its own main route and navigation tab', () => {
+    expect(routerSource).toContain("path: '/timeline'")
+    expect(routerSource).toContain("name: 'focused-timeline'")
+    expect(routerSource).toContain("component: () => import('@/views/FocusedTimelineView.vue')")
+    expect(headerSource).toContain('to="/timeline"')
+    expect(headerSource).toContain("'focused-timeline': t('kanban.focus_timeline')")
   })
 
   it('centers one task with identifiable previous and next tasks', () => {

@@ -1,8 +1,8 @@
 # FlowState MASTER_PLAN.md
 
-### BUG-2085: Restore Board Kanban and separate the focused timeline (🔄 IN PROGRESS)
+### ~~BUG-2085~~: Restore Board Kanban and separate the focused timeline (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-10)
+**Priority**: P1 | **Status**: ✅ DONE (2026-09-10)
 
 **User repro**: The Board regressed from its Kanban lanes into the focused task timeline, leaving the Kanban presentation unavailable as the Board's primary surface.
 

@@ -1,14 +1,14 @@
 # FlowState MASTER_PLAN.md
 
-### TASK-2087: Remove the duplicate Board List mode and clarify main navigation (🔄 IN PROGRESS)
+### ~~TASK-2087: Remove the duplicate Board List mode and clarify main navigation~~ (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-10)
+**Priority**: P1 | **Status**: ✅ DONE (2026-09-10)
 
 **User request**: Keep Board focused on Kanban because Catalog already owns the full list workflow, and make the crowded main navigation easier to scan with recognizable icons.
 
 **Acceptance**: Remove List from the Board mode switcher and migrate a persisted legacy List selection to the default Priority Kanban. Preserve Priority, Due Date, and Category Kanban modes. Use consistent icon-only main navigation controls with accessible names and hover titles, verify LTR and RTL rendering, and deliver and verify the Electron update. This follow-up supersedes BUG-2085's temporary restoration of Board List mode.
 
-**Evidence**: The Board/List removal and independent Timeline route shipped in 1.4.525. The requested icon-only follow-up has focused contract coverage and is being delivered with 1.4.527; installed LTR/RTL visual read-back remains pending.
+**Evidence**: The Board/List removal and independent Timeline route shipped in 1.4.525. FlowState 1.4.527 adds consistent icon-only main navigation with accessible names and hover titles; focused contract coverage, type-check, lint, the full unit suite, Electron packaging, public updater read-back, installed-version read-back, and authenticated desktop visual verification pass. The installed Canvas shows the compact icon row without duplicate Board/List text navigation.
 
 **Failure-class matrix**:
 
@@ -88,11 +88,11 @@
 
 **Acceptance**: The clean runner owns a dedicated configurable port, the browser configuration uses it for both server startup and navigation, and the offline/reconnect browser suite completes while port 5547 remains occupied. Preserve the default port for ordinary local Playwright use. This covers E2E runtime isolation only, not product sync behavior or Electron runtime delivery.
 
-### BUG-2076: Canvas Tidy must visibly re-home loose day-column tasks (🔄 IN PROGRESS)
+### ~~BUG-2076: Canvas Tidy must visibly re-home loose day-column tasks~~ (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-03)
+**Priority**: P1 | **Status**: ✅ DONE (2026-09-10)
 
-**2026-09-10 1.4.527 regression follow-up — in_progress**: The installed 1.4.526 repro showed all 21 Today tasks present in the store and renderer and all 21 included in Tidy's 35-task plan, with the planned Today frame sized to contain them. This rules out eligibility and task-ID loss: a later renderer projection was overriding the atomic layout result. Tidy now reasserts the complete canonical group/task plan after projection reconciliation. A permanently failed orphaned queued edit remains preserved but is shown as amber local attention instead of a red active-sync failure; direct or retryable write failures remain red. Settings persistence reuses the hydrated authenticated user instead of repeatedly calling the auth endpoint. Focused regressions pass (39), the full unit suite, type-check, lint, and locked Electron package pass. Publication and installed visual read-back are pending; no queued edit was discarded.
+**2026-09-10 1.4.527 regression follow-up — complete**: The installed 1.4.526 repro showed all 21 Today tasks present in the store and renderer and all 21 included in Tidy's 35-task plan, with the planned Today frame sized to contain them. This ruled out eligibility and task-ID loss: a later renderer projection was overriding the atomic layout result. Tidy now reasserts the complete canonical group/task plan after projection reconciliation. A permanently failed orphaned queued edit remains preserved but is shown as amber local attention instead of a red active-sync failure; direct or retryable write failures remain red. Settings persistence reuses the hydrated authenticated user instead of repeatedly calling the auth endpoint. Focused regressions pass (39), along with the full unit suite, type-check, lint, locked Electron packaging, public 1.4.527 updater and artifact read-back, installed-version read-back, and authenticated desktop verification. After one Tidy click and a 15-second settle, every visible task in the affected day group remains compactly stacked inside its resized frame with no revert. No queued edit was discarded. This closes the reported projection-overwrite failure; hidden or filtered task layout and explicit review/discard of the preserved orphaned edit remain outside this fix.
 
 **2026-09-10 sync/Tidy follow-up — manual_action_required**: Live Electron 1.4.525 is authenticated and its local API is healthy, but its own device receipt contains one failed queued task update reported as `auth`; read-back confirmed the update targets a task that no longer exists remotely. Device receipts now reuse the central retry classifier, so authoritative-projection failures report as `permanent` instead of sign-in/auth, stale receipt rows age offline after 30 minutes, and Tidy retries the user's click for a bounded five-second hydration window instead of dropping it after one retry. Focused regressions pass (73), all unit tests pass (4,859 with six skipped), consistency and Electron guards pass, type-check and lint pass, the 1.4.526 Electron package validates, and the public updater manifest advertises 1.4.526 with both artifacts. Installed restart/read-back and the user's exact queued edit disposition remain unverified; no live queue entry was discarded. The mandatory restore E2E gate was blocked before application behavior by an invalid HS256 test-fixture JWT.
 
@@ -126,21 +126,23 @@
 
 | Class | Checked? | Evidence | Covered by this fix? |
 | --- | --- | --- | --- |
-| User repro shape | Partial | Screenshot confirms three overflowing cards; browser recreates short frame with four cards | Short-frame repair; exact live membership unverified |
-| Data shape / persisted row shape | Yes | Regression keeps already-correct saved geometry unchanged | No data migration |
-| Renderer store/state | Yes | Original code fails DOM containment; fixed code passes | Yes |
+| User repro shape | Yes | Installed 1.4.526 reproduced the affected Today group; installed 1.4.527 contains every visible card after one Tidy and a 15-second settle | Yes |
+| Data shape / persisted row shape | Yes | All 21 rendered Today tasks were present and all were included in the layout plan; no due dates or queued payloads changed | No data migration; existing task truth preserved |
+| Renderer store/state | Yes | Post-projection reconciliation reapplies the complete canonical layout; focused source regression passes | Yes |
 | Electron main/preload bridge | N/A | Layout change stays in renderer | No |
-| Localhost sidecar endpoint | Partial | Live provenance reports 1.4.515 | No sidecar change |
+| Localhost sidecar endpoint | Yes | Installed 1.4.527 started its authenticated local API on port 5577 | No sidecar change |
 | KDE polling/control path | N/A | Canvas toolbar layout | No |
-| Supabase persistence/realtime | Partial | Authenticated local browser reload passes; unit proves no redundant writes | Existing persistence preserved |
-| Updater/runtime version | Yes / installed pending | Public manifest advertises 1.4.516; AppImage HTTP 200 with matching size | Published; affected installed canvas pending |
-| Stale live process/cache state | Pending | User's affected desktop cannot be inspected through attached browser | Not yet verified |
+| Supabase persistence/realtime | Yes | Authenticated task/store membership and planned moves matched; settings sync uses the hydrated user | Existing persistence preserved |
+| Updater/runtime version | Yes | Public manifest and artifacts advertise 1.4.527; installed asar reports 1.4.527 | Yes |
+| Stale live process/cache state | Yes | Previous 1.4.526 process was stopped and the installed 1.4.527 process was inspected after Tidy settled | Yes for this reported repro |
 
-**Exact failure mode fixed**: Explicit Tidy failed to repair stale rendered bounds when corresponding saved geometry was already canonical.
+**Exact failure mode fixed**: Vue Flow projection reconciliation could overwrite Tidy's already-complete atomic group/task layout, leaving planned tasks rendered below the resized day-group frame.
 
-**Explicitly not covered**: Root cause that originally shortened the live frame; hidden/excluded task membership; all other Canvas failures. BUG-2076 remains in progress until the user's affected installed canvas is checked.
+**Explicitly not covered**: Hidden or filtered task layout, unrelated Canvas failures, and the user's explicit decision to review or discard the preserved orphaned queued edit.
 
-**Regression added for reported repro**: `tidy repairs a short rendered frame when saved group bounds are already correct` checks actual card rectangles, unchanged saved geometry, and reload.
+**Regression added for reported repro**: The Tidy atomic-apply contract now requires a final canonical group/task reconciliation after forced projection, alongside the existing DOM containment and reload coverage.
+
+**Live boundary proof**: Public updater metadata and both artifact URLs read back as 1.4.527, the installed running package reports 1.4.527, and authenticated desktop screenshots before and after one Tidy show the affected visible day group contained and stable after 15 seconds.
 
 **1.4.516 delivery evidence — manual_action_required**: Guarded Electron build, package validation, checksum-checked publishing, and deployment completed. Local release receipt binds the artifacts to clean source commit `4204a9d95a7916377e3967d4ec4cd469f59b83da`; that commit is pushed to main. Public updater read-back advertises 1.4.516, and the AppImage returns HTTP 200 with the expected 182,869,422-byte length. All six pre-existing generated-file changes were restored byte-for-byte. Required manual gate: install 1.4.516, open the affected Canvas, click Tidy, and verify the group encloses the overflowing cards, including after reopening Canvas. The exact live membership and the original frame-shrink trigger remain unverified; BUG-2076 stays IN PROGRESS.
 

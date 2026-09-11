@@ -55,7 +55,7 @@
           @delete-selected="handleDeleteSelected"
           @add-task-to-group="handleAddTaskToGroup"
           @reorder="sortBy = 'manual'"
-          @update:sort-by="sortBy = $event"
+          @update:sort-by="handleSortByChange"
           @update:sort-direction="sortDirection = $event"
         />
       </div>
@@ -121,6 +121,7 @@ import { isDoneForNowAlreadyCompletedError } from '@/services/tasks/doneForNow'
 import { useLaneStore } from '@/stores/lanes'
 import { useTimerStore } from '@/stores/timer'
 import { useSettingsStore } from '@/stores/settings'
+import { useTaskSortStore } from '@/stores/taskSort'
 import { useMobileDetection } from '@/composables/useMobileDetection'
 import { CalendarDays } from 'lucide-vue-next'
 import ViewControls from '@/components/layout/ViewControls.vue'
@@ -140,6 +141,7 @@ import { runTaskMutationWithSettling } from '@/composables/tasks/settleTaskMutat
 import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 import { shouldHideDoneTasksForStatus } from '@/stores/tasks/filterInvariants'
 import { getCanonicalTodayTasks } from '@/utils/todayTaskProjection'
+import { sortTasksByMainAndSecondary, type TaskSortKey } from '@/utils/taskSort'
 import type { Task, GroupByType, TaskGroup, TaskPriority } from '@/types/tasks'
 
 type CreateTaskDefaults = {
@@ -159,6 +161,7 @@ const taskStore = useTaskStore()
 const laneStore = useLaneStore()
 const timerStore = useTimerStore()
 const settingsStore = useSettingsStore()
+const taskSortStore = useTaskSortStore()
 const { bulkDeleteTasksWithUndo, createTaskWithUndo, updateTaskWithUndo } = useUnifiedUndoRedo()
 const { recurrenceAwareDelete } = useRecurrenceAwareDelete()
 const { showToast } = useToast()
@@ -186,8 +189,10 @@ const reportCompletionFailure = (error: unknown) => {
 const { hideDoneTasks } = storeToRefs(taskStore)
 
 // View State (TASK-1215: Persist across restarts via Tauri store + localStorage)
-const sortBy = usePersistentRef<string>('flowstate:all-tasks-sort-by', 'dueDate')
-const sortDirection = usePersistentRef<'asc' | 'desc'>('flowstate:all-tasks-sort-direction', 'asc')
+const { mainSortKey: sortBy, mainSortDirection: sortDirection } = storeToRefs(taskSortStore)
+const handleSortByChange = (value: string) => {
+  sortBy.value = value as TaskSortKey
+}
 const groupBy = usePersistentRef<GroupByType>('flowstate:all-tasks-group-by', 'project')
 const showAllWeekDays = usePersistentRef<boolean>('flowstate-show-all-week-days', false)
 // Density control for task list rows
@@ -246,67 +251,10 @@ const filteredTasks = computed(() => {
 })
 
 const sortedTasks = computed(() => {
-  const tasks = [...filteredTasks.value]
-  const dir = sortDirection.value === 'asc' ? 1 : -1
-
-  switch (sortBy.value) {
-    case 'dueDate':
-      return tasks.sort((a, b) => {
-        if (!a.dueDate && !b.dueDate) return 0
-        if (!a.dueDate) return 1
-        if (!b.dueDate) return -1
-        return dir * (new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-      })
-    case 'priority': {
-      const priorityOrder: Record<string, number> = { immediate: 0, high: 1, medium: 2, low: 3, relaxed: 4 }
-      return tasks.sort((a, b) => {
-        const aPriority = a.priority ? (priorityOrder[a.priority] ?? 5) : 5
-        const bPriority = b.priority ? (priorityOrder[b.priority] ?? 5) : 5
-        return dir * (aPriority - bPriority)
-      })
-    }
-    case 'title':
-      return tasks.sort((a, b) => dir * (a.title || '').localeCompare(b.title || ''))
-    case 'created':
-      return tasks.sort((a, b) => {
-        return dir * (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      })
-    case 'manual':
-      return tasks.sort((a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER))
-    case 'status': {
-      const statusOrder: Record<string, number> = { in_progress: 0, planned: 1, backlog: 2, on_hold: 3, done: 4 }
-      return tasks.sort((a, b) => {
-        const aStatus = statusOrder[a.status] ?? 5
-        const bStatus = statusOrder[b.status] ?? 5
-        return dir * (aStatus - bStatus)
-      })
-    }
-    case 'progress': {
-      return tasks.sort((a, b) => {
-        const aSubtasks = a.subtasks as Array<{ done?: boolean }> | undefined
-        const bSubtasks = b.subtasks as Array<{ done?: boolean }> | undefined
-        const aTotal = aSubtasks?.length ?? 0
-        const bTotal = bSubtasks?.length ?? 0
-        const aProgress = aTotal > 0 ? (aSubtasks!.filter(s => s.done).length / aTotal) : -1
-        const bProgress = bTotal > 0 ? (bSubtasks!.filter(s => s.done).length / bTotal) : -1
-        if (aProgress === -1 && bProgress === -1) return 0
-        if (aProgress === -1) return 1
-        if (bProgress === -1) return -1
-        return dir * (aProgress - bProgress)
-      })
-    }
-    case 'estimatedTime':
-      return tasks.sort((a, b) => {
-        const aTime = (a as any).estimatedTime ?? null
-        const bTime = (b as any).estimatedTime ?? null
-        if (aTime === null && bTime === null) return 0
-        if (aTime === null) return 1
-        if (bTime === null) return -1
-        return dir * (aTime - bTime)
-      })
-    default:
-      return tasks
-  }
+  return sortTasksByMainAndSecondary(filteredTasks.value, {
+    key: sortBy.value,
+    direction: sortDirection.value,
+  })
 })
 
 // TASK-1334: Group tasks by selected criteria

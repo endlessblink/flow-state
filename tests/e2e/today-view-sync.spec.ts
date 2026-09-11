@@ -124,7 +124,6 @@ test.describe('Today view sync visual gate', () => {
 
     await page.goto('/#/calendar')
     await page.waitForSelector('.calendar-inbox-panel', { timeout: 30_000 })
-    await page.locator('.today-quick-filter').click()
     await page.waitForTimeout(500)
     const calendarIds = await idsInDocumentOrder(page, '.calendar-inbox-panel [data-task-id]')
     evidence.calendar = calendarIds

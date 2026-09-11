@@ -1935,9 +1935,19 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
     await expect(clientBRecurringEvent).toBeVisible();
     await clientA.context().setOffline(true);
     await recurringEvent.click({ button: "right" });
-    await clientA.getByText("More", { exact: true }).click();
-    await clientA.getByText("Done for now", { exact: true }).click();
-    await clientA.getByText("Next occurrence", { exact: true }).click();
+    await clientA
+      .locator(".context-menu > .menu-item.has-submenu", { hasText: "More" })
+      .dispatchEvent("mouseenter");
+    await clientA
+      .locator(".submenu:visible .menu-item.has-submenu", {
+        hasText: "Done for now",
+      })
+      .dispatchEvent("mouseenter");
+    await clientA
+      .locator(".submenu:visible button.menu-item", {
+        hasText: "Next occurrence",
+      })
+      .click();
 
     await expect(
       clientA.getByText("Failed to complete task", { exact: true }),

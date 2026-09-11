@@ -4,6 +4,7 @@ import { ensureAuthUser, TEST_USER } from '../fixtures/auth'
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321'
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+const AUTH_ADMIN_KEY = process.env.SUPABASE_AUTH_ADMIN_KEY || SERVICE_ROLE_KEY
 const TASK_ID = 'bacc0000-0000-4000-8000-000000000001'
 const TASK_TITLE = 'Absolute Recovery Round Trip'
 const DELETED_TASK_ID = 'bacc0000-0000-4000-8000-000000000002'
@@ -27,7 +28,10 @@ test.describe.serial('absolute task backup and recovery', () => {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
-    const userId = (await ensureAuthUser(admin, { ...TEST_USER, email_confirm: true })).id
+    const authAdmin = createClient(SUPABASE_URL, AUTH_ADMIN_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const userId = (await ensureAuthUser(authAdmin, { ...TEST_USER, email_confirm: true })).id
 
     await admin.from('tasks').delete().in('id', [TASK_ID, DELETED_TASK_ID])
     await admin.from('tombstones').delete().in('entity_id', [TASK_ID, DELETED_TASK_ID, PERMANENT_DELETED_ID])
@@ -272,7 +276,10 @@ test.describe.serial('absolute task backup and recovery', () => {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
-    const userId = (await ensureAuthUser(admin, { ...TEST_USER, email_confirm: true })).id
+    const authAdmin = createClient(SUPABASE_URL, AUTH_ADMIN_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const userId = (await ensureAuthUser(authAdmin, { ...TEST_USER, email_confirm: true })).id
 
     await admin.from('tasks').delete().in('id', [MIXED_PERSONAL_TASK_ID, MIXED_SHARED_TASK_ID])
     await admin.from('tombstones').delete().in('entity_id', [
@@ -467,7 +474,10 @@ test.describe.serial('absolute task backup and recovery', () => {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
-    const userId = (await ensureAuthUser(admin, { ...TEST_USER, email_confirm: true })).id
+    const authAdmin = createClient(SUPABASE_URL, AUTH_ADMIN_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const userId = (await ensureAuthUser(authAdmin, { ...TEST_USER, email_confirm: true })).id
     const offlineTitle = `${TASK_TITLE} Offline Edit`
 
     await admin.from('tasks').delete().eq('id', TASK_ID)

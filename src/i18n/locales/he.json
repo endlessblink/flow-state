@@ -220,6 +220,8 @@
   },
   "filters": {
     "sort_label": "מיון:",
+    "sort_then_by": "ואז לפי",
+    "sort_main_order": "סדר ראשי בלבד",
     "sort_newest": "חדש ביותר",
     "sort_priority": "עדיפות",
     "sort_due": "תאריך",

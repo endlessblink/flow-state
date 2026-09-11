@@ -1,13 +1,17 @@
 
 import { ref, computed, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { usePersistentRef } from '@/composables/usePersistentRef'
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
+import { useTaskSortStore } from '@/stores/taskSort'
 import { useSmartViews } from '@/composables/useSmartViews'
 import { useCanvasGroupMembership } from '@/composables/canvas/useCanvasGroupMembership'
 import { useDirection } from '@/i18n/useDirection'
 import { getCanonicalTodayTaskIds } from '@/utils/todayTaskProjection'
+import { compareTaskSortField, sortTasksByMainAndSecondary, type TaskSortSpec } from '@/utils/taskSort'
+import { compareTasksBySharedOrder } from '@/utils/taskOrdering'
 // TASK-144: Use centralized duration categories
 import { type DurationCategory, matchesDurationCategory } from '@/utils/durationCategories'
 
@@ -17,7 +21,7 @@ export interface InboxContextProps {
 }
 
 export type TimeFilterType = 'all' | 'today' | 'next3days' | 'week' | 'month'
-export type SortByType = 'newest' | 'priority' | 'dueDate' | 'canvasOrder'
+export type SortByType = 'none' | 'newest' | 'priority' | 'dueDate' | 'canvasOrder'
 export type SortDirection = 'asc' | 'desc'
 
 function uniqueTasksById(tasks: Task[]): Task[] {
@@ -32,7 +36,9 @@ function uniqueTasksById(tasks: Task[]): Task[] {
 export function useUnifiedInboxState(props: InboxContextProps) {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
-    const { isTodayTask, isNext3DaysTask, isWeekTask, isThisMonthTask } = useSmartViews()
+    const taskSortStore = useTaskSortStore()
+    const { mainSortKey, mainSortDirection } = storeToRefs(taskSortStore)
+    const { isNext3DaysTask, isWeekTask, isThisMonthTask } = useSmartViews()
     const { groupsWithCounts, filterTasksByGroup } = useCanvasGroupMembership()
     const { isRTL } = useDirection()
 
@@ -44,7 +50,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     // BUG-1468: All filter keys are context-scoped so canvas/calendar inboxes are independent
     const ctx = props.context
     // BUG-1051: Persist filter (TASK-1215: upgraded to Tauri-aware persistence)
-    const activeTimeFilter = usePersistentRef<TimeFilterType>(`flowstate:inbox-time-filter-${ctx}`, 'all', `${ctx}-inbox-time-filter`)
+    const activeTimeFilter = usePersistentRef<TimeFilterType>(`flowstate:inbox-time-filter-v2-${ctx}`, 'today')
 
     // --- Advanced Filter State (TASK-1215: Persist across restarts via Tauri store + localStorage) ---
     const showAdvancedFilters = usePersistentRef<boolean>(`flowstate:inbox-advanced-filters-${ctx}`, false)
@@ -70,9 +76,9 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     })
 
     // TASK-1073: Sort state (TASK-1215: upgraded to Tauri-aware persistence)
-    const sortBy = usePersistentRef<SortByType>(`flowstate:inbox-sort-by-${ctx}`, 'newest', `${ctx}-inbox-sort-by`)
+    const sortBy = usePersistentRef<SortByType>(`flowstate:inbox-secondary-sort-${ctx}`, 'none')
     // TASK-1412: Sort direction state
-    const sortDirection = usePersistentRef<SortDirection>(`flowstate:inbox-sort-direction-${ctx}`, 'asc', `${ctx}-inbox-sort-direction`)
+    const sortDirection = usePersistentRef<SortDirection>(`flowstate:inbox-secondary-direction-${ctx}`, 'asc')
 
     // TASK-1075: Search query
     const searchQuery = ref('')
@@ -115,31 +121,15 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         return options
     })
 
-    // Today membership is shared with Board and Canvas; calendar events must not
-    // remove a task from this projection before the Today filter is applied.
+    // Today membership is shared with Board and Canvas. Inbox eligibility is
+    // applied separately, so a task already placed on Calendar stays excluded.
     const canonicalTodayTaskIds = computed(() => getCanonicalTodayTaskIds(
         taskStore.calendarFilteredTasks,
         !showDoneOnly.value,
     ))
 
-    const matchesCalendarInboxTodayFilter = (task: Task): boolean => {
-        if (props.context === 'calendar') return canonicalTodayTaskIds.value.has(task.id)
-        return isTodayTask(task)
-    }
-
-    const shouldShowDueTodayTaskInCalendarInbox = (task: Task): boolean => {
-        if (props.context !== 'calendar') return false
-        return canonicalTodayTaskIds.value.has(task.id)
-    }
-
-    const todayCalendarTasks = computed(() => {
-        if (props.context !== 'calendar') return []
-        return uniqueTasksById(taskStore.calendarFilteredTasks.filter(task => {
-            if (showDoneOnly.value ? task.status !== 'done' : task.status === 'done') return false
-            if (task._soft_deleted || task.isPinned) return false
-            return canonicalTodayTaskIds.value.has(task.id)
-        }))
-    })
+    const matchesCalendarInboxTodayFilter = (task: Task): boolean =>
+        canonicalTodayTaskIds.value.has(task.id)
 
     // --- Filter Logic ---
 
@@ -181,8 +171,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             const isOnCanvas = !!task.canvasPosition
             const isAlreadyOnCalendar = task.instances?.some(inst => inst.scheduledDate) ?? false
             const shouldBypassInboxGate = props.context === 'calendar' && (
-                shouldShowDueTodayTaskInCalendarInbox(task) ||
-                (isOnCanvas && !isAlreadyOnCalendar)
+                isOnCanvas && !isAlreadyOnCalendar
             )
             if (!task.isInInbox && !shouldBypassInboxGate) {
                 return false
@@ -229,9 +218,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     })
 
     const todayCount = computed(() => {
-        return props.context === 'calendar'
-            ? todayCalendarTasks.value.length
-            : baseInboxTasks.value.filter(task => matchesCalendarInboxTodayFilter(task)).length
+        return baseInboxTasks.value.filter(task => matchesCalendarInboxTodayFilter(task)).length
     })
 
     const next3DaysCount = computed(() => {
@@ -328,10 +315,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             ? baseInboxTasks.value.filter(t => recentIds.has(t.id))
             : []
 
-        const requestedTimeFilter = activeTimeFilter.value
-        let tasks = props.context === 'calendar' && requestedTimeFilter === 'today'
-            ? todayCalendarTasks.value
-            : baseInboxTasks.value
+        let tasks = baseInboxTasks.value
 
         // 1. Canvas Group Filter (Multi-select)
         if (selectedCanvasGroups.value.size > 0) {
@@ -424,7 +408,9 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             }
         }
 
-        // TASK-1073 / TASK-1412: Apply sorting with direction support
+        const unsortedTasks = [...tasks]
+
+        // TASK-1073 / TASK-1412: Build the optional inbox-specific secondary order.
         const priorityOrder = { immediate: 0, high: 1, medium: 2, low: 3, relaxed: 4, undefined: 5 }
         const dir = sortDirection.value === 'desc' ? -1 : 1
 
@@ -502,7 +488,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             for (const t of tasks) dfs(t)
 
             tasks = sortDirection.value === 'desc' ? result.reverse() : result
-        } else {
+        } else if (sortBy.value !== 'none') {
             tasks = [...tasks].sort((a, b) => {
                 switch (sortBy.value) {
                     case 'priority': {
@@ -534,6 +520,28 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             })
         }
 
+        const mainSpec: TaskSortSpec = {
+            key: mainSortKey.value,
+            direction: mainSortDirection.value,
+        }
+
+        if (sortBy.value !== 'canvasOrder') {
+            const secondarySpec: TaskSortSpec | null = sortBy.value === 'none'
+                ? null
+                : {
+                    key: sortBy.value === 'newest' ? 'created' : sortBy.value,
+                    direction: sortDirection.value,
+                }
+            tasks = sortTasksByMainAndSecondary(unsortedTasks, mainSpec, secondarySpec)
+        } else {
+            const secondaryRank = new Map(tasks.map((task, index) => [task.id, index]))
+            tasks = unsortedTasks.sort((first, second) =>
+                compareTaskSortField(first, second, mainSpec) ||
+                ((secondaryRank.get(first.id) ?? 0) - (secondaryRank.get(second.id) ?? 0)) ||
+                compareTasksBySharedOrder(first, second)
+            )
+        }
+
         // TASK-1486: Exclude pinned tasks from regular inbox (they show in PinnedTasksSection)
         tasks = tasks.filter(t => !t.isPinned)
 
@@ -546,7 +554,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         selectedPriorities.value = new Set()
         selectedProjects.value = new Set()
         selectedDurations.value = new Set()
-        activeTimeFilter.value = 'all'
+        activeTimeFilter.value = 'today'
         selectedCanvasGroups.value = new Set()
         searchQuery.value = '' // TASK-1075
     }

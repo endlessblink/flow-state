@@ -2,6 +2,7 @@
   <div
     class="task-card"
     :class="[{ selected: isSelected, 'is-done': isDone, compact }]"
+    :data-task-id="task.id"
     :data-priority="task.priority || 'none'"
     :data-status="task.status"
     draggable="true"

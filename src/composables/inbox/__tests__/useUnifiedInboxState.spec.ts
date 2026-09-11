@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { nextTick, ref } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
 import type { Task } from '@/types/tasks'
+import { useTaskSortStore } from '@/stores/taskSort'
 
 const taskStoreMock = {
   filteredTasks: [] as Task[],
@@ -26,7 +27,11 @@ vi.mock('@/stores/canvas', () => ({
 
 vi.mock('@/composables/useSmartViews', () => ({
   useSmartViews: () => ({
-    isTodayTask: () => false,
+    isTodayTask: (task: Task) => {
+      const today = new Date()
+      const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+      return String(task.dueDate ?? '').slice(0, 10) === dateKey
+    },
     isNext3DaysTask: () => false,
     isWeekTask: () => false,
     isThisMonthTask: () => false,
@@ -85,6 +90,8 @@ describe('useUnifiedInboxState', () => {
 
     const { useUnifiedInboxState } = await import('@/composables/inbox/useUnifiedInboxState')
     const state = useUnifiedInboxState({ context: 'standalone' })
+    state.activeTimeFilter.value = 'all'
+    await nextTick()
 
     expect(state.baseInboxTasks.value).toHaveLength(1)
     expect(state.inboxTasks.value).toHaveLength(1)
@@ -127,7 +134,7 @@ describe('useUnifiedInboxState', () => {
     expect(state.inboxTasks.value).toHaveLength(0)
   })
 
-  it('keeps a due-today task visible when its calendar event is scheduled elsewhere', async () => {
+  it('keeps a scheduled due-today task out of the calendar Today inbox', async () => {
     const today = new Date()
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
     const tomorrow = new Date(today)
@@ -160,10 +167,10 @@ describe('useUnifiedInboxState', () => {
     state.activeTimeFilter.value = 'today'
     await nextTick()
 
-    expect(state.inboxTasks.value).toHaveLength(1)
+    expect(state.inboxTasks.value).toHaveLength(0)
   })
 
-  it('keeps a Canvas task in the calendar Today projection even when not marked inbox', async () => {
+  it('keeps a task already represented on Calendar out of its Today inbox', async () => {
     const today = new Date()
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
     const otherDay = new Date(today)
@@ -198,6 +205,31 @@ describe('useUnifiedInboxState', () => {
     await nextTick()
 
     expect(state.baseInboxTasks.value).toHaveLength(0)
-    expect(state.inboxTasks.value).toHaveLength(1)
+    expect(state.inboxTasks.value).toHaveLength(0)
+  })
+
+  it('defaults both inbox contexts to Today and follows the global priority order', async () => {
+    const today = new Date()
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    const tasks = [
+      { id: 'medium', title: 'Medium', status: 'todo', priority: 'medium', dueDate: todayStr, isInInbox: true, createdAt: today, updatedAt: today, order: 0 },
+      { id: 'high', title: 'High', status: 'todo', priority: 'high', dueDate: todayStr, isInInbox: true, createdAt: today, updatedAt: today, order: 1 },
+      { id: 'placed', title: 'Placed', status: 'todo', priority: 'immediate', dueDate: todayStr, isInInbox: false, canvasPosition: { x: 1, y: 1 }, createdAt: today, updatedAt: today, order: 2 },
+    ] as Task[]
+    taskStoreMock.filteredTasks = tasks
+    taskStoreMock.calendarFilteredTasks = tasks
+    taskStoreMock._rawTasks = tasks
+
+    const globalSort = useTaskSortStore()
+    globalSort.mainSortKey = 'priority'
+    globalSort.mainSortDirection = 'asc'
+
+    const { useUnifiedInboxState } = await import('@/composables/inbox/useUnifiedInboxState')
+    const canvas = useUnifiedInboxState({ context: 'canvas' })
+    const standalone = useUnifiedInboxState({ context: 'standalone' })
+
+    expect(canvas.activeTimeFilter.value).toBe('today')
+    expect(standalone.activeTimeFilter.value).toBe('today')
+    expect(canvas.inboxTasks.value.map(task => task.id)).toEqual(['high', 'medium'])
   })
 })

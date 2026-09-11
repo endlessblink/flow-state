@@ -8,7 +8,7 @@
     to="body"
   >
     <template #trigger>
-      <button class="sort-trigger" :title="t('filters.sort_label')">
+      <button class="sort-trigger" :title="t('filters.sort_then_by')">
         <component :is="activeIcon" :size="13" />
         <span>{{ activeLabel }}</span>
         <ChevronDown :size="11" class="chevron-icon" :class="{ open: showMenu }" />
@@ -28,9 +28,9 @@
         <Check v-if="sortBy === option.value" :size="13" class="sort-check" />
       </button>
 
-      <div class="sort-divider" />
+      <div v-if="sortBy !== 'none'" class="sort-divider" />
 
-      <button class="sort-option direction-option" @click="toggleDirection">
+      <button v-if="sortBy !== 'none'" class="sort-option direction-option" @click="toggleDirection">
         <ArrowUpNarrowWide v-if="sortDirection === 'asc'" :size="14" />
         <ArrowDownNarrowWide v-else :size="14" />
         <span class="sort-option-label">
@@ -54,6 +54,7 @@ import {
   Check,
   ArrowUpNarrowWide,
   ArrowDownNarrowWide,
+  ListOrdered,
 } from 'lucide-vue-next'
 import type { SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
 
@@ -77,6 +78,7 @@ const { t } = useI18n()
 const showMenu = ref(false)
 
 const allOptions = computed(() => [
+  { value: 'none' as SortByType, label: t('filters.sort_main_order'), icon: ListOrdered },
   { value: 'newest' as SortByType, label: t('filters.sort_newest'), icon: Clock },
   { value: 'priority' as SortByType, label: t('filters.sort_priority'), icon: Flag },
   { value: 'dueDate' as SortByType, label: t('filters.sort_due'), icon: CalendarDays },

@@ -1,5 +1,23 @@
 # FlowState MASTER_PLAN.md
 
+### TASK-2088: Make Catalog sorting the global task order for both inboxes
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-11)
+
+**User request**: Sorting in Catalog must establish the main task order everywhere. Canvas and Calendar inboxes must follow that order after removing tasks already placed in their own surface, both inboxes must default to Today, and an inbox-specific sorter may refine the global order without replacing it.
+
+**Product rule**: Catalog owns one persisted Main Sort and direction. Canvas and Calendar inboxes apply that comparator first, then apply their own optional persisted secondary sort only when two tasks tie under Main Sort. Each inbox applies its own placement exclusion independently. A fresh inbox preference defaults to Today.
+
+**End-to-end acceptance**:
+
+1. Selecting a Catalog sort or clicking a sortable Catalog column updates the same persisted Main Sort and direction consumed by Catalog, Canvas inbox, and Calendar inbox.
+2. Both inboxes default to the Today filter, retain an explicit user filter choice, and never expand the Main Sort beyond the tasks eligible for that inbox.
+3. Canvas inbox excludes tasks already positioned on Canvas; Calendar inbox excludes tasks already scheduled on Calendar. Remaining tasks keep the Catalog primary order.
+4. Each inbox exposes an optional secondary sort and direction. It may reorder only tasks that compare equal under Main Sort; disabling it restores the exact global order.
+5. Ordering is deterministic for equal values and consistent for priority, due date, title, created time, status, progress, estimate, and manual order, including missing values.
+6. Unit and integration regressions cover global persistence, Today defaults, per-view exclusion, primary-order inheritance, secondary tie-breaking, and reload. Desktop E2E proves Catalog priority sorting changes both inboxes and that placing the leading eligible task reveals the next one without disturbing order.
+7. Deliver through the Electron updater with version, package, public manifest/artifact, installed-version, authenticated visual, commit, and push read-back.
+
 ### ~~TASK-2087: Remove the duplicate Board List mode and clarify main navigation~~ (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-09-10)

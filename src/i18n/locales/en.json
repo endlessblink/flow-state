@@ -220,6 +220,8 @@
   },
   "filters": {
     "sort_label": "Sort:",
+    "sort_then_by": "Then by",
+    "sort_main_order": "Main order only",
     "sort_newest": "Newest",
     "sort_priority": "Priority",
     "sort_due": "Due",

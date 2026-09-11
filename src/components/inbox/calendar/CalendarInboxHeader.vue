@@ -34,13 +34,14 @@
       <div class="calendar-sort-control">
         <CustomSelect
           class="calendar-sort-select"
-          :model-value="sortBy || 'newest'"
+          :model-value="sortBy || 'none'"
           :options="sortOptions"
-          placeholder="Sort"
+          :placeholder="$t('filters.sort_then_by')"
           compact
           @update:model-value="handleSortSelect"
         />
         <button
+          v-if="sortBy !== 'none'"
           class="calendar-direction-btn"
           :title="sortDirection === 'asc' ? $t('filters.sort_ascending') : $t('filters.sort_descending')"
           @click="$emit('update:sortDirection', sortDirection === 'asc' ? 'desc' : 'asc')"
@@ -306,6 +307,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const sortOptions = computed(() => [
+  { label: t('filters.sort_main_order'), value: 'none' },
   { label: t('filters.sort_newest'), value: 'newest' },
   { label: t('filters.sort_priority'), value: 'priority' },
   { label: t('filters.sort_due'), value: 'dueDate' },

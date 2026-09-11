@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, beforeEach, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { useTaskSortStore } from '@/stores/taskSort'
 
 const mockTaskStore = vi.hoisted(() => ({
   calendarFilteredTasks: [] as any[],
@@ -54,20 +56,41 @@ describe('useCalendarInboxState subtask filtering', () => {
   })
 
   beforeEach(() => {
+    setActivePinia(createPinia())
     localStorage.clear()
     mockTaskStore.calendarFilteredTasks = []
     mockTaskStore.hideCalendarDoneTasks = false
     mockTaskStore.toggleCalendarDoneTasks.mockClear()
   })
 
+  it('defaults to Today and follows the shared main sort before its local tie-breaker', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-20T12:00:00+03:00'))
+    mockTaskStore.calendarFilteredTasks = [
+      task({ id: 'medium', title: 'A', priority: 'medium', dueDate: '2026-08-20', order: 0 }),
+      task({ id: 'high-late', title: 'Z', priority: 'high', dueDate: '2026-08-20', createdAt: new Date('2026-08-20T10:00:00Z'), order: 1 }),
+      task({ id: 'high-early', title: 'B', priority: 'high', dueDate: '2026-08-20', createdAt: new Date('2026-08-20T08:00:00Z'), order: 2 }),
+    ]
+    const mainSort = useTaskSortStore()
+    mainSort.mainSortKey = 'priority'
+    mainSort.mainSortDirection = 'asc'
+
+    const state = useCalendarInboxState()
+    state.sortBy.value = 'newest'
+
+    expect(state.showTodayOnly.value).toBe(true)
+    expect(state.inboxTasks.value.map(item => item.id)).toEqual(['high-late', 'high-early', 'medium'])
+  })
+
   it('keeps parent tasks visible while hiding tasks linked by parentTaskId', () => {
     mockTaskStore.calendarFilteredTasks = [
-      task({ id: 'parent', title: 'פרויקט בינה מעצבת' }),
-      task({ id: 'child', title: 'Child follow-up', parentTaskId: 'parent' }),
-      task({ id: 'standalone', title: 'Standalone task' }),
+      task({ id: 'parent', title: 'פרויקט בינה מעצבת', order: 0 }),
+      task({ id: 'child', title: 'Child follow-up', parentTaskId: 'parent', order: 1 }),
+      task({ id: 'standalone', title: 'Standalone task', order: 2 }),
     ]
 
     const state = useCalendarInboxState()
+    state.showTodayOnly.value = false
 
     expect(state.inboxTasks.value.map(item => item.title)).toEqual([
       'פרויקט בינה מעצבת',
@@ -106,6 +129,7 @@ describe('useCalendarInboxState subtask filtering', () => {
     ]
 
     const state = useCalendarInboxState()
+    state.showTodayOnly.value = false
 
     state.hideSubtasks.value = true
 
@@ -127,12 +151,29 @@ describe('useCalendarInboxState subtask filtering', () => {
     ]
 
     const state = useCalendarInboxState()
+    state.showTodayOnly.value = false
     state.sortBy.value = 'canvasOrder'
 
     expect(state.inboxTasks.value.map(item => item.id)).toEqual(['unscheduled-task'])
   })
 
-  it('keeps a task due today visible in the Today filter even when it has a calendar instance', () => {
+  it('keeps an unscheduled Canvas task available in the Calendar inbox', () => {
+    mockTaskStore.calendarFilteredTasks = [
+      task({
+        id: 'canvas-only-task',
+        title: 'Canvas only task',
+        canvasPosition: { x: 10, y: 20 },
+        isInInbox: false,
+      }),
+    ]
+
+    const state = useCalendarInboxState()
+    state.showTodayOnly.value = false
+
+    expect(state.inboxTasks.value.map(item => item.id)).toEqual(['canvas-only-task'])
+  })
+
+  it('excludes a due-today task already represented by a calendar instance', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-20T12:00:00+03:00'))
     mockTaskStore.calendarFilteredTasks = [
@@ -153,10 +194,10 @@ describe('useCalendarInboxState subtask filtering', () => {
     const state = useCalendarInboxState()
     state.showTodayOnly.value = true
 
-    expect(state.inboxTasks.value.map(item => item.id)).toEqual(['due-today-with-calendar-instance'])
+    expect(state.inboxTasks.value).toEqual([])
   })
 
-  it('keeps a schedule-only task visible in the Today filter', () => {
+  it('excludes a schedule-only task already represented on the calendar', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-20T12:00:00+03:00'))
     mockTaskStore.calendarFilteredTasks = [
@@ -171,10 +212,10 @@ describe('useCalendarInboxState subtask filtering', () => {
     const state = useCalendarInboxState()
     state.showTodayOnly.value = true
 
-    expect(state.inboxTasks.value.map(item => item.id)).toEqual(['scheduled-only-today'])
+    expect(state.inboxTasks.value).toEqual([])
   })
 
-  it('keeps recurring scheduled tasks visible in the calendar inbox', () => {
+  it('excludes recurring tasks already represented on the calendar', () => {
     mockTaskStore.calendarFilteredTasks = [
       task({
         id: 'recurring-canvas-task',
@@ -186,8 +227,9 @@ describe('useCalendarInboxState subtask filtering', () => {
     ]
 
     const state = useCalendarInboxState()
+    state.showTodayOnly.value = false
 
-    expect(state.inboxTasks.value.map(item => item.id)).toEqual(['recurring-canvas-task'])
+    expect(state.inboxTasks.value).toEqual([])
   })
 
   it('removes a recurring task from the calendar inbox after scheduling clears its inbox flag', () => {
@@ -211,6 +253,7 @@ describe('useCalendarInboxState subtask filtering', () => {
     ]
 
     const state = useCalendarInboxState()
+    state.showTodayOnly.value = false
 
     expect(state.inboxTasks.value.map(item => item.id)).toEqual(['due-date-only-task'])
   })

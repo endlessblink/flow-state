@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
@@ -6,17 +7,22 @@ import { useCanvasGroupMembership } from '@/composables/canvas/useCanvasGroupMem
 import { useDirection } from '@/i18n/useDirection'
 import { type DurationCategory, matchesDurationCategory } from '@/utils/durationCategories'
 import { getCanonicalTodayTaskIds } from '@/utils/todayTaskProjection'
+import { useTaskSortStore } from '@/stores/taskSort'
+import { compareTaskSortField, type TaskSortSpec } from '@/utils/taskSort'
+import { compareTasksBySharedOrder } from '@/utils/taskOrdering'
 import type { SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
 
 export function useCalendarInboxState() {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
+    const taskSortStore = useTaskSortStore()
+    const { mainSortKey, mainSortDirection } = storeToRefs(taskSortStore)
     const { groupsWithCounts, filterTasksByGroup } = useCanvasGroupMembership()
     const { isRTL } = useDirection()
 
     // --- State ---
     const isCollapsed = ref(false)
-    const showTodayOnly = ref(false)
+    const showTodayOnly = usePersistentRef<boolean>('flowstate:calendar-inbox-today-v2', true)
 
     // Advanced Filters
     const showAdvancedFilters = ref(false)
@@ -45,9 +51,9 @@ export function useCalendarInboxState() {
     const searchQuery = ref('')
 
     // TASK-1303: Sort state (persistent per calendar inbox)
-    const sortBy = usePersistentRef<SortByType>('flowstate:cal-inbox-sort-by', 'newest')
+    const sortBy = usePersistentRef<SortByType>('flowstate:calendar-inbox-secondary-sort', 'none')
     // TASK-1412: Sort direction (asc/desc)
-    const sortDirection = usePersistentRef<SortDirection>('flowstate:cal-inbox-sort-direction', 'asc', 'cal-inbox-sort-direction')
+    const sortDirection = usePersistentRef<SortDirection>('flowstate:calendar-inbox-secondary-direction', 'asc')
 
     // --- Computed ---
 
@@ -74,16 +80,6 @@ export function useCalendarInboxState() {
     const isScheduledOnCalendar = (task: Task): boolean => {
         if (!task.instances || task.instances.length === 0) return false
         return task.instances.some(inst => inst.scheduledDate)
-    }
-
-    const isRecurringTask = (task: Task): boolean => {
-        return Boolean(
-            task.recurrence?.isEnabled ||
-            task.recurrenceRule ||
-            task.recurrenceParentId ||
-            task.recurringInstances?.length ||
-            task.instances?.some(instance => instance.isRecurring)
-        )
     }
 
     const embeddedSubtaskIds = computed(() => {
@@ -113,24 +109,15 @@ export function useCalendarInboxState() {
         return taskStore.calendarFilteredTasks.filter(task => {
             if (hideCalendarDoneTasks.value && task.status === 'done') return false
             if (task.isPinned) return false
-            if (task.isInInbox === false) return false
-
-            // Recurring tasks remain inbox tasks even when they also have calendar instances.
-            return !isScheduledOnCalendar(task) || isRecurringTask(task)
+            // Calendar events already represent scheduled tasks, including recurring tasks.
+            return !isScheduledOnCalendar(task)
         })
     })
 
-    // Today is a due-date projection shared with Canvas. Apply it before the
-    // normal calendar-event exclusion so a due-today task with an event still
-    // appears in the same Today set as Canvas.
-    const todayInboxTasks = computed(() => {
-        return taskStore.calendarFilteredTasks.filter(task => {
-            if (hideCalendarDoneTasks.value && task.status === 'done') return false
-            if (task.isPinned) return false
-            if (task.isInInbox === false) return false
-            return isTaskDueToday(task)
-        })
-    })
+    // Today is the canonical due-date projection after calendar placement exclusion.
+    const todayInboxTasks = computed(() =>
+        baseInboxTasks.value.filter(task => isTaskDueToday(task)),
+    )
 
     // Count tasks due today (uses normalized date comparison)
     const todayCount = computed(() => {
@@ -203,7 +190,9 @@ export function useCalendarInboxState() {
             })
         }
 
-        // TASK-1412: Apply sorting with direction support
+        const unsortedTasks = [...tasks]
+
+        // TASK-1412: Build the optional inbox-specific secondary ordering.
         const priorityOrder = { immediate: 0, high: 1, medium: 2, low: 3, relaxed: 4, undefined: 5 }
         const dir = sortDirection.value === 'desc' ? -1 : 1
 
@@ -303,7 +292,23 @@ export function useCalendarInboxState() {
             })
         }
 
-        return tasks
+        const secondaryRank = new Map(tasks.map((task, index) => [task.id, index]))
+        const mainSort: TaskSortSpec = {
+            key: mainSortKey.value,
+            direction: mainSortDirection.value,
+        }
+
+        return [...unsortedTasks].sort((a, b) => {
+            const mainComparison = compareTaskSortField(a, b, mainSort)
+            if (mainComparison !== 0) return mainComparison
+
+            if (sortBy.value !== 'none') {
+                const secondaryComparison = (secondaryRank.get(a.id) ?? 0) - (secondaryRank.get(b.id) ?? 0)
+                if (secondaryComparison !== 0) return secondaryComparison
+            }
+
+            return compareTasksBySharedOrder(a, b)
+        })
     })
 
     // --- Actions ---

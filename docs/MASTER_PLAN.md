@@ -1,8 +1,8 @@
 # FlowState MASTER_PLAN.md
 
-### TASK-2088: Make Catalog sorting the global task order for both inboxes
+### ~~TASK-2088: Make Catalog sorting the global task order for both inboxes~~ (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-11)
+**Priority**: P1 | **Status**: ✅ DONE (2026-09-12)
 
 **User request**: Sorting in Catalog must establish the main task order everywhere. Canvas and Calendar inboxes must follow that order after removing tasks already placed in their own surface, both inboxes must default to Today, and an inbox-specific sorter may refine the global order without replacing it.
 
@@ -17,6 +17,30 @@
 5. Ordering is deterministic for equal values and consistent for priority, due date, title, created time, status, progress, estimate, and manual order, including missing values.
 6. Unit and integration regressions cover global persistence, Today defaults, per-view exclusion, primary-order inheritance, secondary tie-breaking, and reload. Desktop E2E proves Catalog priority sorting changes both inboxes and that placing the leading eligible task reveals the next one without disturbing order.
 7. Deliver through the Electron updater with version, package, public manifest/artifact, installed-version, authenticated visual, commit, and push read-back.
+
+**Delivery proof**: FlowState 1.4.528 passed the full unit, type-check, focused desktop E2E, and Electron build gates; the public updater manifest and both artifacts returned successfully; the installed AppImage hash and running package version matched 1.4.528; the restarted desktop was visibly foreground, authenticated, online, retained its active focus session, and showed no sync, update, or error indicator. Commit `0e180fa7` is on `origin/main`.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Desktop E2E changes Catalog priority order and verifies both filtered inboxes advance after placement | Yes |
+| Data shape / persisted row shape | Yes | Unit coverage includes missing values and deterministic ordering across supported task fields | Yes |
+| Renderer store/state | Yes | Shared persisted Main Sort plus independent inbox tie-break preferences are covered by unit and E2E tests | Yes |
+| Electron main/preload bridge | N/A | Sorting and inbox eligibility remain renderer-owned; no bridge contract changed | No |
+| Localhost sidecar endpoint | N/A | The sidecar does not own task ordering; timer read-back only proved restart continuity | No |
+| KDE polling/control path | N/A | KDE does not own Catalog or inbox ordering | No |
+| Supabase persistence/realtime | Checked, unchanged | Existing task rows and realtime transport are consumed without schema or transport changes | No |
+| Updater/runtime version | Yes | Public 1.4.528 manifest/artifacts, installed hash, and running package version were read back | Yes |
+| Stale live process/cache state | Yes | The old runtime was replaced and the restarted 1.4.528 desktop was visually verified | Yes |
+
+**Exact failure mode fixed**: Catalog and each inbox previously derived order from separate view-local sort state, so changing Catalog priority order did not establish the primary order of eligible Canvas and Calendar inbox tasks; fresh inboxes also did not reliably begin at Today.
+
+**Explicitly not covered**: This change does not alter task placement, Canvas tidy/group geometry, Calendar scheduling, Supabase transport, or synchronize sort preferences between different devices.
+
+**Regression added for reported repro**: Desktop E2E selects Catalog priority ordering, verifies the leading eligible task in both Today inboxes, places it on each relevant surface, and verifies the next eligible task preserves the global order; unit tests cover persistence, exclusions, tie-breaking, reload, and missing values.
+
+**Live boundary proof**: The installed 1.4.528 AppImage was restarted into the authenticated online desktop, preserved the active focus session, rendered normally, and showed no sync, update, or error indicator.
 
 ### ~~TASK-2087: Remove the duplicate Board List mode and clarify main navigation~~ (✅ DONE)
 

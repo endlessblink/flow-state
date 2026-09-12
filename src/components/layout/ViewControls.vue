@@ -5,9 +5,9 @@
     <button
       class="filter-toggle"
       :aria-expanded="showFilters"
-      aria-label="Toggle filters"
+      :aria-label="$t('catalog_controls.toggle_controls')"
       :class="{ active: showFilters }"
-      title="Toggle filters"
+      :title="$t('catalog_controls.toggle_controls')"
       @click="showFilters = !showFilters"
     >
       <SlidersHorizontal :size="20" :stroke-width="1.5" />
@@ -29,7 +29,7 @@
 
   <!-- Collapsible Filter Bar -->
   <Transition name="slide-down">
-    <div v-if="showFilters" class="filter-bar">
+    <div v-if="showFilters" ref="filterBar" class="filter-bar">
       <!-- Expand/Collapse Controls -->
       <div v-if="showTreeControls" class="tree-controls">
         <BaseButton variant="secondary" size="sm" @click="$emit('expandAll')">
@@ -43,37 +43,45 @@
       </div>
 
       <!-- Group By Control -->
-      <div class="control-wrapper">
+      <div class="control-wrapper" data-control="group">
+        <span class="control-label">{{ $t('catalog_controls.group_by') }}</span>
         <CustomSelect
           :model-value="groupBy"
           :options="groupByOptions"
+          :aria-label="$t('catalog_controls.group_by')"
           @update:model-value="$emit('update:groupBy', $event as string)"
         />
       </div>
 
       <!-- Sort Control -->
-      <div class="control-wrapper">
+      <div class="control-wrapper" data-control="sort">
+        <span class="control-label">{{ $t('catalog_controls.global_order') }}</span>
         <CustomSelect
           :model-value="sortBy"
           :options="sortOptions"
+          :aria-label="$t('catalog_controls.global_order')"
           @update:model-value="$emit('update:sortBy', $event as string)"
         />
       </div>
 
       <!-- Filter Control -->
-      <div class="control-wrapper">
+      <div class="control-wrapper" data-control="status">
+        <span class="control-label">{{ $t('catalog_controls.status_label') }}</span>
         <CustomSelect
           :model-value="filterStatus"
           :options="filterOptions"
+          :aria-label="$t('catalog_controls.status_label')"
           @update:model-value="$emit('update:filterStatus', $event as string)"
         />
       </div>
 
       <!-- Density Control -->
-      <div v-if="density" class="control-wrapper">
+      <div v-if="density" class="control-wrapper" data-control="density">
+        <span class="control-label">{{ $t('catalog_controls.density') }}</span>
         <CustomSelect
           :model-value="density"
           :options="densityOptions"
+          :aria-label="$t('catalog_controls.density')"
           @update:model-value="$emit('update:density', $event as string)"
         />
       </div>
@@ -82,13 +90,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ChevronsDown, ChevronsUp, Eye, EyeOff, SlidersHorizontal } from 'lucide-vue-next'
 import BaseButton from '@/components/base/BaseButton.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
+import type { CatalogFocusTarget } from '@/stores/catalogView'
 
-defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  density: 'comfortable',
+  expanded: false,
+  focusTarget: null,
+})
 
 // Use explicit function signature to avoid emit type inference issues
 const _emit = defineEmits<{
@@ -99,12 +112,17 @@ const _emit = defineEmits<{
   (e: 'expandAll'): void
   (e: 'collapseAll'): void
   (e: 'update:density', value: string): void
+  (e: 'update:expanded', value: boolean): void
+  (e: 'focusHandled'): void
 }>()
 
 const { t } = useI18n()
 
-// TASK-157: Filters hidden by default for cleaner look
-const showFilters = ref(false)
+const filterBar = ref<HTMLElement | null>(null)
+const showFilters = computed({
+  get: () => props.expanded,
+  set: value => _emit('update:expanded', value),
+})
 
 interface Props {
   sortBy: string
@@ -113,7 +131,21 @@ interface Props {
   hideDoneTasks?: boolean
   showTreeControls?: boolean
   density?: 'compact' | 'comfortable' | 'spacious'
+  expanded?: boolean
+  focusTarget?: CatalogFocusTarget | null
 }
+
+watch(
+  [() => props.expanded, () => props.focusTarget],
+  async ([expanded, focusTarget]) => {
+    if (!expanded || !focusTarget) return
+    await nextTick()
+    const trigger = filterBar.value?.querySelector<HTMLElement>(`[data-control="${focusTarget}"] .select-trigger`)
+    if (!trigger) return
+    trigger.focus()
+    _emit('focusHandled')
+  },
+)
 
 const sortOptions = computed(() => [
   { label: t('filters.sort_due_date'), value: 'dueDate' },
@@ -160,6 +192,15 @@ const densityOptions = computed(() => [
 
 .control-wrapper {
   min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.control-label {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
 }
 
 .hide-done-toggle {

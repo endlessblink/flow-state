@@ -45,6 +45,18 @@
         </span>
       </div>
 
+      <CatalogViewSummary
+        v-if="isCatalogRoute"
+        :sort-by="mainSortKey"
+        :sort-direction="mainSortDirection"
+        :scope-label="catalogScopeLabel"
+        :group-by="catalogGroupBy"
+        :filter-status="catalogFilterStatus"
+        :hide-done-tasks="taskStore.hideDoneTasks"
+        @open-global-order="catalogViewStore.openGlobalOrderControls"
+        @open-catalog-view="catalogViewStore.openCatalogViewControls(catalogFilterStatus)"
+      />
+
       <!-- INTEGRATED CONTROL PANEL: Sync + AI + Clock + Timer -->
       <div class="control-panel">
         <!-- TASK-1177: Sync Status Indicator -->
@@ -318,6 +330,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useTaskStore, type Project } from '@/stores/tasks'
@@ -326,12 +339,15 @@ import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import { useTimerStore } from '@/stores/timer'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useUIStore } from '@/stores/ui'
+import { useTaskSortStore } from '@/stores/taskSort'
+import { useCatalogViewStore } from '@/stores/catalogView'
 import { Timer, Play, Pause, Coffee, Square, Armchair, Sparkles, Keyboard, Search, LayoutDashboard, CalendarDays, Columns3, Clock3, ListTree, ArrowUpDown } from 'lucide-vue-next'
 import TimeDisplay from '@/components/common/TimeDisplay.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import SyncStatusIndicator from '@/components/sync/SyncStatusIndicator.vue'
 import QuickTaskDropdown from '@/components/timer/QuickTaskDropdown.vue'
 import AppLogo from '@/components/base/AppLogo.vue'
+import CatalogViewSummary from '@/components/catalog/CatalogViewSummary.vue'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -339,6 +355,10 @@ const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const aiChatStore = useAIChatStore()
 const uiStore = useUIStore()
+const taskSortStore = useTaskSortStore()
+const catalogViewStore = useCatalogViewStore()
+const { mainSortKey, mainSortDirection } = storeToRefs(taskSortStore)
+const { groupBy: catalogGroupBy } = storeToRefs(catalogViewStore)
 const { isNavItemVisible } = useWorkspaceNavigation()
 
 // TASK-1435: Active task project visual for glass pill
@@ -467,6 +487,13 @@ const pageTitleInfo = computed<PageTitleInfo>(() => {
   }
 })
 
+const isCatalogRoute = computed(() => router.currentRoute.value.name === 'catalog')
+const catalogFilterStatus = computed(() => taskStore.activeStatusFilter || 'all')
+const catalogScopeLabel = computed(() => {
+  const filter = pageTitleInfo.value.filter
+  return typeof filter === 'string' ? filter : filter.name
+})
+
 // Uncategorized task count for Quick Sort badge
 const uncategorizedCount = computed(() => {
   return taskStore.getUncategorizedTaskCount()
@@ -527,6 +554,7 @@ const startLongBreak = async () => {
 /* Hierarchical page title display */
 .page-title {
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
   align-items: flex-start;
   pointer-events: auto;
@@ -568,6 +596,7 @@ const startLongBreak = async () => {
 /* INTEGRATED CONTROL PANEL */
 .control-panel {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-3) var(--space-4);
@@ -586,6 +615,18 @@ const startLongBreak = async () => {
   background: var(--glass-bg-soft);
   border-color: var(--state-hover-border);
   box-shadow: var(--shadow-lg);
+}
+
+@media (max-width: 1500px) {
+  .header-section {
+    flex-wrap: wrap;
+  }
+
+  .header-section :deep(.catalog-view-summary) {
+    order: 3;
+    flex: 1 0 100%;
+    max-width: 100%;
+  }
 }
 
 .time-display-container {

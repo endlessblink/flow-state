@@ -1,5 +1,22 @@
 # FlowState MASTER_PLAN.md
 
+### TASK-2089: Expose global ordering and Catalog view context (🚧 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-12)
+
+**User request**: Make the global sort discoverable in Catalog, show which global order and Catalog-only filters are active, and add regressions proving that Catalog, Canvas Inbox, and Calendar Inbox keep honoring the same primary order.
+
+**Product rule**: The Catalog header shows two separate interactive summaries: `Global order` for the ordering shared by Catalog and both inboxes, and `Catalog view` for Catalog-only scope, grouping, status, and completed-task visibility. Opening either summary reveals the existing controls and focuses the relevant selector. Catalog-only filters never become global inbox filters.
+
+**Acceptance**:
+
+1. Catalog visibly identifies the shared Global order control and the current ordering field and direction.
+2. A separate Catalog view summary shows the active scope, grouping, status restriction when present, and completed-task visibility without implying those settings affect inboxes.
+3. Activating either summary expands the controls and moves keyboard focus to the Global order selector or the most relevant Catalog-only selector.
+4. The summaries remain readable and actionable without overlapping the desktop control panel at supported window widths and in Hebrew RTL.
+5. Regression coverage proves summary content and focus behavior, visible control labels, persisted Catalog preference keys, Catalog column sorting, Today inbox defaults, per-surface exclusion, and inherited inbox ordering.
+6. Deliver and verify through the Electron updater, installed authenticated desktop, commit, and push read-back.
+
 ### ~~TASK-2088: Make Catalog sorting the global task order for both inboxes~~ (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-09-12)

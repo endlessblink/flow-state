@@ -58,6 +58,7 @@ async function seedTasks(admin: SupabaseClient, userId: string) {
 
 test.describe('TASK-2088 global sort and inbox defaults', () => {
   test.skip(!SERVICE_ROLE_KEY, 'requires SUPABASE_SERVICE_ROLE_KEY (set by scripts/run-e2e.sh)')
+  test.skip(({ browserName }) => browserName !== 'chromium', 'Electron acceptance uses Chromium')
   test.describe.configure({ mode: 'serial', timeout: 90_000 })
 
   let admin: SupabaseClient
@@ -78,6 +79,8 @@ test.describe('TASK-2088 global sort and inbox defaults', () => {
   test('Catalog Priority becomes the main order and each Today inbox applies only its own exclusion', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem('flowstate:all-tasks-group-by', 'none')
+      localStorage.setItem('flowstate:all-tasks-sort-by', 'dueDate')
+      localStorage.setItem('flowstate:all-tasks-sort-direction', 'asc')
       localStorage.setItem('flowstate:inbox-secondary-sort-canvas', 'none')
       localStorage.setItem('flowstate:calendar-inbox-secondary-sort', 'none')
       localStorage.removeItem('flowstate:inbox-time-filter-v2-canvas')
@@ -87,8 +90,19 @@ test.describe('TASK-2088 global sort and inbox defaults', () => {
     await page.goto('/#/catalog')
     await waitForTaskStore(page)
     await page.waitForSelector(`[data-task-id="${IDS.medium}"]`, { timeout: 30_000 })
-    await page.getByText('Priority', { exact: true }).click()
+    await expect(page.getByTestId('global-order-summary')).toContainText('Global order: Due date ↑')
+    await expect(page.getByTestId('catalog-view-summary')).toContainText('Catalog view:')
+
+    await page.getByTestId('catalog-view-summary').click()
+    await expect(page.locator(':focus')).toHaveAttribute('aria-label', 'Group by')
+    await expect(page.locator('[data-control="group"] .control-label')).toHaveText('Group by')
+    await expect(page.locator('[data-control="sort"] .control-label')).toHaveText('Global order')
+
+    await page.getByTestId('global-order-summary').click()
+    await expect(page.locator(':focus')).toHaveAttribute('aria-label', 'Global order')
+    await page.locator('.sortable-header').filter({ hasText: 'Priority' }).click()
     await expect(page.locator('.sortable-header--active').filter({ hasText: 'Priority' })).toBeVisible()
+    await expect(page.getByTestId('global-order-summary')).toContainText('Global order: Priority ↑')
     expect(await idsInOrder(page, '.task-list [data-task-id]')).toEqual([
       IDS.tomorrow, IDS.canvas, IDS.calendar, IDS.immediate, IDS.high, IDS.medium,
     ])

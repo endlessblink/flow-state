@@ -262,6 +262,21 @@
     "group_category": "קטגוריה",
     "group_list": "רשימה"
   },
+  "catalog_controls": {
+    "summary_label": "מיון וסינון הקטלוג",
+    "global_order": "סדר ראשי",
+    "catalog_view": "תצוגת קטלוג",
+    "group_by": "קיבוץ לפי",
+    "grouped_by": "מקובץ לפי {group}",
+    "status_label": "סטטוס",
+    "status": "סטטוס: {status}",
+    "density": "צפיפות",
+    "completed_hidden": "משימות שהושלמו מוסתרות",
+    "toggle_controls": "הצגת פקדי הקטלוג",
+    "manual": "ידני",
+    "due_date": "תאריך יעד",
+    "lane": "מסלול"
+  },
   "quick_sort": {
     "title": "מיון מהיר",
     "sort_tab": "מיון",

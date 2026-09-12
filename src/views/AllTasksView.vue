@@ -11,13 +11,16 @@
           v-model:sort-by="sortBy"
           v-model:group-by="groupBy"
           v-model:density="density"
+          v-model:expanded="controlsExpanded"
           :filter-status="filterStatus"
+          :focus-target="focusTarget"
           :hide-done-tasks="hideDoneTasks"
           :show-tree-controls="groupBy !== 'none'"
           @update:filter-status="handleStatusFilterChange"
           @update:hide-done-tasks="handleToggleDoneTasksFromControl"
           @expand-all="handleExpandAll"
           @collapse-all="handleCollapseAll"
+          @focus-handled="catalogViewStore.clearFocusTarget"
         />
 
         <!-- Show All Week Days Toggle -->
@@ -115,13 +118,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
-import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore } from '@/stores/tasks'
 import { isDoneForNowAlreadyCompletedError } from '@/services/tasks/doneForNow'
 import { useLaneStore } from '@/stores/lanes'
 import { useTimerStore } from '@/stores/timer'
 import { useSettingsStore } from '@/stores/settings'
 import { useTaskSortStore } from '@/stores/taskSort'
+import { useCatalogViewStore } from '@/stores/catalogView'
 import { useMobileDetection } from '@/composables/useMobileDetection'
 import { CalendarDays } from 'lucide-vue-next'
 import ViewControls from '@/components/layout/ViewControls.vue'
@@ -142,7 +145,7 @@ import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 import { shouldHideDoneTasksForStatus } from '@/stores/tasks/filterInvariants'
 import { getCanonicalTodayTasks } from '@/utils/todayTaskProjection'
 import { sortTasksByMainAndSecondary, type TaskSortKey } from '@/utils/taskSort'
-import type { Task, GroupByType, TaskGroup, TaskPriority } from '@/types/tasks'
+import type { Task, TaskGroup, TaskPriority } from '@/types/tasks'
 
 type CreateTaskDefaults = {
   dueDate?: string
@@ -162,6 +165,7 @@ const laneStore = useLaneStore()
 const timerStore = useTimerStore()
 const settingsStore = useSettingsStore()
 const taskSortStore = useTaskSortStore()
+const catalogViewStore = useCatalogViewStore()
 const { bulkDeleteTasksWithUndo, createTaskWithUndo, updateTaskWithUndo } = useUnifiedUndoRedo()
 const { recurrenceAwareDelete } = useRecurrenceAwareDelete()
 const { showToast } = useToast()
@@ -190,13 +194,10 @@ const { hideDoneTasks } = storeToRefs(taskStore)
 
 // View State (TASK-1215: Persist across restarts via Tauri store + localStorage)
 const { mainSortKey: sortBy, mainSortDirection: sortDirection } = storeToRefs(taskSortStore)
+const { groupBy, showAllWeekDays, density, controlsExpanded, focusTarget } = storeToRefs(catalogViewStore)
 const handleSortByChange = (value: string) => {
   sortBy.value = value as TaskSortKey
 }
-const groupBy = usePersistentRef<GroupByType>('flowstate:all-tasks-group-by', 'project')
-const showAllWeekDays = usePersistentRef<boolean>('flowstate-show-all-week-days', false)
-// Density control for task list rows
-const density = usePersistentRef<'compact' | 'comfortable' | 'spacious'>('flowstate:task-list-density', 'comfortable')
 // Use global status filter directly from store (maintains reactivity)
 const filterStatus = computed(() => taskStore.activeStatusFilter || 'all')
 const handleStatusFilterChange = (status: string) => {

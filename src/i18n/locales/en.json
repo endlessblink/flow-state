@@ -262,6 +262,21 @@
     "group_category": "Category",
     "group_list": "List"
   },
+  "catalog_controls": {
+    "summary_label": "Catalog sorting and filters",
+    "global_order": "Global order",
+    "catalog_view": "Catalog view",
+    "group_by": "Group by",
+    "grouped_by": "Grouped by {group}",
+    "status_label": "Status",
+    "status": "Status: {status}",
+    "density": "Density",
+    "completed_hidden": "Completed hidden",
+    "toggle_controls": "Toggle filters",
+    "manual": "Manual",
+    "due_date": "Due date",
+    "lane": "Lane"
+  },
   "quick_sort": {
     "title": "Quick Sort",
     "sort_tab": "Sort",

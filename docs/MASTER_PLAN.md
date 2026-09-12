@@ -1,8 +1,8 @@
 # FlowState MASTER_PLAN.md
 
-### TASK-2089: Expose global ordering and Catalog view context (🚧 IN PROGRESS)
+### ~~TASK-2089: Expose global ordering and Catalog view context~~ (✅ DONE)
 
-**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-12)
+**Priority**: P1 | **Status**: ✅ DONE (2026-09-12)
 
 **User request**: Make the global sort discoverable in Catalog, show which global order and Catalog-only filters are active, and add regressions proving that Catalog, Canvas Inbox, and Calendar Inbox keep honoring the same primary order.
 
@@ -16,6 +16,21 @@
 4. The summaries remain readable and actionable without overlapping the desktop control panel at supported window widths and in Hebrew RTL.
 5. Regression coverage proves summary content and focus behavior, visible control labels, persisted Catalog preference keys, Catalog column sorting, Today inbox defaults, per-surface exclusion, and inherited inbox ordering.
 6. Deliver and verify through the Electron updater, installed authenticated desktop, commit, and push read-back.
+
+**Delivery proof**: FlowState 1.4.529 passed the focused summary and cross-surface desktop regressions, full unit suite (4,874 passed, 3 skipped), type-check, targeted production lint, Electron sync and release guards, Electron build, and packaging validation. The public updater advertises 1.4.529 and both artifacts return the manifest sizes; the installed AppImage matches the manifest checksum and the running diagnostics report 1.4.529 with authenticated remote sync available and no warnings. The restarted authenticated desktop visibly shows `Global order: Priority ↑` and `Catalog view: All Active Tasks · Grouped by due date · Completed hidden` without overlap or clipping; both summaries focus their intended controls, the account is Online, and no sync, update, or error warning is visible. The timer is idle at 25:00, so active-focus continuity was not applicable to this restart.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+|---|---:|---|---:|
+| Data shape and ordering authority | Yes | Existing persisted global sort keys remain the single primary comparator consumed by Catalog, Canvas Inbox, and Calendar Inbox. | Yes |
+| Renderer state and discoverability | Yes | The installed Catalog shows distinct interactive Global order and Catalog view summaries; activation expands controls and focuses Global order or Group by. | Yes |
+| Electron main/preload and localhost sidecar | Yes | Packaged runtime diagnostics report 1.4.529, health 200, authenticated renderer state, and no failures or warnings. | No change required |
+| Supabase persistence and cross-device sync | Partial | Existing authenticated sync is available; this task does not make Catalog-only filters global or add cross-device sort preference synchronization. | No |
+| Updater/runtime version | Yes | Public manifest, artifact sizes, installed checksum, and running app version all agree on 1.4.529. | Yes |
+| Stale live process state | Yes | The prior process was stopped and the verified installed AppImage was relaunched twice; the final process uses the real user profile and renders the new summaries. | Yes |
+
+**Exact failure closed**: Global sorting already controlled Catalog and both inboxes, but the Catalog header did not reveal where that global authority lived and visually conflated shared ordering with Catalog-only view settings. The repro-focused regression now exercises the visible summaries and control focus, then changes Catalog priority order and proves both Today inboxes inherit it after their own placement exclusions. Unrelated Canvas tidy layout, Catalog-only filter propagation, and cross-device preference sync remain outside this task.
 
 ### ~~TASK-2088: Make Catalog sorting the global task order for both inboxes~~ (✅ DONE)
 

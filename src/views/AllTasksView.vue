@@ -21,18 +21,21 @@
           @expand-all="handleExpandAll"
           @collapse-all="handleCollapseAll"
           @focus-handled="catalogViewStore.clearFocusTarget"
-        />
-
-        <!-- Show All Week Days Toggle -->
-        <button
-          v-if="groupBy === 'dueDate'"
-          class="mode-btn"
-          :class="{ 'mode-btn--active': showAllWeekDays }"
-          :title="showAllWeekDays ? 'Hide empty days' : 'Show all week days'"
-          @click="showAllWeekDays = !showAllWeekDays"
         >
-          <CalendarDays :size="16" />
-        </button>
+          <template #secondary-actions>
+            <button
+              v-if="groupBy === 'dueDate'"
+              class="mode-btn"
+              :class="{ 'mode-btn--active': showAllWeekDays }"
+              :aria-pressed="showAllWeekDays"
+              :title="showAllWeekDays ? 'Hide empty days' : 'Show all week days'"
+              @click="showAllWeekDays = !showAllWeekDays"
+            >
+              <CalendarDays :size="16" />
+              <span>{{ showAllWeekDays ? 'Hide empty days' : 'Show all week days' }}</span>
+            </button>
+          </template>
+        </ViewControls>
       </div>
 
       <!-- Content Area -->
@@ -118,6 +121,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import { useTaskStore } from '@/stores/tasks'
 import { isDoneForNowAlreadyCompletedError } from '@/services/tasks/doneForNow'
 import { useLaneStore } from '@/stores/lanes'
@@ -158,6 +162,7 @@ type CreateTaskDefaults = {
 
 // Mobile Detection
 const { isMobile } = useMobileDetection()
+const { t } = useI18n()
 
 // Stores
 const taskStore = useTaskStore()
@@ -415,7 +420,7 @@ const groupedTasks = computed((): TaskGroup[] => {
     if (noLane.length > 0) {
       groups.unshift({
         key: 'no-lane',
-        title: 'No Lane',
+        title: t('catalog_controls.no_lane'),
         tasks: noLane,
         parentTasks: getRootTasks(noLane)
       })
@@ -496,12 +501,12 @@ const groupedTasks = computed((): TaskGroup[] => {
     buckets.today = getCanonicalTodayTasks(tasks, hideDoneTasks.value)
 
     const bucketConfig: { key: string; title: string }[] = [
-      { key: 'overdue', title: 'Overdue' },
-      { key: 'today', title: 'Today' },
-      { key: 'tomorrow', title: 'Tomorrow' },
+      { key: 'overdue', title: t('task.overdue') },
+      { key: 'today', title: t('task.today') },
+      { key: 'tomorrow', title: t('task.tomorrow') },
       ...perDayBuckets.map(({ key, title }) => ({ key, title })),
-      { key: 'later', title: 'Later' },
-      { key: 'noDate', title: 'No Date' }
+      { key: 'later', title: t('task.later') },
+      { key: 'noDate', title: t('task.no_date') }
     ]
 
     bucketConfig.forEach(({ key, title }) => {
@@ -829,24 +834,25 @@ onMounted(() => {
 
 /* FEATURE-1293: Controls row — ViewControls + mode toggle side-by-side */
 .controls-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  display: block;
+  padding: var(--space-3) var(--space-2) 0;
 }
 
 
 .mode-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0 var(--space-3);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   color: var(--text-secondary);
   cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm);
   transition: all var(--duration-fast) ease;
 }
 
@@ -949,7 +955,7 @@ onMounted(() => {
 
 .tasks-container {
   flex: 1;
-  overflow-y: auto;
+  overflow: auto;
   min-height: 0;
 }
 </style>

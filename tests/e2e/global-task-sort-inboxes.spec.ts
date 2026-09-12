@@ -47,7 +47,7 @@ async function seedTasks(admin: SupabaseClient, userId: string) {
     { id: IDS.tomorrow, title: 'Sort sync tomorrow', priority: 'immediate', due_date: `${tomorrow}T09:00:00+03:00`, order: 0 },
     { id: IDS.canvas, title: 'Sort sync on canvas', priority: 'immediate', due_date: `${today}T09:00:00+03:00`, order: 1, is_in_inbox: false, position: { x: 2800, y: 2800, format: 'absolute' }, position_version: 1 },
     { id: IDS.calendar, title: 'Sort sync on calendar', priority: 'immediate', due_date: `${today}T09:00:00+03:00`, order: 2, instances: [{ id: `${ID_PREFIX}7`, scheduledDate: today, scheduledTime: '14:00', duration: 30 }] },
-    { id: IDS.immediate, title: 'Sort sync immediate', priority: 'immediate', due_date: `${today}T09:00:00+03:00`, order: 3 },
+    { id: IDS.immediate, title: 'משימת עדיפות מיידית עם כותרת ארוכה + mixed direction', priority: 'immediate', due_date: `${today}T09:00:00+03:00`, order: 3 },
     { id: IDS.high, title: 'Sort sync high', priority: 'high', due_date: `${today}T09:00:00+03:00`, order: 4 },
     { id: IDS.medium, title: 'Sort sync medium', priority: 'medium', due_date: `${today}T09:00:00+03:00`, order: 5 },
   ].map(row => ({ user_id: userId, status: 'planned', is_in_inbox: true, ...row }))
@@ -90,22 +90,64 @@ test.describe('TASK-2088 global sort and inbox defaults', () => {
     await page.goto('/#/catalog')
     await waitForTaskStore(page)
     await page.waitForSelector(`[data-task-id="${IDS.medium}"]`, { timeout: 30_000 })
-    await expect(page.getByTestId('global-order-summary')).toContainText('Global order: Due date ↑')
-    await expect(page.getByTestId('catalog-view-summary')).toContainText('Catalog view:')
-
-    await page.getByTestId('catalog-view-summary').click()
-    await expect(page.locator(':focus')).toHaveAttribute('aria-label', 'Group by')
+    await expect(page.getByTestId('catalog-toolbar')).toBeVisible()
+    await expect(page.getByTestId('global-order-note')).toHaveText('Also orders Canvas and Calendar inboxes')
+    await expect(page.getByTestId('global-order-summary')).toHaveCount(0)
+    await expect(page.getByTestId('catalog-view-summary')).toHaveCount(0)
     await expect(page.locator('[data-control="group"] .control-label')).toHaveText('Group by')
     await expect(page.locator('[data-control="sort"] .control-label')).toHaveText('Global order')
 
-    await page.getByTestId('global-order-summary').click()
-    await expect(page.locator(':focus')).toHaveAttribute('aria-label', 'Global order')
+    await page.getByTestId('catalog-view-options').click()
+    await expect(page.locator('[data-control="status"] .control-label')).toHaveText('Status')
+    await expect(page.locator('[data-control="density"] .control-label')).toHaveText('Density')
+    await page.getByTestId('catalog-view-options').click()
+
     await page.locator('.sortable-header').filter({ hasText: 'Priority' }).click()
     await expect(page.locator('.sortable-header--active').filter({ hasText: 'Priority' })).toBeVisible()
-    await expect(page.getByTestId('global-order-summary')).toContainText('Global order: Priority ↑')
     expect(await idsInOrder(page, '.task-list [data-task-id]')).toEqual([
       IDS.tomorrow, IDS.canvas, IDS.calendar, IDS.immediate, IDS.high, IDS.medium,
     ])
+
+    await page.setViewportSize({ width: 1200, height: 800 })
+    const priorityBox = await page.locator(`[data-task-id="${IDS.immediate}"] .task-row__priority`).boundingBox()
+    const dueBox = await page.locator(`[data-task-id="${IDS.immediate}"] .task-row__due-date`).boundingBox()
+    expect(priorityBox).not.toBeNull()
+    expect(dueBox).not.toBeNull()
+    const intersects = priorityBox!.x < dueBox!.x + dueBox!.width
+      && priorityBox!.x + priorityBox!.width > dueBox!.x
+      && priorityBox!.y < dueBox!.y + dueBox!.height
+      && priorityBox!.y + priorityBox!.height > dueBox!.y
+    expect(intersects).toBe(false)
+
+    const [listBox, actionsBox] = await Promise.all([
+      page.locator('.task-list').boundingBox(),
+      page.locator(`[data-task-id="${IDS.immediate}"] .task-row__actions`).boundingBox(),
+    ])
+    expect(listBox).not.toBeNull()
+    expect(actionsBox).not.toBeNull()
+    expect(actionsBox!.x).toBeGreaterThanOrEqual(listBox!.x)
+    const layoutDiagnostics = await page.locator(`.hierarchical-task-row[data-task-id="${IDS.immediate}"] .task-row`).evaluate((row) => ({
+      row: row.getBoundingClientRect().toJSON(),
+      rowColumns: getComputedStyle(row).gridTemplateColumns,
+      rowGap: getComputedStyle(row).columnGap,
+      rowDirection: getComputedStyle(row).direction,
+      rowScrollWidth: row.scrollWidth,
+      actions: row.querySelector('.task-row__actions')?.getBoundingClientRect().toJSON(),
+      actionsGridArea: row.querySelector('.task-row__actions') ? getComputedStyle(row.querySelector('.task-row__actions')!).gridArea : null,
+      list: row.closest('.task-list')?.getBoundingClientRect().toJSON(),
+    }))
+    expect(actionsBox!.x + actionsBox!.width, JSON.stringify(layoutDiagnostics)).toBeLessThanOrEqual(listBox!.x + listBox!.width)
+
+    if (process.env.CATALOG_VISUAL_CAPTURE) {
+      await page.screenshot({ path: '/tmp/catalog-redesign-populated-en-1200.png', fullPage: true })
+      await page.evaluate(() => localStorage.setItem('flowstate-app-locale', 'he'))
+      await page.reload()
+      await page.waitForSelector(`[data-task-id="${IDS.immediate}"]`, { timeout: 30_000 })
+      await page.screenshot({ path: '/tmp/catalog-redesign-populated-he-1200.png', fullPage: true })
+      await page.evaluate(() => localStorage.setItem('flowstate-app-locale', 'en'))
+      await page.reload()
+      await page.waitForSelector(`[data-task-id="${IDS.immediate}"]`, { timeout: 30_000 })
+    }
 
     await page.goto('/#/canvas')
     await waitForTaskStore(page)

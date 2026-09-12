@@ -41,6 +41,7 @@ describe('TaskList hidden selection safety', () => {
         groupBy: 'none',
       },
       global: {
+        mocks: { $t: (key: string) => key },
         stubs: {
           HierarchicalTaskRow: {
             props: ['task'],
@@ -75,6 +76,7 @@ describe('TaskList hidden selection safety', () => {
         groupBy: 'dueDate',
       },
       global: {
+        mocks: { $t: (key: string) => key },
         stubs: {
           HierarchicalTaskRow: {
             props: ['task'],

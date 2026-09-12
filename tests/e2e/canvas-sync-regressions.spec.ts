@@ -1452,14 +1452,15 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
         .first(),
     ).toBeVisible();
 
-    await clientA.getByTitle("Toggle filters").click();
+    await clientA.getByTestId("catalog-view-options").click();
     await clientA
-      .locator(".filter-bar .custom-select")
-      .nth(2)
+      .locator('[data-control="status"] .custom-select')
       .getByRole("combobox")
       .click();
     await clientA.getByRole("option", { name: "Done", exact: true }).click();
-    const showCompleted = clientA.getByTitle("Show completed tasks");
+    const showCompleted = clientA.getByRole("button", {
+      name: "Show completed",
+    });
     if (await showCompleted.count()) await showCompleted.click();
     const catalogState = await clientA.evaluate((taskId) => {
       const root = document.querySelector("#app") as any;

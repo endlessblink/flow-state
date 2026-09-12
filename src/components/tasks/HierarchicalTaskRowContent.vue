@@ -16,7 +16,7 @@
     }"
     :data-status="task.status"
     :style="{
-      paddingLeft: `${indentLevel * 20 + 40}px`,
+      '--task-indent': `${indentLevel * 20}px`,
       '--indent-level': indentLevel
     }"
     draggable="true"

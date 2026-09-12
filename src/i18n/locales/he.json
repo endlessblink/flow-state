@@ -263,8 +263,11 @@
     "group_list": "רשימה"
   },
   "catalog_controls": {
+    "toolbar_label": "פקדי הקטלוג",
     "summary_label": "מיון וסינון הקטלוג",
     "global_order": "סדר ראשי",
+    "global_order_note": "מסדר גם את תיבות הקלט של הקנבס והיומן",
+    "view_options": "אפשרויות תצוגה",
     "catalog_view": "תצוגת קטלוג",
     "group_by": "קיבוץ לפי",
     "grouped_by": "מקובץ לפי {group}",
@@ -273,9 +276,21 @@
     "density": "צפיפות",
     "completed_hidden": "משימות שהושלמו מוסתרות",
     "toggle_controls": "הצגת פקדי הקטלוג",
+    "show_completed": "הצגת משימות שהושלמו",
+    "hide_completed": "הסתרת משימות שהושלמו",
     "manual": "ידני",
     "due_date": "תאריך יעד",
-    "lane": "מסלול"
+    "lane": "מסלול",
+    "no_lane": "ללא מסלול",
+    "task_column": "משימה",
+    "status_column": "סטטוס",
+    "priority_column": "עדיפות",
+    "due_column": "יעד",
+    "progress_column": "התקדמות",
+    "estimate_column": "הערכה",
+    "density_compact": "צפופה",
+    "density_comfortable": "נוחה",
+    "density_spacious": "מרווחת"
   },
   "quick_sort": {
     "title": "מיון מהיר",

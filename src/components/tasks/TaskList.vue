@@ -37,33 +37,33 @@
       </template>
       <template v-else>
         <span class="sortable-header" :class="{ 'sortable-header--active': sortBy === 'title' }" @click="handleSort('title')">
-          Task <span class="task-total-count">{{ tasks.length }}</span>
+          {{ $t('catalog_controls.task_column') }} <span class="task-total-count">{{ tasks.length }}</span>
           <ChevronUp v-if="sortBy === 'title' && sortDirection === 'asc'" :size="12" class="sort-indicator" />
           <ChevronDown v-else-if="sortBy === 'title'" :size="12" class="sort-indicator" />
         </span>
         <span />
         <span class="sortable-header" :class="{ 'sortable-header--active': sortBy === 'status' }" @click="handleSort('status')">
-          Status
+          {{ $t('catalog_controls.status_column') }}
           <ChevronUp v-if="sortBy === 'status' && sortDirection === 'asc'" :size="12" class="sort-indicator" />
           <ChevronDown v-else-if="sortBy === 'status'" :size="12" class="sort-indicator" />
         </span>
         <span class="sortable-header" :class="{ 'sortable-header--active': sortBy === 'priority' }" @click="handleSort('priority')">
-          Priority
+          {{ $t('catalog_controls.priority_column') }}
           <ChevronUp v-if="sortBy === 'priority' && sortDirection === 'asc'" :size="12" class="sort-indicator" />
           <ChevronDown v-else-if="sortBy === 'priority'" :size="12" class="sort-indicator" />
         </span>
         <span class="sortable-header" :class="{ 'sortable-header--active': sortBy === 'dueDate' }" @click="handleSort('dueDate')">
-          Due
+          {{ $t('catalog_controls.due_column') }}
           <ChevronUp v-if="sortBy === 'dueDate' && sortDirection === 'asc'" :size="12" class="sort-indicator" />
           <ChevronDown v-else-if="sortBy === 'dueDate'" :size="12" class="sort-indicator" />
         </span>
         <span class="sortable-header" :class="{ 'sortable-header--active': sortBy === 'progress' }" @click="handleSort('progress')">
-          Progress
+          {{ $t('catalog_controls.progress_column') }}
           <ChevronUp v-if="sortBy === 'progress' && sortDirection === 'asc'" :size="12" class="sort-indicator" />
           <ChevronDown v-else-if="sortBy === 'progress'" :size="12" class="sort-indicator" />
         </span>
         <span class="sortable-header" :class="{ 'sortable-header--active': sortBy === 'estimatedTime' }" @click="handleSort('estimatedTime')">
-          Est.
+          {{ $t('catalog_controls.estimate_column') }}
           <ChevronUp v-if="sortBy === 'estimatedTime' && sortDirection === 'asc'" :size="12" class="sort-indicator" />
           <ChevronDown v-else-if="sortBy === 'estimatedTime'" :size="12" class="sort-indicator" />
         </span>
@@ -900,6 +900,7 @@ defineExpose({
 
 <style scoped>
 .task-list {
+  --catalog-task-columns: 32px minmax(260px, 1fr) 40px 120px 96px 104px 72px 72px 160px;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -910,6 +911,7 @@ defineExpose({
   overflow-y: visible;
   min-height: 0;
   flex: 1;
+  min-width: 0;
 }
 
 /* Density variants — set CSS custom properties inherited by .task-row in HierarchicalTaskRow.css */
@@ -1212,7 +1214,7 @@ defineExpose({
 /* Column Headers */
 .column-headers {
   display: grid;
-  grid-template-columns: 52px 1fr 40px 120px 72px 96px 72px 72px 112px;
+  grid-template-columns: var(--catalog-task-columns);
   gap: var(--space-3);
   align-items: center;
   padding: var(--space-1) var(--space-2);
@@ -1402,5 +1404,20 @@ defineExpose({
   pointer-events: none;
   z-index: 10;
   transition: top 0.1s ease;
+}
+
+@media (max-width: 1400px) {
+  .task-list {
+    --catalog-task-columns: 32px minmax(152px, 1fr) 32px 112px 96px 104px 0 0 160px;
+  }
+
+  .column-headers {
+    gap: var(--space-1);
+  }
+
+  .column-headers > :nth-child(7),
+  .column-headers > :nth-child(8) {
+    display: none;
+  }
 }
 </style>

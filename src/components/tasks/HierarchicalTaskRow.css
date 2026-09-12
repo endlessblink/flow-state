@@ -8,8 +8,8 @@
 /* Lean task row - minimal like Linear/Notion */
 .task-row {
     display: grid;
-    /* done  title        proj  status   prio   due    prog   est    actions */
-    grid-template-columns: 32px 1fr 40px 120px 72px 96px 72px 72px 112px;
+    /* Shared with the Catalog header: priority 96px, due 104px. */
+    grid-template-columns: var(--catalog-task-columns);
     grid-template-areas: "done title project status priority due progress estimate actions";
     gap: var(--space-3);
     align-items: center;
@@ -218,6 +218,7 @@
 .task-row {
     min-height: var(--row-min-height, 44px);
     padding: var(--row-padding-v, var(--space-1)) var(--row-padding-h, var(--space-2));
+    padding-inline-start: calc(var(--row-padding-h, var(--space-2)) + var(--task-indent, 0px));
 }
 
 /* No progress indicator styling */
@@ -279,4 +280,15 @@
 .task-row--hovered .task-row__actions,
 .task-row__actions:focus-within {
     opacity: 1;
+}
+
+@media (max-width: 1400px) {
+    .task-row {
+        gap: var(--space-1);
+    }
+
+    .task-row__progress,
+    .task-row__estimate {
+        display: none;
+    }
 }

@@ -263,8 +263,11 @@
     "group_list": "List"
   },
   "catalog_controls": {
+    "toolbar_label": "Catalog controls",
     "summary_label": "Catalog sorting and filters",
     "global_order": "Global order",
+    "global_order_note": "Also orders Canvas and Calendar inboxes",
+    "view_options": "View options",
     "catalog_view": "Catalog view",
     "group_by": "Group by",
     "grouped_by": "Grouped by {group}",
@@ -273,9 +276,21 @@
     "density": "Density",
     "completed_hidden": "Completed hidden",
     "toggle_controls": "Toggle filters",
+    "show_completed": "Show completed",
+    "hide_completed": "Hide completed",
     "manual": "Manual",
     "due_date": "Due date",
-    "lane": "Lane"
+    "lane": "Lane",
+    "no_lane": "No lane",
+    "task_column": "Task",
+    "status_column": "Status",
+    "priority_column": "Priority",
+    "due_column": "Due",
+    "progress_column": "Progress",
+    "estimate_column": "Est.",
+    "density_compact": "Compact",
+    "density_comfortable": "Comfortable",
+    "density_spacious": "Spacious"
   },
   "quick_sort": {
     "title": "Quick Sort",

@@ -2,8 +2,6 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia, storeToRefs } from 'pinia'
 import { createI18n } from 'vue-i18n'
-import { nextTick } from 'vue'
-import CatalogViewSummary from '@/components/catalog/CatalogViewSummary.vue'
 import ViewControls from '@/components/layout/ViewControls.vue'
 import { useCatalogViewStore } from '@/stores/catalogView'
 import en from '@/i18n/locales/en.json'
@@ -22,46 +20,7 @@ describe('Catalog filter and global-order discoverability', () => {
     setActivePinia(createPinia())
   })
 
-  it('shows global ordering separately from the meaningful Catalog view state', () => {
-    const wrapper = mount(CatalogViewSummary, {
-      global: { plugins: [createTestI18n()] },
-      props: {
-        sortBy: 'dueDate',
-        sortDirection: 'asc',
-        scopeLabel: 'All active tasks',
-        groupBy: 'dueDate',
-        filterStatus: 'todo',
-        hideDoneTasks: true,
-      },
-    })
-
-    expect(wrapper.get('[data-testid="global-order-summary"]').text()).toContain('Global order: Due date ↑')
-    const catalogSummary = wrapper.get('[data-testid="catalog-view-summary"]').text()
-    expect(catalogSummary).toContain('Catalog view: All active tasks')
-    expect(catalogSummary).toContain('Grouped by due date')
-    expect(catalogSummary).toContain('Status: To Do')
-    expect(catalogSummary).toContain('Completed hidden')
-    expect(catalogSummary).not.toContain('Comfortable')
-  })
-
-  it('localizes the summaries while keeping sort direction semantic in RTL', () => {
-    const wrapper = mount(CatalogViewSummary, {
-      global: { plugins: [createTestI18n('he')] },
-      props: {
-        sortBy: 'priority',
-        sortDirection: 'desc',
-        scopeLabel: 'כל המשימות הפעילות',
-        groupBy: 'none',
-        filterStatus: 'all',
-        hideDoneTasks: false,
-      },
-    })
-
-    expect(wrapper.get('[data-testid="global-order-summary"]').text()).toContain('סדר ראשי: עדיפות ↓')
-    expect(wrapper.get('[data-testid="catalog-view-summary"]').text()).toContain('ללא קיבוץ')
-  })
-
-  it('labels group and global-order selectors even when both select Due Date', () => {
+  it('keeps the Catalog structure and shared order visible in one toolbar', () => {
     const wrapper = mount(ViewControls, {
       global: { plugins: [createTestI18n()] },
       props: {
@@ -69,35 +28,36 @@ describe('Catalog filter and global-order discoverability', () => {
         groupBy: 'dueDate',
         filterStatus: 'all',
         density: 'comfortable',
-        expanded: true,
+        expanded: false,
       },
     })
 
     expect(wrapper.get('[data-control="group"] .control-label').text()).toBe('Group by')
     expect(wrapper.get('[data-control="sort"] .control-label').text()).toBe('Global order')
-    expect(wrapper.get('[data-control="status"] .control-label').text()).toBe('Status')
-    expect(wrapper.get('[data-control="density"] .control-label').text()).toBe('Density')
+    expect(wrapper.get('[data-testid="catalog-toolbar"]').attributes('role')).toBe('toolbar')
+    expect(wrapper.get('[data-testid="global-order-note"]').text()).toBe('Also orders Canvas and Calendar inboxes')
+    expect(wrapper.find('[data-control="status"]').exists()).toBe(false)
+    expect(wrapper.find('[data-control="density"]').exists()).toBe(false)
   })
 
-  it('opens and focuses the requested selector from a header summary', async () => {
+  it('reveals secondary Catalog-only controls without duplicating the primary controls', async () => {
     const wrapper = mount(ViewControls, {
-      attachTo: document.body,
       global: { plugins: [createTestI18n()] },
       props: {
         sortBy: 'dueDate',
         groupBy: 'dueDate',
         filterStatus: 'all',
         expanded: false,
-        focusTarget: null,
       },
     })
 
-    await wrapper.setProps({ expanded: true, focusTarget: 'sort' })
-    await nextTick()
+    await wrapper.get('[data-testid="catalog-view-options"]').trigger('click')
+    await wrapper.setProps({ expanded: true })
 
-    expect(document.activeElement?.getAttribute('aria-label')).toBe('Global order')
-    expect(wrapper.emitted('focusHandled')).toBeTruthy()
-    wrapper.unmount()
+    expect(wrapper.get('[data-control="status"] .control-label').text()).toBe('Status')
+    expect(wrapper.get('[data-control="density"] .control-label').text()).toBe('Density')
+    expect(wrapper.findAll('[data-control="group"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-control="sort"]')).toHaveLength(1)
   })
 
   it('preserves existing Catalog preference keys and chooses the intended focus target', () => {

@@ -1,8 +1,8 @@
 # FlowState MASTER_PLAN.md
 
-### BUG-2091: Tidy must contain cards after late renderer growth and repeated presses
+### ~~BUG-2091~~: Tidy must contain cards after late renderer growth and repeated presses (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS
+**Priority**: P0 | **Status**: ✅ DONE (2026-09-13)
 
 **User repro**: In the installed Canvas, pressing Tidy can leave one or more visible member cards below the group frame. Repeating Tidy does not reliably repair the frame.
 
@@ -25,12 +25,12 @@
 | User repro shape | Yes | The 1.4.536 installed authenticated Canvas rendered 86 cards with completed work shown; after restoring the hidden-completed preference, 13 active cards remained and 12 had parent IDs absent from the current group set. The new unit and local-browser regression reproduce a dated card outside every lane with a deleted parent-group ID. | Yes |
 | Data shape / membership | Yes | Tidy now treats a parent ID absent from all visible groups as loose and may recover that active dated card into the matching current day group. Dismissed/history/deleted records remain excluded and no task record is deleted. | Yes |
 | Renderer state | Yes | Regression forces a member card to grow two animation frames after Tidy. | Yes |
-| Electron main/preload | Yes | Renderer-only change; the guarded Electron build and packaging validation passed for 1.4.533. | No change required |
-| Supabase persistence/realtime | Yes | The authenticated installed Tidy persisted the adopted completed card under its day group through the existing task mutation path. | No transport change |
-| Updater/runtime version | Yes | The public manifest advertises 1.4.533 with the validated AppImage, and the restarted installed runtime reports 1.4.533. | Yes |
-| Stale live process state | Yes | The old 1.4.532 process was stopped and the installed 1.4.533 AppImage was relaunched against the real user profile. | Yes |
+| Electron main/preload | Yes | Renderer-only change; the guarded Electron build and packaging validation passed for 1.4.537. | No change required |
+| Supabase persistence/realtime | Yes | The authenticated installed Tidy persisted all 12 dated stale-parent repairs through reload; the final read-back found every rendered card owned by a current group. | No transport change |
+| Updater/runtime version | Yes | The public manifest advertises 1.4.537 with the validated AppImage, and the restarted installed runtime reports 1.4.537. | Yes |
+| Stale live process state | Yes | The prior process was stopped and the installed 1.4.537 AppImage was relaunched against the real user profile. | Yes |
 
-**Current evidence**: The new exact-shape unit regression failed before the candidate and now passes; the matching local-browser test passes in Chromium and WebKit and persists the repaired parent through reload. The full unit suite, type-check, source lint, script syntax checks, and diff validation pass. The current installed 1.4.536 preference has been safely restored to hide completed history. Closure still requires a newer Electron updater release and installed authenticated geometric plus visual containment read-back. The unrelated whole-file E2E seed contamination remains tracked by TASK-1906.
+**Completion evidence**: The new exact-shape unit regression failed before the candidate and now passes; the matching local-browser test passes in Chromium and WebKit and persists the repaired parent through reload. The full ship gate passed 4,889 tests with 3 expected skips, plus type-check, source lint, script syntax, diff validation, Electron build, and package validation. Version 1.4.537 was published, its installed AppImage hash matches the release artifact, and the restarted packaged runtime reports 1.4.537. On the authenticated populated Canvas, completed history is hidden again, all 5 currently filtered rendered cards have valid current parents, and a fresh installed Tidy reports 0 overlaps, 0 same-parent overlaps, 0 invalid rendered tasks, and 0 escaped group tasks. The unrelated whole-file E2E seed contamination remains tracked by TASK-1906.
 
 ### ~~TASK-2089: Expose global ordering and Catalog view context~~ (✅ DONE)
 

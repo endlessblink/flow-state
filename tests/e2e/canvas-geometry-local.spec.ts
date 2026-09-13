@@ -1224,7 +1224,7 @@ test.describe('local canvas geometry regressions', () => {
     }))
   })
 
-  test('tidy re-homes a stale date-parent task outside every day column', async ({ page }) => {
+  test('tidy re-homes a task whose saved parent group no longer exists', async ({ page }) => {
     await page.waitForFunction(() => {
       const root = document.querySelector('#app') as { __vue_app__?: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, unknown> } } } } } } | null
       const canvasStore = root?.__vue_app__?._context.config.globalProperties.$pinia._s.get('canvas') as { _hasInitializedOnce?: boolean } | undefined
@@ -1245,9 +1245,9 @@ test.describe('local canvas geometry regressions', () => {
       { id: 'dated-today', name: 'Today', x: 100, y: 200, width: 400, height: 320 },
       { id: 'dated-tomorrow', name: 'Tomorrow', x: 700, y: 200, width: 400, height: 320 },
     ], [
-      // A failed drag left the saved Tomorrow parent behind even though the
-      // card is visibly outside every column. Tidy must recover by date.
-      { id: 'dated-loose-task', title: 'Loose dated task', parentId: 'dated-tomorrow', dueDate: today, x: -400, y: 540 },
+      // A regenerated smart-group set left this task pointing at a group ID
+      // that no longer exists. Tidy must recover the visible card by date.
+      { id: 'dated-loose-task', title: 'Loose dated task', parentId: 'deleted-day-group', dueDate: today, x: -400, y: 540 },
     ], { sync: false, refreshOnMissing: false })
 
     // Establish that the Tidy click operates on the intended persisted
@@ -1259,7 +1259,7 @@ test.describe('local canvas geometry regressions', () => {
       return {
         groups: geometry.groups.map((group) => group.name).sort(),
         task: geometry.tasks.find((task) => task.id === 'dated-loose-task'),
-        tomorrowGroupId: tomorrowGroup?.id,
+        hasTomorrowGroup: Boolean(tomorrowGroup),
       }
     }).toMatchObject({
       groups: ['Today', 'Tomorrow'],
@@ -1267,12 +1267,11 @@ test.describe('local canvas geometry regressions', () => {
         x: -400,
         y: 540,
       },
-      tomorrowGroupId: expect.any(String),
+      hasTomorrowGroup: true,
     })
 
     const beforeTidy = await readGeometry(page)
-    const tomorrowGroupId = beforeTidy.groups.find((group) => group.name === 'Tomorrow')!.id
-    expect(beforeTidy.tasks.find((task) => task.id === 'dated-loose-task')!.parentId).toBe(tomorrowGroupId)
+    expect(beforeTidy.tasks.find((task) => task.id === 'dated-loose-task')!.parentId).toBe('deleted-day-group')
 
     await clickToolbar(page, /tidy|layout/)
 

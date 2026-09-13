@@ -129,6 +129,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
         })
         .map((group) => group.id)
     )
+    const visibleGroupIds = new Set(visibleGroups.map((group) => group.id))
     const isInsideVisibleGroupColumn = (task: typeof taskStore.rawTasks[number]) => {
       const position = options.getNodePosition?.(task.id) ?? task.canvasPosition
       return Boolean(position && spatialGroups.some((group) => (
@@ -138,7 +139,9 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     }
     const looseDatedTasks = taskStore.rawTasks.filter(
       (task) => !adoptedParents.has(task.id)
-        && (!task.parentId || (dateGroupIds.has(task.parentId) && !isInsideVisibleGroupColumn(task)))
+        && (!task.parentId
+          || !visibleGroupIds.has(task.parentId)
+          || (dateGroupIds.has(task.parentId) && !isInsideVisibleGroupColumn(task)))
     )
     for (const [taskId, groupId] of collectDayGroupAdoptions(looseDatedTasks, visibleGroups, { mode: 'dueDate' })) {
       adoptedParents.set(taskId, groupId)

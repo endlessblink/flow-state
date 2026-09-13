@@ -5,7 +5,8 @@ const browser = await chromium.connectOverCDP(cdpUrl)
 const page = browser.contexts()[0].pages()[0]
 if (!page) throw new Error('No Electron window available')
 
-await page.goto('https://in-theflow.com/#/canvas')
+if (!page.url().startsWith('file:')) throw new Error(`Expected packaged Electron page, got ${page.url()}`)
+await page.evaluate(() => { location.hash = '/canvas' })
 await page.waitForFunction(() => document.querySelectorAll('.vue-flow__node [data-task-id]').length > 0, null, { timeout: 30_000 })
 await page.locator('[aria-label="Tidy day-group layout"]').click()
 await page.waitForTimeout(5_000)

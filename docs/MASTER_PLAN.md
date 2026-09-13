@@ -6,7 +6,7 @@
 
 **User repro**: In the installed Canvas, pressing Tidy can leave one or more visible member cards below the group frame. Repeating Tidy does not reliably repair the frame.
 
-**Exact failure modes**: First, the deferred Tidy pass used a zero-delay timer as its settle boundary, so later card growth could leave the persisted frame too short; repeated presses could also race the in-flight geometry transaction. FlowState 1.4.532 fixed and shipped that renderer timing class. FlowState 1.4.533 included rendered completed cards, but the installed populated-canvas read-back exposed another renderer-state class: loose cards can remain visible at DOM positions that disagree with missing or stale Vue Flow geometry, so spatial adoption still measures the wrong column and leaves those cards outside the frame.
+**Exact failure modes**: First, the deferred Tidy pass used a zero-delay timer as its settle boundary, so later card growth could leave the persisted frame too short; repeated presses could also race the in-flight geometry transaction. Later fixes made rendered geometry authoritative and kept explicitly dismissed/history records out. The 1.4.536 installed read-back exposed a distinct data-shape class: completed history was visible because `hideCanvasDoneTasks=false` was persisted, while 12 of the 13 active rendered cards referenced group IDs that no longer existed. Tidy only treated root cards or cards owned by a current date group as loose, so the stale-parent cards were never adopted or framed.
 
 **Acceptance**:
 
@@ -16,20 +16,21 @@
 4. Regression coverage exercises the real toolbar twice in quick succession and asserts rendered DOM containment, alongside unit coverage for the settle barrier and coalescing contract.
 5. Ship through the Electron updater and verify the installed authenticated Canvas against the user's populated layout.
 6. When completed cards are shown, spatial Tidy recovery includes every rendered completed card aligned with a visible group column; when they are hidden, Tidy leaves them excluded.
+7. A visible active card whose saved parent group no longer exists is treated as loose and adopted into its matching current date group; explicitly dismissed, completion-record, and soft-deleted tasks remain excluded.
 
 **Failure-class matrix**:
 
 | Class | Checked? | Evidence | Covered by this fix? |
 | --- | --- | --- | --- |
-| User repro shape | Yes | 1.4.532 fixed late growth; 1.4.533 also adopts the rendered completed card that remained below the populated installed frame. The installed authenticated read-back contains the exact card and all 55 visible members of rendered groups with zero violations. | Yes |
-| Data shape / membership | Yes | The failing task was visible and column-aligned but `done` with stale/missing parent metadata. Spatial recovery now uses renderer visibility and may adopt shown completed cards; due-date recovery still excludes completed cards. | Yes |
+| User repro shape | Yes | The 1.4.536 installed authenticated Canvas rendered 86 cards with completed work shown; after restoring the hidden-completed preference, 13 active cards remained and 12 had parent IDs absent from the current group set. The new unit and local-browser regression reproduce a dated card outside every lane with a deleted parent-group ID. | Yes |
+| Data shape / membership | Yes | Tidy now treats a parent ID absent from all visible groups as loose and may recover that active dated card into the matching current day group. Dismissed/history/deleted records remain excluded and no task record is deleted. | Yes |
 | Renderer state | Yes | Regression forces a member card to grow two animation frames after Tidy. | Yes |
 | Electron main/preload | Yes | Renderer-only change; the guarded Electron build and packaging validation passed for 1.4.533. | No change required |
 | Supabase persistence/realtime | Yes | The authenticated installed Tidy persisted the adopted completed card under its day group through the existing task mutation path. | No transport change |
 | Updater/runtime version | Yes | The public manifest advertises 1.4.533 with the validated AppImage, and the restarted installed runtime reports 1.4.533. | Yes |
 | Stale live process state | Yes | The old 1.4.532 process was stopped and the installed 1.4.533 AppImage was relaunched against the real user profile. | Yes |
 
-**Current evidence**: FlowState 1.4.533 passed source and updater gates, but installed visual read-back still shows loose rendered cards outside a group frame. Closure requires using the rendered DOM position as Tidy's membership authority, shipping a newer desktop version, and repeating installed geometric and visual containment checks.
+**Current evidence**: The new exact-shape unit regression failed before the candidate and now passes; the matching local-browser test passes in Chromium and WebKit and persists the repaired parent through reload. The full unit suite, type-check, source lint, script syntax checks, and diff validation pass. The current installed 1.4.536 preference has been safely restored to hide completed history. Closure still requires a newer Electron updater release and installed authenticated geometric plus visual containment read-back. The unrelated whole-file E2E seed contamination remains tracked by TASK-1906.
 
 ### ~~TASK-2089: Expose global ordering and Catalog view context~~ (✅ DONE)
 

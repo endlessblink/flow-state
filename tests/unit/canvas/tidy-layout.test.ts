@@ -705,6 +705,35 @@ describe('useTidyLayout', () => {
     )
   })
 
+  it('repairs a dated card whose saved parent group no longer exists', () => {
+    const today = makeGroup('Today', 0)
+    const monday = makeGroup('Monday', 500)
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, monday])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
+      {
+        id: 'missing-parent-task',
+        parentId: 'deleted-day-group',
+        dueDate: '2026-05-04',
+        canvasPosition: { x: -400, y: 520 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+    ] as any)
+
+    const { taskMoves, release } = useTidyLayout().tidyDayGroups()
+    release()
+
+    expect(taskMoves).toContainEqual(expect.objectContaining({
+      taskId: 'missing-parent-task',
+      parentId: today.id,
+      position: { x: 20, y: 70 },
+    }))
+    expect(updateTask).toHaveBeenCalledWith(
+      'missing-parent-task',
+      { parentId: today.id, canvasPosition: { x: 20, y: 70 }, positionFormat: 'absolute' },
+      'DRAG'
+    )
+  })
+
   it('spatially adopts loose tasks sitting inside visible groups during tidy', () => {
     // A loose task visibly sitting inside a group needs membership before Tidy
     // can stack it with the group. Already-parented tasks are covered by the

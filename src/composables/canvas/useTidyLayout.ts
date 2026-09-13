@@ -46,6 +46,8 @@ export interface TidyLayoutOptions {
   getNodeSize?: (nodeId: string) => { width: number; height: number } | undefined
   /** Return false when a task node is currently hidden/not rendered on canvas. */
   isTaskVisible?: (taskId: string) => boolean | undefined
+  /** Wait until rendered card dimensions stop changing before the final plan. */
+  waitForGeometrySettled?: () => Promise<void>
 }
 
 interface TidyPlan {
@@ -226,7 +228,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
    * Lay out smart + day-of-week groups in a canonical single row. Restacks
    * tasks vertically inside each group.
    */
-  function tidyDayGroups(options: { deferPersistence?: boolean } = {}): {
+  function tidyDayGroups(tidyOptions: { deferPersistence?: boolean } = {}): {
     groupMoves: GroupMove[]
     taskMoves: TaskMove[]
     pendingWrites: Promise<void>
@@ -352,9 +354,10 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       })
     }
 
-    const pendingWritesWithUndo = options.deferPersistence
+    const pendingWritesWithUndo = tidyOptions.deferPersistence
       ? new Promise<void>((resolve, reject) => {
-          window.setTimeout(() => {
+          const settleAndPersist = async () => {
+            await options.waitForGeometrySettled?.()
             if (released) {
               resolve()
               return
@@ -368,11 +371,18 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
               allGroupMoves.splice(0, allGroupMoves.length, ...settledPlan.groupMoves)
               allTaskMoves.splice(0, allTaskMoves.length, ...settledPlan.taskMoves)
               lockPlan(settledPlan)
-              persistPlan(settledPlan).then(resolve).catch(reject)
+              await persistPlan(settledPlan)
+              resolve()
             } catch (err) {
               reject(err)
             }
-          }, 0)
+          }
+
+          if (options.waitForGeometrySettled) {
+            void settleAndPersist()
+          } else {
+            window.setTimeout(() => { void settleAndPersist() }, 0)
+          }
         })
       : persistPlan(initialPlan)
 

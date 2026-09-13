@@ -738,7 +738,42 @@ const tidyLayout = useTidyLayout({
     const taskElement = document.querySelector(`[data-task-id="${CSS.escape(taskId)}"]`)
     return taskElement != null
   },
+  waitForGeometrySettled: () => waitForTidyGeometrySettled(),
 })
+
+const TIDY_SETTLE_MAX_FRAMES = 20
+const TIDY_SETTLE_STABLE_FRAMES = 2
+
+function nextAnimationFrame() {
+  return new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+}
+
+async function waitForTidyGeometrySettled() {
+  let previousSignature = ''
+  let stableFrames = 0
+
+  for (let frame = 0; frame < TIDY_SETTLE_MAX_FRAMES; frame += 1) {
+    await nextTick()
+    await nextAnimationFrame()
+    const signature = taskStore.rawTasks
+      .filter((task) => task.canvasPosition && !task._soft_deleted && !task.isCompletionRecord)
+      .map((task) => {
+        const size = getRenderedNodeSize(task.id)
+        return size ? `${task.id}:${Math.round(size.width)}x${Math.round(size.height)}` : null
+      })
+      .filter(Boolean)
+      .sort()
+      .join('|')
+
+    if (signature && signature === previousSignature) {
+      stableFrames += 1
+      if (stableFrames >= TIDY_SETTLE_STABLE_FRAMES) return
+    } else {
+      stableFrames = 0
+      previousSignature = signature
+    }
+  }
+}
 
 // TASK-1756 v10: Vue Flow's dimension + bounds bookkeeping lags Vue's
 // reactivity cycle. Single nextTick lets the BUG-1203 spatial validator
@@ -771,6 +806,7 @@ function handleRotateDayGroups() {
 }
 
 const TIDY_HYDRATION_MAX_RETRIES = 20
+let tidyInFlight: Promise<void> | null = null
 
 async function handleTidyLayout(hydrationRetriesRemaining = TIDY_HYDRATION_MAX_RETRIES) {
   // BUG-1899: Tidy plans from the CURRENT store — if the initial canvas load is
@@ -791,26 +827,34 @@ async function handleTidyLayout(hydrationRetriesRemaining = TIDY_HYDRATION_MAX_R
     return
   }
 
-  // TASK-1756 v8: lay out all smart + day-of-week groups in a clean single row
-  // (user's left-to-right order preserved) and restack tasks inside them.
-  const { groupMoves, taskMoves, pendingWrites, release } = tidyLayout.tidyDayGroups({ deferPersistence: true })
-  applyCanonicalMoves(groupMoves, taskMoves)
-  // Tidy has two sources to settle: the immediate Vue Flow move and the
-  // optimistic store write. After both have settled, force the read path to
-  // rebuild Vue Flow nodes from the now-current absolute store geometry. This
-  // prevents stale child `position` / `computedPosition` state from surviving
-  // a programmatic reparent/restack.
-  releaseOnDoubleNextTick(release, () => {
-    syncNodes(undefined, { force: true })
-    // Vue Flow's forced store projection can reconcile child transforms after
-    // the first atomic apply. Reassert the complete plan once that projection
-    // has settled so every visible card—not only the first mounted subset—uses
-    // the same parent-relative geometry and the frame keeps its planned height.
-    nextTick(() => nextTick(() => {
+  if (tidyInFlight) {
+    await tidyInFlight
+    return
+  }
+
+  const runTidy = async () => {
+    // TASK-1756 v8: lay out all smart + day-of-week groups in a clean single row
+    // (user's left-to-right order preserved) and restack tasks inside them.
+    const { groupMoves, taskMoves, pendingWrites, release } = tidyLayout.tidyDayGroups({ deferPersistence: true })
+    try {
+      applyCanonicalMoves(groupMoves, taskMoves)
+      await pendingWrites
+      syncNodes(undefined, { force: true })
+      await nextTick()
+      await nextTick()
       applyCanonicalMoves(groupMoves, taskMoves)
       if (import.meta.env.DEV) logPostTidySanity(groupMoves, taskMoves)
-    }))
-  }, pendingWrites)
+    } finally {
+      release()
+    }
+  }
+
+  tidyInFlight = runTidy()
+  try {
+    await tidyInFlight
+  } finally {
+    tidyInFlight = null
+  }
 }
 
 function logPostTidySanity(

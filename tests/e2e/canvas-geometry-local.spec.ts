@@ -1505,6 +1505,45 @@ test.describe('local canvas geometry regressions', () => {
     ).toEqual(settledTasks)
   })
 
+  test('tidy contains a member card that grows after the click render', async ({ page }) => {
+    const ids = ['late-frame-a', 'late-frame-b']
+    await seedCanvas(page, [
+      { id: 'late-frame-group', name: 'Late frame growth', x: 100, y: 200, width: 400, height: 650 },
+    ], ids.map((id, index) => ({
+      id,
+      title: `Late frame task ${index}`,
+      parentId: 'late-frame-group',
+      x: 120,
+      y: 280 + index * 120,
+    })), { sync: false })
+
+    await page.evaluate(() => {
+      const tidyButton = [...document.querySelectorAll<HTMLElement>('button')]
+        .find((button) => /tidy|layout/i.test(button.getAttribute('aria-label') ?? button.title ?? ''))
+      if (!tidyButton) throw new Error('Tidy button not found')
+      tidyButton.addEventListener('click', () => {
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          const card = document.querySelector<HTMLElement>('[data-task-id="late-frame-b"]')
+          if (!card) throw new Error('Late-growing task card not found')
+          card.style.minHeight = '900px'
+        }))
+      }, { once: true })
+    })
+
+    await clickToolbar(page, /tidy|layout/)
+    await clickToolbar(page, /tidy|layout/)
+    await expect.poll(() => page.evaluate((taskIds) => {
+      const frame = document.querySelector('[data-id="section-late-frame-group"]')?.getBoundingClientRect()
+      const cards = taskIds.map((id) => document.querySelector(`[data-task-id="${id}"]`)?.getBoundingClientRect())
+      return !!frame && cards.every((card) => !!card
+        && card.top >= frame.top - 1
+        && card.bottom <= frame.bottom + 1)
+    }, ids), {
+      timeout: 10_000,
+      message: 'Tidy must include card growth that lands after the click render',
+    }).toBe(true)
+  })
+
   test('tidy stacks variable-height cards without overlap', async ({ page }) => {
     await seedCanvas(page, [
       { id: 'thu', name: 'Thursday', x: 100, y: 200 },

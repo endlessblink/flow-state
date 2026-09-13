@@ -164,6 +164,49 @@ describe('useTidyLayout', () => {
     tidy.release()
   })
 
+  it('waits for late rendered card growth before computing the persisted frame', async () => {
+    const today = makeGroup('Today', 0)
+    const tasks = Array.from({ length: 3 }, (_, index) => ({
+      id: `late-growth-${index}`,
+      parentId: today.id,
+      canvasPosition: { x: 20, y: 70 + index * 112 },
+      createdAt: '2026-04-01T00:00:00Z',
+    }))
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue(tasks as any)
+    updateGroup.mockImplementation((_id, changes) => Object.assign(today, changes))
+    updateTask.mockImplementation((id, changes) => {
+      const task = tasks.find(task => task.id === id)
+      if (task) Object.assign(task, changes)
+    })
+
+    let renderedCardHeight = 80
+    const waitForGeometrySettled = vi.fn(async () => {
+      renderedCardHeight = 520
+    })
+    const { tidyDayGroups } = useTidyLayout({
+      getNodeSize: (nodeId) => nodeId.startsWith('late-growth-')
+        ? { width: 280, height: renderedCardHeight }
+        : undefined,
+      waitForGeometrySettled,
+    })
+
+    const tidy = tidyDayGroups({ deferPersistence: true })
+    const initialHeight = tidy.groupMoves[0]?.size.height ?? 0
+    await vi.runAllTimersAsync()
+    await tidy.pendingWrites
+
+    expect(waitForGeometrySettled).toHaveBeenCalledOnce()
+    expect(tidy.groupMoves[0]?.size.height).toBeGreaterThan(initialHeight)
+    expect(updateGroup).toHaveBeenCalledWith(
+      today.id,
+      expect.objectContaining({
+        position: expect.objectContaining({ height: tidy.groupMoves[0]?.size.height }),
+      })
+    )
+    tidy.release()
+  })
+
   it('does not reacquire locks when deferred Tidy is released before its settled pass', async () => {
     const today = makeGroup('Today', 0)
     const task = {

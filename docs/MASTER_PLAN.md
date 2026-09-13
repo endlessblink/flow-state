@@ -1,5 +1,33 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2091: Tidy must contain cards after late renderer growth and repeated presses (🚧 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-13)
+
+**User repro**: In the installed Canvas, pressing Tidy can leave one or more visible member cards below the group frame. Repeating Tidy does not reliably repair the frame.
+
+**Exact failure mode**: The deferred Tidy pass used a zero-delay timer as its settle boundary. Card height can still change on later animation frames, so the persisted plan and displayed frame are computed from stale dimensions. A second Tidy press can start another layout transaction before the first releases its geometry locks.
+
+**Acceptance**:
+
+1. Tidy waits until rendered canvas-card dimensions remain stable across animation frames before computing and persisting its final plan.
+2. A second Tidy press while layout is in flight joins the existing operation rather than racing it.
+3. After the final render, every visible member card is fully contained by its actual group frame, including a card whose height grows two animation frames after the click.
+4. Regression coverage exercises the real toolbar twice in quick succession and asserts rendered DOM containment, alongside unit coverage for the settle barrier and coalescing contract.
+5. Ship through the Electron updater and verify the installed authenticated Canvas against the user's populated layout.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | In progress | Delayed-growth plus repeated-toolbar-click E2E is green; populated installed-app read-back remains. | Yes |
+| Data shape / membership | Yes | Existing Tidy membership and wrapped-frame regressions remain green; no task/group schema changes. | No change required |
+| Renderer state | Yes | Regression forces a member card to grow two animation frames after Tidy. | Yes |
+| Electron main/preload | Pending | Renderer-only change; packaged runtime still requires release verification. | No change required |
+| Supabase persistence/realtime | Partial | Final plan still uses the existing persistence path; authenticated installed read-back remains. | No transport change |
+| Updater/runtime version | Pending | Requires 1.4.532 manifest, artifact, install, and running-version proof. | Yes |
+| Stale live process state | Pending | Requires replacement and restart of the installed AppImage. | Yes |
+
 ### ~~TASK-2089: Expose global ordering and Catalog view context~~ (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-09-12)

@@ -25,9 +25,9 @@ describe('Canvas Tidy Vue Flow application', () => {
     )
 
     expect(handleTidyLayout).toContain('applyCanonicalMoves(groupMoves, taskMoves)')
-    expect(handleTidyLayout).toContain('releaseOnDoubleNextTick(release, () => {')
+    expect(handleTidyLayout).toContain('await pendingWrites')
     expect(handleTidyLayout).toContain('syncNodes(undefined, { force: true })')
-    expect(handleTidyLayout).toContain('}, pendingWrites)')
+    expect(handleTidyLayout).toContain('release()')
   })
 
   it('reapplies the complete canonical plan after Vue Flow reconciles the forced sync', () => {
@@ -38,7 +38,7 @@ describe('Canvas Tidy Vue Flow application', () => {
     )
 
     expect(handleTidyLayout).toContain('syncNodes(undefined, { force: true })')
-    expect(handleTidyLayout).toContain('nextTick(() => nextTick(() => {')
+    expect(handleTidyLayout).toContain('await nextTick()')
     expect(handleTidyLayout).toContain('applyCanonicalMoves(groupMoves, taskMoves)')
   })
 
@@ -56,14 +56,28 @@ describe('Canvas Tidy Vue Flow application', () => {
     expect(handleTidyLayout).not.toContain('Date.now() - tidyWaitStart')
   })
 
+  it('coalesces repeated Tidy presses while the rendered geometry is settling', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/views/CanvasView.vue'), 'utf8')
+    const handleTidyLayout = source.slice(
+      source.indexOf('let tidyInFlight'),
+      source.indexOf('function getCanvasNodeSnapshot')
+    )
+
+    expect(handleTidyLayout).toContain('if (tidyInFlight)')
+    expect(handleTidyLayout).toContain('tidyInFlight = runTidy()')
+    expect(handleTidyLayout).toContain('await tidyInFlight')
+    expect(handleTidyLayout).toContain('tidyInFlight = null')
+  })
+
   it('waits for group persistence as part of the Tidy completion barrier', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/composables/canvas/useTidyLayout.ts'), 'utf8')
     const tidy = source.slice(source.indexOf('function tidyDayGroups'), source.indexOf('function planReorderColumn'))
 
     expect(tidy).toContain('writes.push(canvasStore.updateGroup')
-    expect(tidy).toContain('options.deferPersistence')
+    expect(tidy).toContain('tidyOptions.deferPersistence')
+    expect(tidy).toContain('await options.waitForGeometrySettled?.()')
     expect(tidy).toContain('const settledPlan = planTidyDayGroups()')
-    expect(tidy).toContain('persistPlan(settledPlan).then(resolve).catch(reject)')
+    expect(tidy).toContain('await persistPlan(settledPlan)')
   })
 
   it('publishes a new controlled nodes array after Vue Flow applies node changes', () => {

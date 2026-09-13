@@ -233,6 +233,17 @@ describe('useCanvasFilteredState — dynamicNodeExtent & filtering', () => {
     expect(tasksWithCanvasPosition.value[0].id).toBe(withPos.id)
   })
 
+  it('10a: stale positions do not restore dismissed tasks or completion records', () => {
+    const active = makeTask({ id: 'active', canvasPosition: { x: 50, y: 50 } })
+    const dismissed = makeTask({ id: 'dismissed', canvasDismissed: true, canvasPosition: { x: 60, y: 60 } })
+    const completion = makeTask({ id: 'completion', isCompletionRecord: true, canvasPosition: { x: 70, y: 70 } })
+    const tasks = ref<Task[]>([active, dismissed, completion])
+
+    const { tasksWithCanvasPosition } = useCanvasFilteredState(tasks, makeCanvasStore() as never)
+
+    expect(tasksWithCanvasPosition.value.map(task => task.id)).toEqual(['active'])
+  })
+
   it('10b: due-today tasks without canvasPosition project into the Today group', () => {
     const today = formatDateKey(new Date())
     const task = makeTask({ id: 'today-task', dueDate: today, canvasPosition: undefined })

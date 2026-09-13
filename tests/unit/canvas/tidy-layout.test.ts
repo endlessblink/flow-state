@@ -793,7 +793,7 @@ describe('useTidyLayout', () => {
     )
   })
 
-  it('adopts a rendered dismissed completion card below a group when completed cards are shown', () => {
+  it('adopts a rendered done task below a group when completed cards are shown', () => {
     const today = makeGroup('Today', 200, 0)
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
@@ -801,13 +801,11 @@ describe('useTidyLayout', () => {
         id: 'rendered-done-task',
         parentId: undefined,
         status: 'done',
-        canvasDismissed: true,
-        isCompletionRecord: true,
         canvasPosition: { x: 20, y: 3478 },
         createdAt: '2026-04-01T00:00:00Z',
       },
     ] as any)
-    taskStore.hideCanvasDoneTasks = true
+    taskStore.hideCanvasDoneTasks = false
 
     const { taskMoves, groupMoves, release } = useTidyLayout({
       getNodePosition: (nodeId) => nodeId === 'rendered-done-task'
@@ -826,6 +824,33 @@ describe('useTidyLayout', () => {
       position: { x: 220, y: 70 },
     }))
     expect(groupMoves[0]?.size.height).toBeGreaterThanOrEqual(270)
+  })
+
+  it.each([
+    ['dismissed', { canvasDismissed: true }],
+    ['completion record', { isCompletionRecord: true }],
+  ])('does not restore a rendered %s task during Tidy', (_label, flags) => {
+    const today = makeGroup('Today', 200, 0)
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([{
+      id: 'removed-task',
+      parentId: undefined,
+      status: 'done',
+      canvasPosition: { x: 220, y: 3478 },
+      createdAt: '2026-04-01T00:00:00Z',
+      ...flags,
+    }] as any)
+    taskStore.hideCanvasDoneTasks = false
+
+    const { taskMoves, release } = useTidyLayout({
+      getNodePosition: () => ({ x: 220, y: 3478 }),
+      getNodeSize: () => ({ width: 280, height: 180 }),
+      isTaskVisible: () => true,
+    }).tidyDayGroups()
+    release()
+
+    expect(taskMoves).toEqual([])
+    expect(updateTask).not.toHaveBeenCalledWith('removed-task', expect.anything(), expect.anything())
   })
 
   it.each([520, 850])('adopts from live group columns, including resized width at x=%s', (x) => {

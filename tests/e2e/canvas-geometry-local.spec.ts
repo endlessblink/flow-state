@@ -50,7 +50,7 @@ const setupCanvas = async (page: Page) => {
   }, { timeout: 30_000 })
 }
 
-const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], options: { refreshOnMissing?: boolean; sync?: boolean } = {}) => {
+const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], options: { refreshOnMissing?: boolean; sync?: boolean; hiddenTaskIds?: string[] } = {}) => {
   await page.evaluate(async ({ groups, tasks, options }) => {
     const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
     const pinia = root.__vue_app__._context.config.globalProperties.$pinia
@@ -106,9 +106,12 @@ const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], op
 
   await expect.poll(async () => {
     try {
-      return await page.evaluate(({ groups, tasks, refreshOnMissing }) => {
+      return await page.evaluate(({ groups, tasks, refreshOnMissing, expectedHiddenTaskIds }) => {
+        const hiddenTaskIds = new Set(expectedHiddenTaskIds)
         const hasNodes = groups.every((group) => document.querySelector(`[data-id="section-${group.id}"]`))
-          && tasks.every((task) => document.querySelector(`[data-id="${task.id}"]`))
+          && tasks.every((task) => hiddenTaskIds.has(task.id)
+            ? !document.querySelector(`[data-id="${task.id}"]`)
+            : document.querySelector(`[data-id="${task.id}"]`))
         if (!hasNodes && refreshOnMissing !== false) {
           const root = document.querySelector('#app') as { __vue_app__?: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } } | null
           const pinia = root?.__vue_app__?._context.config.globalProperties.$pinia
@@ -116,7 +119,12 @@ const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], op
           pinia?._s.get('canvasUi')?.requestSync?.('user:manual')
         }
         return hasNodes
-      }, { groups, tasks, refreshOnMissing: options.refreshOnMissing })
+      }, {
+        groups,
+        tasks,
+        refreshOnMissing: options.refreshOnMissing,
+        expectedHiddenTaskIds: options.hiddenTaskIds ?? [],
+      })
     } catch (error) {
       if (String(error).includes('Execution context was destroyed')) return false
       throw error
@@ -1511,7 +1519,7 @@ test.describe('local canvas geometry regressions', () => {
     ).toEqual(settledTasks)
   })
 
-  test('tidy pulls a rendered dismissed completion card below its column into the frame', async ({ page }) => {
+  test('tidy never restores a dismissed completion record with stale geometry', async ({ page }) => {
     const groupId = 'visible-done-group'
     const taskId = 'visible-done-loose-task'
     await seedCanvas(page, [
@@ -1525,7 +1533,7 @@ test.describe('local canvas geometry regressions', () => {
       isCompletionRecord: true,
       x: 120,
       y: 1200,
-    }], { sync: false })
+    }], { sync: false, hiddenTaskIds: [taskId] })
 
     const readContainment = () => page.evaluate(({ groupId, taskId }) => {
       const frame = document.querySelector(`[data-id="section-${groupId}"]`)?.getBoundingClientRect()
@@ -1540,11 +1548,11 @@ test.describe('local canvas geometry regressions', () => {
       }
     }, { groupId, taskId })
 
-    await expect.poll(readContainment).toMatchObject({ rendered: true, contained: false })
+    await expect.poll(readContainment).toMatchObject({ rendered: false, contained: false, parentId: undefined })
     await clickToolbar(page, /tidy|layout/)
     await expect.poll(readContainment, {
-      message: 'Tidy must adopt every rendered completed card in the visible column',
-    }).toMatchObject({ rendered: true, contained: true, parentId: groupId })
+      message: 'Tidy must not resurrect explicitly removed or historical tasks',
+    }).toMatchObject({ rendered: false, contained: false, parentId: undefined })
   })
 
   test('tidy contains a member card that grows after the click render', async ({ page }) => {

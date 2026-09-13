@@ -226,6 +226,10 @@ export function useCanvasSync() {
                 }
             }
             const tasksToSync = (tasks || taskStore.rawTasks || taskStore.tasks)
+                // Raw geometry is authoritative for positioned active tasks, but
+                // stale geometry must not override an explicit Canvas removal or
+                // turn a historical completion record back into a visible card.
+                .filter(task => !task.canvasDismissed && !task.isCompletionRecord && !task._soft_deleted)
                 .map(task => {
                     if (task.canvasPosition || !todayGroup || !todayTaskIds.has(task.id)) return task
                     return {

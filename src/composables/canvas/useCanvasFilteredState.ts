@@ -49,6 +49,11 @@ export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: 
         let tasks = filteredTasks.value
         if (!Array.isArray(tasks)) return []
 
+        // A stale position must never resurrect a task the user explicitly
+        // removed from Canvas. Completion records are history-only and follow
+        // the same rule even if an old client left geometry behind.
+        tasks = tasks.filter(task => !task.canvasDismissed && !task.isCompletionRecord && !task._soft_deleted)
+
         // Keep done canvas tasks in the node model. useCanvasSync marks them
         // hidden instead of removing them, preserving Vue Flow parent/position state.
 
@@ -71,7 +76,7 @@ export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: 
         const groupHash = (canvasStore.groups || [])
             .map(group => `${group.id}:${group.name}:${group.isVisible}:${group.position?.x || ''}:${group.position?.y || ''}`)
             .join('|')
-        const currentHash = `${tasks.map(t => `${t.id}:${t.title}:${t.description || ''}:${t.dueDate || ''}:${t.canvasPosition?.x || ''}:${t.canvasPosition?.y || ''}:${t.parentId || ''}:${t.status || ''}:${t.updatedAt ? new Date(t.updatedAt).getTime() : ''}`).join('|')}##${groupHash}`
+        const currentHash = `${tasks.map(t => `${t.id}:${t.title}:${t.description || ''}:${t.dueDate || ''}:${t.canvasPosition?.x || ''}:${t.canvasPosition?.y || ''}:${t.parentId || ''}:${t.status || ''}:${t.canvasDismissed ? 1 : 0}:${t.isCompletionRecord ? 1 : 0}:${t.updatedAt ? new Date(t.updatedAt).getTime() : ''}`).join('|')}##${groupHash}`
 
         if (currentHash === lastCanvasTasksHash && lastCanvasTasks.length > 0) {
             return lastCanvasTasks

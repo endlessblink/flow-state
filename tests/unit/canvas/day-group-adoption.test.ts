@@ -74,7 +74,7 @@ describe('Canvas day-group adoption', () => {
       .toEqual(new Map([['task-1', 'today']]))
   })
 
-  it('spatially adopts visible dismissed and completion cards rendered in a group column', () => {
+  it('never spatially adopts dismissed or completion records even with stale rendered geometry', () => {
     const dismissed = {
       ...task({ id: 'dismissed', canvasDismissed: true, canvasPosition: { x: 20, y: 900 } }),
       isVisible: true,
@@ -85,9 +85,6 @@ describe('Canvas day-group adoption', () => {
     }
 
     expect(collectDayGroupAdoptions([dismissed, completion], [group('today', 'Today')], { mode: 'spatial' }))
-      .toEqual(new Map([
-        ['dismissed', 'today'],
-        ['completion', 'today'],
-      ]))
+      .toEqual(new Map())
   })
 })

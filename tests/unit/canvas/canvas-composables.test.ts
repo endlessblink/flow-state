@@ -41,6 +41,7 @@ import { NodeState, useNodeStateMachine } from '@/composables/canvas/state-machi
 import { useCanvasFilteredState } from '@/composables/canvas/useCanvasFilteredState'
 import { useCanvasGroups } from '@/stores/canvas/canvasGroups'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
+import { formatDateKey } from '@/utils/dateUtils'
 import { findMatchingGroupForDueDate, calculatePositionInGroup } from '@/composables/canvas/useSmartGroupMatcher'
 import { getAbsolutePositionForNodeSync } from '@/composables/canvas/useNodeSync'
 import type { Task } from '@/types/tasks'
@@ -233,7 +234,7 @@ describe('useCanvasFilteredState — dynamicNodeExtent & filtering', () => {
   })
 
   it('10b: due-today tasks without canvasPosition project into the Today group', () => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = formatDateKey(new Date())
     const task = makeTask({ id: 'today-task', dueDate: today, canvasPosition: undefined })
     const todayGroup = makeGroup({ id: 'today-group', name: 'Today' })
     const tasks = ref<Task[]>([task])

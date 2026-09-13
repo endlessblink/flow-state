@@ -24,11 +24,12 @@ type SeedGroup = {
 type SeedTask = {
   id: string
   title: string
-  parentId: string
+  parentId?: string
   x: number
   y: number
   dueDate?: string
   order?: number
+  status?: 'todo' | 'done'
 }
 
 const setupCanvas = async (page: Page) => {
@@ -57,6 +58,7 @@ const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], op
 
     settingsStore.weekStartsOn = 1
     taskStore.hideCanvasOverdueTasks = false
+    taskStore.hideCanvasDoneTasks = false
     taskStore.clearAll()
     canvasStore.clearAll()
     canvasStore.setViewport?.({ x: 0, y: 0, zoom: 1 })
@@ -82,7 +84,7 @@ const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], op
       await taskStore.createTask({
         id: task.id,
         title: task.title,
-        status: 'todo',
+        status: task.status ?? 'todo',
         priority: 'medium',
         isInInbox: false,
         parentId: task.parentId,
@@ -1503,6 +1505,40 @@ test.describe('local canvas geometry regressions', () => {
         .filter(task => ids.includes(task.id))
         .sort((a, b) => a.id.localeCompare(b.id))
     ).toEqual(settledTasks)
+  })
+
+  test('tidy pulls a rendered completed card below its column into the frame', async ({ page }) => {
+    const groupId = 'visible-done-group'
+    const taskId = 'visible-done-loose-task'
+    await seedCanvas(page, [
+      { id: groupId, name: 'Visible completed cards', x: 100, y: 200, width: 400, height: 300 },
+    ], [{
+      id: taskId,
+      title: 'Visible completed card below frame',
+      parentId: undefined,
+      status: 'done',
+      x: 120,
+      y: 1200,
+    }], { sync: false })
+
+    const readContainment = () => page.evaluate(({ groupId, taskId }) => {
+      const frame = document.querySelector(`[data-id="section-${groupId}"]`)?.getBoundingClientRect()
+      const card = document.querySelector(`[data-task-id="${taskId}"]`)?.getBoundingClientRect()
+      const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
+      const taskStore = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const task = taskStore.rawTasks.find((candidate: any) => candidate.id === taskId)
+      return {
+        rendered: !!frame && !!card,
+        contained: !!frame && !!card && card.top >= frame.top - 1 && card.bottom <= frame.bottom + 1,
+        parentId: task?.parentId,
+      }
+    }, { groupId, taskId })
+
+    await expect.poll(readContainment).toMatchObject({ rendered: true, contained: false })
+    await clickToolbar(page, /tidy|layout/)
+    await expect.poll(readContainment, {
+      message: 'Tidy must adopt every rendered completed card in the visible column',
+    }).toMatchObject({ rendered: true, contained: true, parentId: groupId })
   })
 
   test('tidy contains a member card that grows after the click render', async ({ page }) => {

@@ -6,7 +6,7 @@
 
 **User repro**: In the installed Canvas, pressing Tidy can leave one or more visible member cards below the group frame. Repeating Tidy does not reliably repair the frame.
 
-**Exact failure mode**: The deferred Tidy pass used a zero-delay timer as its settle boundary. Card height can still change on later animation frames, so the persisted plan and displayed frame are computed from stale dimensions. A second Tidy press can start another layout transaction before the first releases its geometry locks.
+**Exact failure modes**: First, the deferred Tidy pass used a zero-delay timer as its settle boundary, so later card growth could leave the persisted frame too short; repeated presses could also race the in-flight geometry transaction. FlowState 1.4.532 fixed and shipped that renderer timing class. The installed populated-canvas read-back then exposed a separate membership class: a rendered completed card with stale or missing parent metadata was excluded from spatial recovery even while completed cards were shown, so it contributed neither a task move nor group height.
 
 **Acceptance**:
 
@@ -15,17 +15,18 @@
 3. After the final render, every visible member card is fully contained by its actual group frame, including a card whose height grows two animation frames after the click.
 4. Regression coverage exercises the real toolbar twice in quick succession and asserts rendered DOM containment, alongside unit coverage for the settle barrier and coalescing contract.
 5. Ship through the Electron updater and verify the installed authenticated Canvas against the user's populated layout.
+6. When completed cards are shown, spatial Tidy recovery includes every rendered completed card aligned with a visible group column; when they are hidden, Tidy leaves them excluded.
 
 **Failure-class matrix**:
 
 | Class | Checked? | Evidence | Covered by this fix? |
 | --- | --- | --- | --- |
-| User repro shape | In progress | Delayed-growth plus repeated-toolbar-click E2E is green; populated installed-app read-back remains. | Yes |
-| Data shape / membership | Yes | Existing Tidy membership and wrapped-frame regressions remain green; no task/group schema changes. | No change required |
+| User repro shape | In progress | 1.4.532 fixed late growth, but the populated installed canvas still overflowed on a rendered completed card with no canonical parent. New unit and browser-rendered regressions cover that exact shape; 1.4.533 installed read-back remains. | Yes |
+| Data shape / membership | Yes | The failing task was visible and column-aligned but `done` with stale/missing parent metadata. Spatial recovery now uses renderer visibility and may adopt shown completed cards; due-date recovery still excludes completed cards. | Yes |
 | Renderer state | Yes | Regression forces a member card to grow two animation frames after Tidy. | Yes |
-| Electron main/preload | Pending | Renderer-only change; packaged runtime still requires release verification. | No change required |
+| Electron main/preload | Pending | Renderer-only change; packaged runtime still requires 1.4.533 release verification. | No change required |
 | Supabase persistence/realtime | Partial | Final plan still uses the existing persistence path; authenticated installed read-back remains. | No transport change |
-| Updater/runtime version | Pending | Requires 1.4.532 manifest, artifact, install, and running-version proof. | Yes |
+| Updater/runtime version | Pending | 1.4.532 was published and installed but retained the membership regression. Requires 1.4.533 manifest, artifact, install, and running-version proof. | Yes |
 | Stale live process state | Pending | Requires replacement and restart of the installed AppImage. | Yes |
 
 ### ~~TASK-2089: Expose global ordering and Catalog view context~~ (✅ DONE)

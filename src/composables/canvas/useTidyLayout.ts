@@ -107,7 +107,12 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     // canonical layout move below.
     const tasksForSpatialAdoption = taskStore.rawTasks.map((task) => {
       const visualPosition = options.getNodePosition?.(task.id)
-      return visualPosition ? { ...task, canvasPosition: visualPosition } : task
+      const isVisible = options.isTaskVisible?.(task.id)
+      return {
+        ...task,
+        ...(visualPosition ? { canvasPosition: visualPosition } : {}),
+        ...(isVisible !== undefined ? { isVisible } : {}),
+      }
     })
     const adoptedParents = collectDayGroupAdoptions(tasksForSpatialAdoption, spatialGroups, { mode: 'spatial' })
 

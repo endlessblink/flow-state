@@ -793,6 +793,39 @@ describe('useTidyLayout', () => {
     )
   })
 
+  it('adopts a rendered done task below a group when completed cards are shown', () => {
+    const today = makeGroup('Today', 200, 0)
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
+      {
+        id: 'rendered-done-task',
+        parentId: undefined,
+        status: 'done',
+        canvasPosition: { x: 20, y: 3478 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+    ] as any)
+    taskStore.hideCanvasDoneTasks = false
+
+    const { taskMoves, groupMoves, release } = useTidyLayout({
+      getNodePosition: (nodeId) => nodeId === 'rendered-done-task'
+        ? { x: 220, y: 3478 }
+        : undefined,
+      getNodeSize: (nodeId) => nodeId === 'rendered-done-task'
+        ? { width: 280, height: 180 }
+        : undefined,
+      isTaskVisible: (taskId) => taskId === 'rendered-done-task',
+    }).tidyDayGroups()
+    release()
+
+    expect(taskMoves).toContainEqual(expect.objectContaining({
+      taskId: 'rendered-done-task',
+      parentId: today.id,
+      position: { x: 220, y: 70 },
+    }))
+    expect(groupMoves[0]?.size.height).toBeGreaterThanOrEqual(270)
+  })
+
   it.each([520, 850])('adopts from live group columns, including resized width at x=%s', (x) => {
     const today = makeGroup('Today', 0)
     const monday = makeGroup('Monday', 500)

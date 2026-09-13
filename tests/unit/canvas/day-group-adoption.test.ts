@@ -65,4 +65,12 @@ describe('Canvas day-group adoption', () => {
       new Map([['task-1', 'today']]),
     )
   })
+
+  it('spatially adopts a rendered completed card but not a hidden one', () => {
+    const rendered = task({ status: 'done', canvasPosition: { x: 20, y: 900 } })
+    const hidden = { ...rendered, id: 'hidden-done', isVisible: false }
+
+    expect(collectDayGroupAdoptions([rendered, hidden], [group('today', 'Today')], { mode: 'spatial' }))
+      .toEqual(new Map([['task-1', 'today']]))
+  })
 })

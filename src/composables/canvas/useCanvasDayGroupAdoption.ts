@@ -37,8 +37,7 @@ export function collectDayGroupAdoptions(
   const adoptions = new Map<string, string>()
   for (const task of tasks) {
     const eligible = mode === 'spatial'
-      ? task.status !== 'done'
-        && !task._soft_deleted
+      ? !task._soft_deleted
         && !task.isCompletionRecord
         && !task.isPinned
         && !task.canvasDismissed

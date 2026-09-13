@@ -30,6 +30,8 @@ type SeedTask = {
   dueDate?: string
   order?: number
   status?: 'todo' | 'done'
+  canvasDismissed?: boolean
+  isCompletionRecord?: boolean
 }
 
 const setupCanvas = async (page: Page) => {
@@ -92,6 +94,8 @@ const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], op
         positionFormat: 'absolute',
         ...(task.dueDate === undefined ? {} : { dueDate: task.dueDate }),
         ...(task.order === undefined ? {} : { order: task.order }),
+        ...(task.canvasDismissed === undefined ? {} : { canvasDismissed: task.canvasDismissed }),
+        ...(task.isCompletionRecord === undefined ? {} : { isCompletionRecord: task.isCompletionRecord }),
       })
     }
 
@@ -1507,7 +1511,7 @@ test.describe('local canvas geometry regressions', () => {
     ).toEqual(settledTasks)
   })
 
-  test('tidy pulls a rendered completed card below its column into the frame', async ({ page }) => {
+  test('tidy pulls a rendered dismissed completion card below its column into the frame', async ({ page }) => {
     const groupId = 'visible-done-group'
     const taskId = 'visible-done-loose-task'
     await seedCanvas(page, [
@@ -1517,6 +1521,8 @@ test.describe('local canvas geometry regressions', () => {
       title: 'Visible completed card below frame',
       parentId: undefined,
       status: 'done',
+      canvasDismissed: true,
+      isCompletionRecord: true,
       x: 120,
       y: 1200,
     }], { sync: false })

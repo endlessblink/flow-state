@@ -145,9 +145,10 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     }
     const layoutTasks = taskStore.rawTasks.filter((task) => {
       if (!task.canvasPosition && !adoptedParents.has(task.id)) return false
-      if (task._soft_deleted || task.isCompletionRecord || task.isPinned) return false
-      if (taskStore.hideCanvasDoneTasks && task.status === 'done') return false
       const visible = options.isTaskVisible?.(task.id)
+      if (task._soft_deleted || task.isPinned) return false
+      if (task.isCompletionRecord && visible !== true) return false
+      if (visible !== true && taskStore.hideCanvasDoneTasks && task.status === 'done') return false
       // Rendered cards must contribute to their frame even when a stored
       // filter preference has not hidden them in the current projection.
       if (visible !== true && taskStore.hideCanvasOverdueTasks && isOverdue(task.dueDate)) return false

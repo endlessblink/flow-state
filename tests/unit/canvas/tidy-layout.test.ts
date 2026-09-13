@@ -793,7 +793,7 @@ describe('useTidyLayout', () => {
     )
   })
 
-  it('adopts a rendered done task below a group when completed cards are shown', () => {
+  it('adopts a rendered dismissed completion card below a group when completed cards are shown', () => {
     const today = makeGroup('Today', 200, 0)
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
@@ -801,11 +801,13 @@ describe('useTidyLayout', () => {
         id: 'rendered-done-task',
         parentId: undefined,
         status: 'done',
+        canvasDismissed: true,
+        isCompletionRecord: true,
         canvasPosition: { x: 20, y: 3478 },
         createdAt: '2026-04-01T00:00:00Z',
       },
     ] as any)
-    taskStore.hideCanvasDoneTasks = false
+    taskStore.hideCanvasDoneTasks = true
 
     const { taskMoves, groupMoves, release } = useTidyLayout({
       getNodePosition: (nodeId) => nodeId === 'rendered-done-task'
@@ -842,6 +844,7 @@ describe('useTidyLayout', () => {
       getNodePosition: (id) => id === `section-${today.id}` ? { x: 500, y: 0 }
         : id === `section-${monday.id}` ? { x: 0, y: 0 } : undefined,
       getNodeSize: (id) => id === `section-${today.id}` ? { width: 400, height: 200 } : undefined,
+      isTaskVisible: (id) => id === 'aligned',
     }).tidyDayGroups()
     release()
 

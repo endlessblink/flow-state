@@ -38,9 +38,7 @@ export function collectDayGroupAdoptions(
   for (const task of tasks) {
     const eligible = mode === 'spatial'
       ? !task._soft_deleted
-        && !task.isCompletionRecord
         && !task.isPinned
-        && !task.canvasDismissed
         && task.isVisible !== false
         && Boolean(task.canvasPosition)
       : isEligibleForDayGroupAdoption(task)

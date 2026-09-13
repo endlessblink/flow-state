@@ -236,133 +236,146 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
 
     canvasSyncInProgress.value = true
     let released = false
-    let pendingGroupMoves: GroupMove[] = []
-    let pendingTaskMoves: TaskMove[] = []
+    const lockedGroupIds = new Set<string>()
+    const lockedTaskIds = new Set<string>()
     const release = () => {
       if (released) return
       released = true
-      for (const gm of pendingGroupMoves) {
-        positionManager.releasePositionLock(gm.groupId, 'user-drag')
+      for (const groupId of lockedGroupIds) {
+        positionManager.releasePositionLock(groupId, 'user-drag')
       }
-      for (const tm of pendingTaskMoves) {
-        positionManager.releasePositionLock(tm.taskId, 'user-drag')
+      for (const taskId of lockedTaskIds) {
+        positionManager.releasePositionLock(taskId, 'user-drag')
       }
       canvasSyncInProgress.value = false
     }
 
-    const pendingWriteFactories: Array<() => Promise<unknown>> = []
-    const { inputs, groupMoves: allGroupMoves, taskMoves: allTaskMoves, adoptedParents } = planTidyDayGroups()
-
-    // TASK-1871: Drop NO-OP moves (target == current position/parent). The canonical
-    // layout emits a move for EVERY group/task regardless of whether it changed, so
-    // re-running tidy re-wrote identical positions (x=1616 -> 1616) — hundreds of
-    // pointless saves that flooded the API ("API rate limit exceeded") and cascaded
-    // into auth/sync failures. Skipping unchanged moves makes re-runs write nothing.
     const EPS = 0.5
-    const groupMoves = allGroupMoves.filter((gm) => {
-      const p = getPersistedVisibleGroups().find((g) => g.id === gm.groupId)?.position
-      if (!p) return true
-      return Math.abs((p.x ?? 0) - gm.position.x) > EPS
-        || Math.abs((p.y ?? 0) - gm.position.y) > EPS
-        || Math.abs((p.width ?? 0) - gm.size.width) > EPS
-        || Math.abs((p.height ?? 0) - gm.size.height) > EPS
-    })
-    const taskMoves = allTaskMoves.filter((tm) => {
-      const t = taskStore.rawTasks.find((x) => x.id === tm.taskId)
-      const cp = t?.canvasPosition
-      const adopted = adoptedParents.get(tm.taskId)
-      const parentChanged = adopted !== undefined && t?.parentId !== adopted
-      if (parentChanged) return true
-      if (!cp) return true
-      return Math.abs(cp.x - tm.position.x) > EPS || Math.abs(cp.y - tm.position.y) > EPS
-    })
-    pendingGroupMoves = allGroupMoves
-    pendingTaskMoves = allTaskMoves
+    const initialPlan = planTidyDayGroups()
+    const allGroupMoves = initialPlan.groupMoves
+    const allTaskMoves = initialPlan.taskMoves
 
-    if (inputs.length === 0) {
+    if (initialPlan.inputs.length === 0) {
       release()
       return { groupMoves: [], taskMoves: [], pendingWrites: Promise.resolve(), release }
     }
 
-    // Explicit Tidy also repairs stale rendered geometry when the stored layout
-    // is already correct. Hold every visual move until the caller settles it;
-    // only the filtered moves below create persistence writes or undo entries.
-    try {
-      for (const gm of allGroupMoves) {
+    const lockPlan = (plan: TidyPlan) => {
+      for (const gm of plan.groupMoves) {
         positionManager.updatePosition(gm.groupId, gm.position, 'user-drag', null)
+        lockedGroupIds.add(gm.groupId)
       }
-      for (const tm of allTaskMoves) {
+      for (const tm of plan.taskMoves) {
         positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
+        lockedTaskIds.add(tm.taskId)
       }
-    } catch (err) {
-      release()
-      throw err
-    }
-    if (groupMoves.length === 0 && taskMoves.length === 0) {
-      return { groupMoves: allGroupMoves, taskMoves: allTaskMoves, pendingWrites: Promise.resolve(), release }
     }
 
-    const affectedIds = [...new Set([
-      ...groupMoves.map((move) => move.groupId),
-      ...taskMoves.map((move) => move.taskId),
-    ])]
-    const undoSystem = getUndoSystem()
-    const snapshotBefore = cloneCanvasGeometrySnapshot(taskStore.rawTasks, getPersistedVisibleGroups(), affectedIds)
-
-    // Apply store + PositionManager writes synchronously. Caller applies Vue
-    // Flow moves immediately after this function returns.
     try {
-      for (const gm of groupMoves) {
-        const input = inputs.find((i) => i.group.id === gm.groupId)
-        if (!input?.group.position) continue
-        pendingWriteFactories.push(() => canvasStore.updateGroup(gm.groupId, {
-          position: {
-            ...input.group.position,
-            x: gm.position.x,
-            y: gm.position.y,
-            width: gm.size.width,
-            height: gm.size.height,
-          },
-          // The canonical tidy row is an absolute sibling layout. Keeping a
-          // nested parent here would reinterpret the absolute slot as a
-          // parent-relative position on the next load and put the group back
-          // off-canvas.
-          ...(input.group.parentGroupId ? { parentGroupId: null } : {}),
-        }))
-      }
-      for (const tm of taskMoves) {
-        const adoptedParentId = adoptedParents.get(tm.taskId)
-        pendingWriteFactories.push(() => taskStore.updateTask(
-          tm.taskId,
-          adoptedParentId
-            ? { parentId: adoptedParentId, canvasPosition: tm.position, positionFormat: 'absolute' }
-            : { canvasPosition: tm.position, positionFormat: 'absolute' },
-          'DRAG'
-        ))
-      }
+      // Explicit Tidy also repairs stale rendered geometry when the stored
+      // layout is already correct. Hold every visual move until the caller
+      // settles it; only changed moves create persistence or undo entries.
+      lockPlan(initialPlan)
     } catch (err) {
       release()
       throw err
     }
 
-    const persistAndRecordUndo = () => Promise.all(pendingWriteFactories.map((write) => write())).then(() => {
-          if (groupMoves.length > 0 || taskMoves.length > 0) {
-            const snapshotAfter = cloneCanvasGeometrySnapshot(taskStore.rawTasks, getPersistedVisibleGroups(), affectedIds)
-            undoSystem.pushCanvasGeometryUndoSnapshot(
-              `Tidy ${affectedIds.length} canvas item${affectedIds.length === 1 ? '' : 's'}`,
-              affectedIds,
-              snapshotBefore,
-              snapshotAfter
-            )
-          }
-        })
+    const persistPlan = (plan: TidyPlan): Promise<void> => {
+      // TASK-1871: Drop NO-OP moves. The canonical layout emits every visual
+      // move, while persistence should only write geometry that changed.
+      const groupMoves = plan.groupMoves.filter((gm) => {
+        const p = getPersistedVisibleGroups().find((g) => g.id === gm.groupId)?.position
+        if (!p) return true
+        return Math.abs((p.x ?? 0) - gm.position.x) > EPS
+          || Math.abs((p.y ?? 0) - gm.position.y) > EPS
+          || Math.abs((p.width ?? 0) - gm.size.width) > EPS
+          || Math.abs((p.height ?? 0) - gm.size.height) > EPS
+      })
+      const taskMoves = plan.taskMoves.filter((tm) => {
+        const task = taskStore.rawTasks.find((candidate) => candidate.id === tm.taskId)
+        const currentPosition = task?.canvasPosition
+        const adoptedParent = plan.adoptedParents.get(tm.taskId)
+        if (adoptedParent !== undefined && task?.parentId !== adoptedParent) return true
+        if (!currentPosition) return true
+        return Math.abs(currentPosition.x - tm.position.x) > EPS
+          || Math.abs(currentPosition.y - tm.position.y) > EPS
+      })
+
+      if (groupMoves.length === 0 && taskMoves.length === 0) return Promise.resolve()
+
+      const affectedIds = [...new Set([
+        ...groupMoves.map((move) => move.groupId),
+        ...taskMoves.map((move) => move.taskId),
+      ])]
+      const snapshotBefore = cloneCanvasGeometrySnapshot(taskStore.rawTasks, getPersistedVisibleGroups(), affectedIds)
+      const writes: Promise<unknown>[] = []
+
+      try {
+        for (const gm of groupMoves) {
+          const input = plan.inputs.find((candidate) => candidate.group.id === gm.groupId)
+          if (!input?.group.position) continue
+          writes.push(canvasStore.updateGroup(gm.groupId, {
+            position: {
+              ...input.group.position,
+              x: gm.position.x,
+              y: gm.position.y,
+              width: gm.size.width,
+              height: gm.size.height,
+            },
+            ...(input.group.parentGroupId ? { parentGroupId: null } : {}),
+          }))
+        }
+        for (const tm of taskMoves) {
+          const adoptedParentId = plan.adoptedParents.get(tm.taskId)
+          writes.push(taskStore.updateTask(
+            tm.taskId,
+            adoptedParentId
+              ? { parentId: adoptedParentId, canvasPosition: tm.position, positionFormat: 'absolute' }
+              : { canvasPosition: tm.position, positionFormat: 'absolute' },
+            'DRAG'
+          ))
+        }
+      } catch (err) {
+        return Promise.reject(err)
+      }
+
+      console.log('[TIDY] Wrote', groupMoves.length, 'group moves +', taskMoves.length, 'task moves')
+      return Promise.all(writes).then(() => {
+        const snapshotAfter = cloneCanvasGeometrySnapshot(taskStore.rawTasks, getPersistedVisibleGroups(), affectedIds)
+        getUndoSystem().pushCanvasGeometryUndoSnapshot(
+          `Tidy ${affectedIds.length} canvas item${affectedIds.length === 1 ? '' : 's'}`,
+          affectedIds,
+          snapshotBefore,
+          snapshotAfter
+        )
+      })
+    }
+
     const pendingWritesWithUndo = options.deferPersistence
       ? new Promise<void>((resolve, reject) => {
-          window.setTimeout(() => { persistAndRecordUndo().then(resolve).catch(reject) }, 0)
+          window.setTimeout(() => {
+            if (released) {
+              resolve()
+              return
+            }
+            try {
+              // Vue Flow may report pre-wrap card heights during the click
+              // handler. Replan once after rendering settles, then mutate the
+              // returned arrays so the caller's final visual reapply uses and
+              // persists the same expanded frame.
+              const settledPlan = planTidyDayGroups()
+              allGroupMoves.splice(0, allGroupMoves.length, ...settledPlan.groupMoves)
+              allTaskMoves.splice(0, allTaskMoves.length, ...settledPlan.taskMoves)
+              lockPlan(settledPlan)
+              persistPlan(settledPlan).then(resolve).catch(reject)
+            } catch (err) {
+              reject(err)
+            }
+          }, 0)
         })
-      : persistAndRecordUndo()
+      : persistPlan(initialPlan)
 
-    console.log('[TIDY] Wrote', groupMoves.length, 'group moves +', taskMoves.length, 'task moves')
     return { groupMoves: allGroupMoves, taskMoves: allTaskMoves, pendingWrites: pendingWritesWithUndo, release }
   }
 

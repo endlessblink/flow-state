@@ -122,6 +122,73 @@ describe('useTidyLayout', () => {
     expect(tasks.some(task => lockManager.isLocked(task.id))).toBe(false)
   })
 
+  it('expands the group from settled rendered card heights before persisting deferred Tidy', async () => {
+    const today = makeGroup('Today', 0)
+    const tasks = Array.from({ length: 4 }, (_, index) => ({
+      id: `settled-${index}`,
+      parentId: today.id,
+      canvasPosition: { x: 20, y: 70 + index * 112 },
+      createdAt: '2026-04-01T00:00:00Z',
+    }))
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue(tasks as any)
+    updateGroup.mockImplementation((_id, changes) => Object.assign(today, changes))
+    updateTask.mockImplementation((id, changes) => {
+      const task = tasks.find(task => task.id === id)
+      if (task) Object.assign(task, changes)
+    })
+
+    let renderedCardHeight = 80
+    const { tidyDayGroups } = useTidyLayout({
+      getNodeSize: (nodeId) => nodeId.startsWith('settled-')
+        ? { width: 280, height: renderedCardHeight }
+        : undefined,
+    })
+    const tidy = tidyDayGroups({ deferPersistence: true })
+    const initialHeight = tidy.groupMoves[0]?.size.height ?? 0
+
+    // Vue Flow can report the old compact card height during the click handler,
+    // then expose the true wrapped content height after its render settles.
+    renderedCardHeight = 400
+    await vi.runAllTimersAsync()
+    await tidy.pendingWrites
+
+    const settledHeight = tidy.groupMoves[0]?.size.height ?? 0
+    expect(settledHeight).toBeGreaterThan(initialHeight)
+    expect(updateGroup).toHaveBeenCalledWith(
+      today.id,
+      expect.objectContaining({
+        position: expect.objectContaining({ height: settledHeight }),
+      })
+    )
+    tidy.release()
+  })
+
+  it('does not reacquire locks when deferred Tidy is released before its settled pass', async () => {
+    const today = makeGroup('Today', 0)
+    const task = {
+      id: 'released-before-settle',
+      parentId: today.id,
+      canvasPosition: { x: 20, y: 70 },
+      createdAt: '2026-04-01T00:00:00Z',
+    }
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([task] as any)
+
+    const { tidyDayGroups } = useTidyLayout()
+    const tidy = tidyDayGroups({ deferPersistence: true })
+    tidy.release()
+
+    await vi.runAllTimersAsync()
+    await tidy.pendingWrites
+
+    expect(lockManager.isLocked(today.id)).toBe(false)
+    expect(lockManager.isLocked(task.id)).toBe(false)
+    expect(updateGroup).not.toHaveBeenCalled()
+    expect(updateTask).not.toHaveBeenCalled()
+    expect(mockCanvasSyncInProgress.value).toBe(false)
+  })
+
   it('orders day groups from the current weekday instead of preserving broken X order', () => {
     const fri = makeGroup('Friday', 100)
     const mon = makeGroup('Monday', 500)

@@ -60,9 +60,10 @@ describe('Canvas Tidy Vue Flow application', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/composables/canvas/useTidyLayout.ts'), 'utf8')
     const tidy = source.slice(source.indexOf('function tidyDayGroups'), source.indexOf('function planReorderColumn'))
 
-    expect(tidy).toContain('pendingWriteFactories.push(() => canvasStore.updateGroup')
+    expect(tidy).toContain('writes.push(canvasStore.updateGroup')
     expect(tidy).toContain('options.deferPersistence')
-    expect(tidy).toContain('window.setTimeout(() => { persistAndRecordUndo()')
+    expect(tidy).toContain('const settledPlan = planTidyDayGroups()')
+    expect(tidy).toContain('persistPlan(settledPlan).then(resolve).catch(reject)')
   })
 
   it('publishes a new controlled nodes array after Vue Flow applies node changes', () => {

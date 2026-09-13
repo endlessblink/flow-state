@@ -284,6 +284,7 @@ onUnmounted(() => {
 /* Content wrapper */
 .task-node-content {
   position: relative;
+  z-index: 2;
   padding: var(--space-6);
   border-radius: var(--radius-xl);
   overflow: visible;

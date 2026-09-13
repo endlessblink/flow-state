@@ -1,12 +1,12 @@
 # FlowState MASTER_PLAN.md
 
-### BUG-2091: Tidy must contain cards after late renderer growth and repeated presses (🚧 IN PROGRESS)
+### BUG-2091: Tidy must contain cards after late renderer growth and repeated presses
 
-**Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-13)
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS
 
 **User repro**: In the installed Canvas, pressing Tidy can leave one or more visible member cards below the group frame. Repeating Tidy does not reliably repair the frame.
 
-**Exact failure modes**: First, the deferred Tidy pass used a zero-delay timer as its settle boundary, so later card growth could leave the persisted frame too short; repeated presses could also race the in-flight geometry transaction. FlowState 1.4.532 fixed and shipped that renderer timing class. The installed populated-canvas read-back then exposed a separate membership class: a rendered completed card with stale or missing parent metadata was excluded from spatial recovery even while completed cards were shown, so it contributed neither a task move nor group height.
+**Exact failure modes**: First, the deferred Tidy pass used a zero-delay timer as its settle boundary, so later card growth could leave the persisted frame too short; repeated presses could also race the in-flight geometry transaction. FlowState 1.4.532 fixed and shipped that renderer timing class. FlowState 1.4.533 included rendered completed cards, but the installed populated-canvas read-back exposed another renderer-state class: loose cards can remain visible at DOM positions that disagree with missing or stale Vue Flow geometry, so spatial adoption still measures the wrong column and leaves those cards outside the frame.
 
 **Acceptance**:
 
@@ -21,13 +21,15 @@
 
 | Class | Checked? | Evidence | Covered by this fix? |
 | --- | --- | --- | --- |
-| User repro shape | In progress | 1.4.532 fixed late growth, but the populated installed canvas still overflowed on a rendered completed card with no canonical parent. New unit and browser-rendered regressions cover that exact shape; 1.4.533 installed read-back remains. | Yes |
+| User repro shape | Yes | 1.4.532 fixed late growth; 1.4.533 also adopts the rendered completed card that remained below the populated installed frame. The installed authenticated read-back contains the exact card and all 55 visible members of rendered groups with zero violations. | Yes |
 | Data shape / membership | Yes | The failing task was visible and column-aligned but `done` with stale/missing parent metadata. Spatial recovery now uses renderer visibility and may adopt shown completed cards; due-date recovery still excludes completed cards. | Yes |
 | Renderer state | Yes | Regression forces a member card to grow two animation frames after Tidy. | Yes |
-| Electron main/preload | Pending | Renderer-only change; packaged runtime still requires 1.4.533 release verification. | No change required |
-| Supabase persistence/realtime | Partial | Final plan still uses the existing persistence path; authenticated installed read-back remains. | No transport change |
-| Updater/runtime version | Pending | 1.4.532 was published and installed but retained the membership regression. Requires 1.4.533 manifest, artifact, install, and running-version proof. | Yes |
-| Stale live process state | Pending | Requires replacement and restart of the installed AppImage. | Yes |
+| Electron main/preload | Yes | Renderer-only change; the guarded Electron build and packaging validation passed for 1.4.533. | No change required |
+| Supabase persistence/realtime | Yes | The authenticated installed Tidy persisted the adopted completed card under its day group through the existing task mutation path. | No transport change |
+| Updater/runtime version | Yes | The public manifest advertises 1.4.533 with the validated AppImage, and the restarted installed runtime reports 1.4.533. | Yes |
+| Stale live process state | Yes | The old 1.4.532 process was stopped and the installed 1.4.533 AppImage was relaunched against the real user profile. | Yes |
+
+**Current evidence**: FlowState 1.4.533 passed source and updater gates, but installed visual read-back still shows loose rendered cards outside a group frame. Closure requires using the rendered DOM position as Tidy's membership authority, shipping a newer desktop version, and repeating installed geometric and visual containment checks.
 
 ### ~~TASK-2089: Expose global ordering and Catalog view context~~ (✅ DONE)
 

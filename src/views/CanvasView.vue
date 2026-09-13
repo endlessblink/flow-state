@@ -345,6 +345,7 @@ import { useCanvasImagesStore } from '@/stores/canvasImages'
 import { useAuthStore } from '@/stores/auth'
 import { getClipboardImage, compressImage, uploadCanvasImage } from '@/services/canvasImageUpload'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
+import { resolveVisualNodePosition } from '@/utils/canvas/visualNodePosition'
 import { getDeepestContainingGroup } from '@/utils/canvas/spatialContainment'
 import { lockManager } from '@/services/canvas/LockManager'
 import { hasOverlappingRects } from '@/composables/canvas/useCanonicalDayGroupLayout'
@@ -680,25 +681,11 @@ const dayRotation = useDayGroupRotation({
 })
 
 function getVisualNodePosition(nodeId: string): { x: number; y: number } | undefined {
-  const node = findNode(nodeId) as CanvasNodeRecord | undefined
-  if (!node?.position) return undefined
-
-  const computedPosition = node.computedPosition
-  if (Number.isFinite(computedPosition?.x) && Number.isFinite(computedPosition?.y)) {
-    return { x: computedPosition!.x, y: computedPosition!.y }
-  }
-
-  if (node.parentNode) {
-    const parentNode = findNode(node.parentNode) as CanvasNodeRecord | undefined
-    if (parentNode?.position) {
-      return {
-        x: parentNode.position.x + node.position.x,
-        y: parentNode.position.y + node.position.y,
-      }
-    }
-  }
-
-  return { x: node.position.x, y: node.position.y }
+  return resolveVisualNodePosition(
+    nodeId,
+    (id) => findNode(id) as CanvasNodeRecord | undefined,
+    screenToFlowCoordinate,
+  )
 }
 
 function getRenderedNodeSize(nodeId: string) {

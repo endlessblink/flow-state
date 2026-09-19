@@ -2472,6 +2472,7 @@ describe('Sync status derivation', () => {
 
     expect(sync.failedCount.value).toBe(1)
     expect(syncState.value.failedOperations).toEqual([conflict])
+    expect(syncState.value.lastError).toBe('Version conflict')
   })
 
   it('pendingCount includes both pending and syncing operations', async () => {

@@ -391,6 +391,11 @@ async function updateStatus() {
   // TASK-1177: Populate failedOperations array for UI display
   if (stats.failedCount > 0 || stats.conflictCount > 0) {
     state.value.failedOperations = await getFailedOperations()
+    // Restore the persisted operation message after an app restart so the
+    // popover does not fall back to a generic review notice.
+    if (!state.value.lastError) {
+      state.value.lastError = state.value.failedOperations.find(operation => operation.lastError)?.lastError
+    }
   } else {
     state.value.failedOperations = []
   }

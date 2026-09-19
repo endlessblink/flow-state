@@ -1,8 +1,8 @@
 # FlowState MASTER_PLAN.md
 
-### BUG-2092: Tidy and Rotate must repair stale renderer geometry (🔄 IN PROGRESS)
+### ~~BUG-2092: Tidy and Rotate must repair stale renderer geometry~~ (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-09-19)
+**Priority**: P0 | **Status**: ✅ DONE (2026-09-19)
 
 **User repro**: On the populated installed Canvas, Tidy can leave cards outside a day-group frame, Rotate by day can appear to do nothing even though the saved geometry is already canonical, and cards dated 22/09/2026 can remain visibly grouped under Tomorrow / 20/09/2026 instead of the matching weekday/date group.
 
@@ -28,9 +28,9 @@
 | Localhost sidecar / KDE control | Yes | The packaged local API passed its route-compatible startup validation; no timer or KDE control code changed. | No change required |
 | Supabase persistence/realtime | Partial | Unit coverage proves repeated Rotate emits no redundant group/task persistence calls; authenticated transport is not changed. | Persistence write suppression preserved |
 | Updater/runtime version | Yes | The public updater manifest advertises 1.4.539; its AppImage and Debian package both return HTTP 200 with content lengths matching the manifest. | Yes |
-| Stale live process state | Pending | The installed runtime must be restarted onto the published build before visual acceptance. | Pending |
+| Stale live process state | Yes | The prior 1.4.538 process was stopped, the installed AppImage was atomically replaced, and the restarted runtime and sidecar both report 1.4.539 with an installed hash matching the published artifact. | Yes |
 
-**Release evidence (2026-09-19)**: The full ship gate passed 419 files / 4,891 tests with 3 expected skips, plus type-check, Electron bundle-environment validation, package validation, and dependency integrity. The exact wrong-day membership regression passed independently in Chromium and WebKit. FlowState 1.4.539 is public in the updater; installed authenticated visual acceptance remains pending because restarting the user's live process requires an explicit interruption warning and confirmation.
+**Completion evidence (2026-09-19)**: The full ship gate passed 419 files / 4,891 tests with 3 expected skips, plus type-check, Electron bundle-environment validation, package validation, and dependency integrity. The exact wrong-day membership regression passed independently in Chromium and WebKit. FlowState 1.4.539 is public in the updater, the restarted installed AppImage hash matches the published artifact, and both the live app and sidecar report 1.4.539. Installed authenticated visual acceptance reproduced cards due 22/09 under Tomorrow / 20.9 before Rotate; one Rotate showed `7 day groups updated for today`, reduced Tomorrow from 10 cards to 2, removed the visible 22/09 mismatches from that group, and retained a 21/09 card under Monday / 21.9. No completed-task filter, task content, or Tidy state was changed. Tuesday's full destination column was outside the final viewport, so exhaustive exact-destination coverage remains supplied by the independent Chromium and WebKit regressions rather than by that screenshot alone.
 
 ### ~~BUG-2091~~: Tidy must contain cards after late renderer growth and repeated presses (✅ DONE)
 

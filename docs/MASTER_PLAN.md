@@ -24,11 +24,13 @@
 | User repro shape | Yes | Unit regressions reproduce an eligible unmeasured Tidy card, a canonical store with stale renderer geometry, and a future-dated card under Tomorrow; local-browser scenarios exercise both toolbar actions and the exact three-card wrong-day membership shape. | Yes |
 | Data shape / membership | Yes | Rotate now searches all visible rotatable day groups for an exact-date destination while restricting automatic reconciliation to cards originating in Today or Tomorrow. Dismissed, pinned, completion-record, soft-deleted, positionless, custom-group, and already-weekday-owned records retain their existing protection. | Yes |
 | Renderer state | Yes | Tidy now blocks on missing eligible dimensions; Rotate returns the complete canonical renderer repair plan. | Yes |
-| Electron main/preload | Pending | Renderer-only candidate; Electron packaging remains to be verified. | No change expected |
-| Localhost sidecar / KDE control | Pending | No timer or KDE control path is changed; packaged runtime health remains to be checked. | No change expected |
+| Electron main/preload | Yes | The guarded 1.4.539 Electron build and package validator confirmed the renderer, main process, preload, route-compatible sidecar, and Linux launcher metadata. | No change required |
+| Localhost sidecar / KDE control | Yes | The packaged local API passed its route-compatible startup validation; no timer or KDE control code changed. | No change required |
 | Supabase persistence/realtime | Partial | Unit coverage proves repeated Rotate emits no redundant group/task persistence calls; authenticated transport is not changed. | Persistence write suppression preserved |
-| Updater/runtime version | Pending | A version newer than 1.4.537 must be built, published, and read back. | Pending |
+| Updater/runtime version | Yes | The public updater manifest advertises 1.4.539; its AppImage and Debian package both return HTTP 200 with content lengths matching the manifest. | Yes |
 | Stale live process state | Pending | The installed runtime must be restarted onto the published build before visual acceptance. | Pending |
+
+**Release evidence (2026-09-19)**: The full ship gate passed 419 files / 4,891 tests with 3 expected skips, plus type-check, Electron bundle-environment validation, package validation, and dependency integrity. The exact wrong-day membership regression passed independently in Chromium and WebKit. FlowState 1.4.539 is public in the updater; installed authenticated visual acceptance remains pending because restarting the user's live process requires an explicit interruption warning and confirmation.
 
 ### ~~BUG-2091~~: Tidy must contain cards after late renderer growth and repeated presses (✅ DONE)
 

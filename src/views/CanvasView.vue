@@ -339,7 +339,7 @@ import DayRotationBanner from '../components/canvas/DayRotationBanner.vue'
 import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenus'
 import { useCanvasOrchestrator } from '../composables/canvas/useCanvasOrchestrator'
 import { useDayGroupRotation } from '@/composables/canvas/useDayGroupRotation'
-import { useTidyLayout } from '@/composables/canvas/useTidyLayout'
+import { getTidyGeometrySnapshot, useTidyLayout } from '@/composables/canvas/useTidyLayout'
 import { useCurrentDay } from '@/composables/useCurrentDay'
 import { useCanvasImagesStore } from '@/stores/canvasImages'
 import { useAuthStore } from '@/stores/auth'
@@ -742,17 +742,18 @@ async function waitForTidyGeometrySettled() {
   for (let frame = 0; frame < TIDY_SETTLE_MAX_FRAMES; frame += 1) {
     await nextTick()
     await nextAnimationFrame()
-    const signature = taskStore.rawTasks
-      .filter((task) => task.canvasPosition && !task._soft_deleted && !task.isCompletionRecord)
-      .map((task) => {
-        const size = getRenderedNodeSize(task.id)
-        return size ? `${task.id}:${Math.round(size.width)}x${Math.round(size.height)}` : null
-      })
-      .filter(Boolean)
-      .sort()
-      .join('|')
+    const { signature, complete } = getTidyGeometrySnapshot(
+      taskStore.rawTasks,
+      getRenderedNodeSize,
+    )
 
-    if (signature && signature === previousSignature) {
+    if (!complete) {
+      stableFrames = 0
+      previousSignature = signature
+      continue
+    }
+
+    if (signature === previousSignature) {
       stableFrames += 1
       if (stableFrames >= TIDY_SETTLE_STABLE_FRAMES) return
     } else {

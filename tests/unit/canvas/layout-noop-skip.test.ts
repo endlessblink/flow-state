@@ -6,7 +6,7 @@
  * identical positions → hundreds of saves → "API rate limit exceeded" → auth/sync
  * cascade. These tests pin the fix:
  *   1. rotateDayGroupPositions is IDEMPOTENT — once positions are canonical, a
- *      second run emits ZERO moves (no storm).
+ *      second run still returns the full visual repair plan but emits no writes.
  *   2. updateGroup skips a write entirely when the position is unchanged (the
  *      systemic guard, so ANY caller is storm-proof — verified via positionVersion
  *      not advancing on a no-op).
@@ -77,15 +77,15 @@ describe("layout no-op skip (TASK-1871)", () => {
     vi.restoreAllMocks();
   });
 
-  it("rotation is idempotent: a second run after applying the moves emits ZERO moves", () => {
+  it("rotation repairs a stale renderer without repeating persistence", async () => {
     const groups = [
       mkGroup("grp-wed", "Wednesday", 0),
       mkGroup("grp-thu", "Thursday", 350),
     ];
     vi.spyOn(canvasStore, "groups", "get").mockReturnValue(groups);
     vi.spyOn(taskStore, "rawTasks", "get").mockReturnValue([]);
-    vi.spyOn(canvasStore, "updateGroup").mockImplementation(() => {});
-    vi.spyOn(taskStore, "updateTask").mockImplementation(() => {});
+    const updateGroup = vi.spyOn(canvasStore, "updateGroup").mockImplementation(() => {});
+    const updateTask = vi.spyOn(taskStore, "updateTask").mockImplementation(() => {});
 
     const { rotateDayGroupPositions } = useDayGroupRotation();
 
@@ -106,14 +106,21 @@ describe("layout no-op skip (TASK-1871)", () => {
           height: m.size.height,
         };
     }
+    updateGroup.mockClear();
+    updateTask.mockClear();
 
-    // Second run: every move is now a no-op → filtered out → ZERO moves (no storm).
+    // The store is now canonical, but Vue Flow can still be displaying its stale
+    // pre-rotation projection. The explicit action must return enough geometry
+    // for the caller to repair that projection without issuing persistence writes.
     const second = rotateDayGroupPositions();
-    second.release();
     expect(
       second.groupMoves.length,
-      "idempotent re-run must emit no moves",
-    ).toBe(0);
+      "idempotent re-run must retain the visual repair plan",
+    ).toBe(first.groupMoves.length);
+    await second.pendingWrites;
+    expect(updateGroup).not.toHaveBeenCalled();
+    expect(updateTask).not.toHaveBeenCalled();
+    second.release();
   });
 
   it("updateGroup skips the write when position is unchanged (no version bump)", async () => {

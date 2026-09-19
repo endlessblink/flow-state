@@ -356,7 +356,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     // TASK-1871: skip NO-OP moves (target == current). Without this, rotation re-wrote
     // identical positions every time it ran, flooding the API ("rate limit exceeded").
     const EPS = 0.5
-    const groupMoves = allGroupMoves.filter((gm) => {
+    const persistedGroupMoves = allGroupMoves.filter((gm) => {
       const p = canvasStore.groups.find((g) => g.id === gm.groupId)?.position
       if (!p) return true
       return Math.abs((p.x ?? 0) - gm.position.x) > EPS
@@ -364,7 +364,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
         || Math.abs((p.width ?? 0) - gm.size.width) > EPS
         || Math.abs((p.height ?? 0) - gm.size.height) > EPS
     })
-    const taskMoves = allTaskMoves.filter((tm) => {
+    const persistedTaskMoves = allTaskMoves.filter((tm) => {
       const task = taskStore.rawTasks.find((x) => x.id === tm.taskId)
       const cp = task?.canvasPosition
       const rehomedParentId = rehomedParents.get(tm.taskId)
@@ -372,12 +372,12 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       if (!cp) return true
       return Math.abs(cp.x - tm.position.x) > EPS || Math.abs(cp.y - tm.position.y) > EPS
     })
-    pendingGroupMoves = groupMoves
-    pendingTaskMoves = taskMoves
+    pendingGroupMoves = persistedGroupMoves
+    pendingTaskMoves = persistedTaskMoves
 
     const affectedIds = [...new Set([
-      ...groupMoves.map((move) => move.groupId),
-      ...taskMoves.map((move) => move.taskId),
+      ...persistedGroupMoves.map((move) => move.groupId),
+      ...persistedTaskMoves.map((move) => move.taskId),
     ])]
     const undoSystem = getUndoSystem()
     const snapshotBefore = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
@@ -385,7 +385,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     // Apply STORE + PositionManager writes synchronously. The caller applies
     // Vue Flow moves via updateNode with both position AND style (width/height).
     try {
-      for (const gm of groupMoves) {
+      for (const gm of persistedGroupMoves) {
         const storePos = inputs.find((i) => i.group.id === gm.groupId)?.group.position
         if (!storePos) continue
         canvasStore.updateGroup(gm.groupId, {
@@ -404,7 +404,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
           null
         )
       }
-      for (const tm of taskMoves) {
+      for (const tm of persistedTaskMoves) {
         const rehomedParentId = rehomedParents.get(tm.taskId)
         pendingWrites.push(taskStore.updateTask(
           tm.taskId,
@@ -421,7 +421,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     }
 
     const pendingWritesWithUndo = Promise.all(pendingWrites).then(() => {
-      if (groupMoves.length > 0 || taskMoves.length > 0) {
+      if (persistedGroupMoves.length > 0 || persistedTaskMoves.length > 0) {
         const snapshotAfter = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
         undoSystem.pushCanvasGeometryUndoSnapshot(
           `Rotate ${affectedIds.length} canvas day item${affectedIds.length === 1 ? '' : 's'}`,
@@ -432,7 +432,15 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       }
     })
 
-    return { groupMoves, taskMoves, pendingWrites: pendingWritesWithUndo, release }
+    // Explicit Rotate is also a renderer-repair action. Return the complete
+    // canonical plan to Vue Flow while keeping API writes, locks and undo
+    // changed-only so repeated clicks remain persistence-idempotent.
+    return {
+      groupMoves: allGroupMoves,
+      taskMoves: allTaskMoves,
+      pendingWrites: pendingWritesWithUndo,
+      release,
+    }
   }
 
   function dismissBanner() {

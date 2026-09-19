@@ -57,6 +57,37 @@ interface TidyPlan {
   adoptedParents: Map<string, string>
 }
 
+interface TidyGeometryTask {
+  id: string
+  canvasPosition?: { x: number; y: number } | null
+  _soft_deleted?: boolean
+  isCompletionRecord?: boolean
+  isPinned?: boolean
+  canvasDismissed?: boolean
+}
+
+export function getTidyGeometrySnapshot(
+  tasks: TidyGeometryTask[],
+  getNodeSize: (nodeId: string) => { width: number; height: number } | undefined,
+) {
+  let complete = true
+  const signature = tasks
+    .filter((task) => task.canvasPosition && !task._soft_deleted && !task.isCompletionRecord
+      && !task.isPinned && !task.canvasDismissed)
+    .map((task) => {
+      const size = getNodeSize(task.id)
+      if (!size) {
+        complete = false
+        return `${task.id}:missing`
+      }
+      return `${task.id}:${Math.round(size.width)}x${Math.round(size.height)}`
+    })
+    .sort()
+    .join('|')
+
+  return { signature, complete }
+}
+
 function isOverdue(dueDate?: string | null) {
   if (!dueDate) return false
   const due = new Date(dueDate)

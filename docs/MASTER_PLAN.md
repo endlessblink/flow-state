@@ -1,5 +1,34 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2092: Tidy and Rotate must repair stale renderer geometry (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-09-19)
+
+**User repro**: On the populated installed Canvas, Tidy can leave cards outside a day-group frame and Rotate by day can appear to do nothing even though the saved geometry is already canonical.
+
+**Exact failure modes**: Tidy's settle signature silently omitted eligible cards whose Vue Flow dimensions were not available yet, so two stable frames from the already measured cards could authorize a partial layout. Rotate filtered canonical no-op moves before returning them to the renderer, so it could not repair stale Vue Flow positions when the store was already correct.
+
+**Acceptance**:
+
+1. Tidy treats every eligible unmeasured card as an incomplete geometry snapshot and waits for the full rendered set before planning.
+2. One Tidy press contains a card whose rendered height grows after the click; the regression must not mask failure with a second click.
+3. Explicit Rotate returns the complete canonical visual plan even when no persistence write is required, while repeated rotation remains API- and undo-idempotent.
+4. Dense cards remain inside the expanded day-group frame after both Tidy and Rotate in isolated Chromium and WebKit runs.
+5. Ship through the Electron updater and verify the restarted installed Canvas without changing the user's completed-task visibility preference.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Unit regressions reproduce an eligible unmeasured Tidy card and a canonical store with stale renderer geometry; the dense local-browser scenario exercises both toolbar actions. | Yes |
+| Data shape / membership | Yes | Eligibility rules remain unchanged: dismissed, pinned, completion-record, soft-deleted, and positionless records stay outside the rendered settle set. | No data mutation change |
+| Renderer state | Yes | Tidy now blocks on missing eligible dimensions; Rotate returns the complete canonical renderer repair plan. | Yes |
+| Electron main/preload | Pending | Renderer-only candidate; Electron packaging remains to be verified. | No change expected |
+| Localhost sidecar / KDE control | Pending | No timer or KDE control path is changed; packaged runtime health remains to be checked. | No change expected |
+| Supabase persistence/realtime | Partial | Unit coverage proves repeated Rotate emits no redundant group/task persistence calls; authenticated transport is not changed. | Persistence write suppression preserved |
+| Updater/runtime version | Pending | A version newer than 1.4.537 must be built, published, and read back. | Pending |
+| Stale live process state | Pending | The installed runtime must be restarted onto the published build before visual acceptance. | Pending |
+
 ### ~~BUG-2091~~: Tidy must contain cards after late renderer growth and repeated presses (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-09-13)

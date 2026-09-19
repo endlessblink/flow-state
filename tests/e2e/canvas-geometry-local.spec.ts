@@ -1580,7 +1580,6 @@ test.describe('local canvas geometry regressions', () => {
     })
 
     await clickToolbar(page, /tidy|layout/)
-    await clickToolbar(page, /tidy|layout/)
     await expect.poll(() => page.evaluate((taskIds) => {
       const frame = document.querySelector('[data-id="section-late-frame-group"]')?.getBoundingClientRect()
       const cards = taskIds.map((id) => document.querySelector(`[data-task-id="${id}"]`)?.getBoundingClientRect())
@@ -1613,6 +1612,11 @@ test.describe('local canvas geometry regressions', () => {
   })
 
   test('tidy and rotate keep dense cards inside the expanded group bounds', async ({ page }) => {
+    await page.waitForFunction(() => {
+      const root = document.querySelector('#app') as any
+      return root?.__vue_app__?._context.config.globalProperties.$pinia._s.get('canvas')?._hasInitializedOnce === true
+    }, { timeout: 30_000 })
+    await page.context().setOffline(true)
     await seedCanvas(page, [
       { id: 'dense-monday', name: 'Monday', x: 100, y: 200, width: 400, height: 1000 },
       { id: 'dense-tuesday', name: 'Tuesday', x: 700, y: 200, width: 400, height: 1000 },
@@ -1622,7 +1626,7 @@ test.describe('local canvas geometry regressions', () => {
       parentId: 'dense-monday',
       x: 120,
       y: 320 + index * 110,
-    })))
+    })), { sync: false, refreshOnMissing: false })
 
     for (const action of [/tidy|layout/, /rotate/]) {
       await clickToolbar(page, action)

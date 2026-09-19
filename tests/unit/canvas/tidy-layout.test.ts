@@ -36,7 +36,7 @@ vi.mock('@/composables/useSupabaseDatabase', () => ({
   }),
 }))
 
-import { useTidyLayout } from '@/composables/canvas/useTidyLayout'
+import { getTidyGeometrySnapshot, useTidyLayout } from '@/composables/canvas/useTidyLayout'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import { lockManager } from '@/services/canvas/LockManager'
@@ -78,6 +78,19 @@ describe('useTidyLayout', () => {
     vi.restoreAllMocks()
     positionManager.clear()
     vi.useRealTimers()
+  })
+
+  it('does not report settled geometry while an eligible canvas card is still unmeasured', () => {
+    const tasks = [
+      { id: 'rendered', canvasPosition: { x: 20, y: 70 } },
+      { id: 'late-mounted', canvasPosition: { x: 20, y: 180 } },
+    ]
+    const snapshot = getTidyGeometrySnapshot(tasks as any, (id) => id === 'rendered'
+      ? { width: 280, height: 120 }
+      : undefined)
+
+    expect(snapshot.complete).toBe(false)
+    expect(snapshot.signature).toContain('late-mounted:missing')
   })
 
   it('returns the complete visual layout on a second Tidy without repeating persistence or undo', async () => {

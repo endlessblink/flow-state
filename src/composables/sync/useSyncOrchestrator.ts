@@ -389,7 +389,7 @@ async function updateStatus() {
   state.value.failedCount = stats.failedCount + stats.conflictCount
 
   // TASK-1177: Populate failedOperations array for UI display
-  if (stats.failedCount > 0) {
+  if (stats.failedCount > 0 || stats.conflictCount > 0) {
     state.value.failedOperations = await getFailedOperations()
   } else {
     state.value.failedOperations = []

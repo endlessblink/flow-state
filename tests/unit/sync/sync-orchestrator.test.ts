@@ -2457,6 +2457,23 @@ describe('Sync status derivation', () => {
     expect(expectedFailedCount).toBe(3)
   })
 
+  it('loads conflict operations for the sync error popover when no failed rows exist', async () => {
+    const conflict = makeOp({ status: 'conflict', lastError: 'Version conflict' })
+    writeQueueMocks.getStats.mockResolvedValue({
+      totalOperations: 1, pendingCount: 0, syncingCount: 0,
+      failedCount: 0, completedCount: 0, conflictCount: 1
+    })
+    writeQueueMocks.getFailedOperations.mockResolvedValue([conflict])
+    writeQueueMocks.getFailedOperations.mockClear()
+
+    const sync = useSyncOrchestrator()
+    const { syncState } = await import('@/composables/sync/useSyncOrchestrator')
+    await vi.advanceTimersByTimeAsync(100)
+
+    expect(sync.failedCount.value).toBe(1)
+    expect(syncState.value.failedOperations).toEqual([conflict])
+  })
+
   it('pendingCount includes both pending and syncing operations', async () => {
     writeQueueMocks.getStats.mockResolvedValue({
       totalOperations: 5, pendingCount: 2, syncingCount: 1,

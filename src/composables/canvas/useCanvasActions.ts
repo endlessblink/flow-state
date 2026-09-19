@@ -308,6 +308,8 @@ export function useCanvasActions(
         handleQuickTaskCreate: taskActions.handleQuickTaskCreate,
         closeQuickTaskCreate: taskActions.closeQuickTaskCreate,
         moveSelectedTasksToInbox: taskActions.moveSelectedTasksToInbox,
+        moveAllCanvasTasksToInbox: taskActions.moveAllCanvasTasksToInbox,
+        moveGroupTasksToInbox: taskActions.moveGroupTasksToInbox,
         doneForNowSelectedTasks: taskActions.doneForNowSelectedTasks,
         deleteSelectedTasks: taskActions.deleteSelectedTasks,
         confirmBulkDelete: taskActions.confirmBulkDelete,

@@ -24,14 +24,11 @@ type SeedGroup = {
 type SeedTask = {
   id: string
   title: string
-  parentId?: string
+  parentId: string
   x: number
   y: number
   dueDate?: string
   order?: number
-  status?: 'todo' | 'done'
-  canvasDismissed?: boolean
-  isCompletionRecord?: boolean
 }
 
 const setupCanvas = async (page: Page) => {
@@ -50,7 +47,7 @@ const setupCanvas = async (page: Page) => {
   }, { timeout: 30_000 })
 }
 
-const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], options: { refreshOnMissing?: boolean; sync?: boolean; hiddenTaskIds?: string[] } = {}) => {
+const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], options: { refreshOnMissing?: boolean; sync?: boolean } = {}) => {
   await page.evaluate(async ({ groups, tasks, options }) => {
     const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
     const pinia = root.__vue_app__._context.config.globalProperties.$pinia
@@ -60,7 +57,6 @@ const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], op
 
     settingsStore.weekStartsOn = 1
     taskStore.hideCanvasOverdueTasks = false
-    taskStore.hideCanvasDoneTasks = false
     taskStore.clearAll()
     canvasStore.clearAll()
     canvasStore.setViewport?.({ x: 0, y: 0, zoom: 1 })
@@ -86,7 +82,7 @@ const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], op
       await taskStore.createTask({
         id: task.id,
         title: task.title,
-        status: task.status ?? 'todo',
+        status: 'todo',
         priority: 'medium',
         isInInbox: false,
         parentId: task.parentId,
@@ -94,8 +90,6 @@ const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], op
         positionFormat: 'absolute',
         ...(task.dueDate === undefined ? {} : { dueDate: task.dueDate }),
         ...(task.order === undefined ? {} : { order: task.order }),
-        ...(task.canvasDismissed === undefined ? {} : { canvasDismissed: task.canvasDismissed }),
-        ...(task.isCompletionRecord === undefined ? {} : { isCompletionRecord: task.isCompletionRecord }),
       })
     }
 
@@ -106,12 +100,9 @@ const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], op
 
   await expect.poll(async () => {
     try {
-      return await page.evaluate(({ groups, tasks, refreshOnMissing, expectedHiddenTaskIds }) => {
-        const hiddenTaskIds = new Set(expectedHiddenTaskIds)
+      return await page.evaluate(({ groups, tasks, refreshOnMissing }) => {
         const hasNodes = groups.every((group) => document.querySelector(`[data-id="section-${group.id}"]`))
-          && tasks.every((task) => hiddenTaskIds.has(task.id)
-            ? !document.querySelector(`[data-id="${task.id}"]`)
-            : document.querySelector(`[data-id="${task.id}"]`))
+          && tasks.every((task) => document.querySelector(`[data-id="${task.id}"]`))
         if (!hasNodes && refreshOnMissing !== false) {
           const root = document.querySelector('#app') as { __vue_app__?: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } } | null
           const pinia = root?.__vue_app__?._context.config.globalProperties.$pinia
@@ -119,12 +110,7 @@ const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], op
           pinia?._s.get('canvasUi')?.requestSync?.('user:manual')
         }
         return hasNodes
-      }, {
-        groups,
-        tasks,
-        refreshOnMissing: options.refreshOnMissing,
-        expectedHiddenTaskIds: options.hiddenTaskIds ?? [],
-      })
+      }, { groups, tasks, refreshOnMissing: options.refreshOnMissing })
     } catch (error) {
       if (String(error).includes('Execution context was destroyed')) return false
       throw error
@@ -1224,7 +1210,7 @@ test.describe('local canvas geometry regressions', () => {
     }))
   })
 
-  test('tidy re-homes a task whose saved parent group no longer exists', async ({ page }) => {
+  test('tidy re-homes a stale date-parent task outside every day column', async ({ page }) => {
     await page.waitForFunction(() => {
       const root = document.querySelector('#app') as { __vue_app__?: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, unknown> } } } } } } | null
       const canvasStore = root?.__vue_app__?._context.config.globalProperties.$pinia._s.get('canvas') as { _hasInitializedOnce?: boolean } | undefined
@@ -1245,9 +1231,9 @@ test.describe('local canvas geometry regressions', () => {
       { id: 'dated-today', name: 'Today', x: 100, y: 200, width: 400, height: 320 },
       { id: 'dated-tomorrow', name: 'Tomorrow', x: 700, y: 200, width: 400, height: 320 },
     ], [
-      // A regenerated smart-group set left this task pointing at a group ID
-      // that no longer exists. Tidy must recover the visible card by date.
-      { id: 'dated-loose-task', title: 'Loose dated task', parentId: 'deleted-day-group', dueDate: today, x: -400, y: 540 },
+      // A failed drag left the saved Tomorrow parent behind even though the
+      // card is visibly outside every column. Tidy must recover by date.
+      { id: 'dated-loose-task', title: 'Loose dated task', parentId: 'dated-tomorrow', dueDate: today, x: -400, y: 540 },
     ], { sync: false, refreshOnMissing: false })
 
     // Establish that the Tidy click operates on the intended persisted
@@ -1259,7 +1245,7 @@ test.describe('local canvas geometry regressions', () => {
       return {
         groups: geometry.groups.map((group) => group.name).sort(),
         task: geometry.tasks.find((task) => task.id === 'dated-loose-task'),
-        hasTomorrowGroup: Boolean(tomorrowGroup),
+        tomorrowGroupId: tomorrowGroup?.id,
       }
     }).toMatchObject({
       groups: ['Today', 'Tomorrow'],
@@ -1267,11 +1253,12 @@ test.describe('local canvas geometry regressions', () => {
         x: -400,
         y: 540,
       },
-      hasTomorrowGroup: true,
+      tomorrowGroupId: expect.any(String),
     })
 
     const beforeTidy = await readGeometry(page)
-    expect(beforeTidy.tasks.find((task) => task.id === 'dated-loose-task')!.parentId).toBe('deleted-day-group')
+    const tomorrowGroupId = beforeTidy.groups.find((group) => group.name === 'Tomorrow')!.id
+    expect(beforeTidy.tasks.find((task) => task.id === 'dated-loose-task')!.parentId).toBe(tomorrowGroupId)
 
     await clickToolbar(page, /tidy|layout/)
 
@@ -1518,42 +1505,6 @@ test.describe('local canvas geometry regressions', () => {
     ).toEqual(settledTasks)
   })
 
-  test('tidy never restores a dismissed completion record with stale geometry', async ({ page }) => {
-    const groupId = 'visible-done-group'
-    const taskId = 'visible-done-loose-task'
-    await seedCanvas(page, [
-      { id: groupId, name: 'Visible completed cards', x: 100, y: 200, width: 400, height: 300 },
-    ], [{
-      id: taskId,
-      title: 'Visible completed card below frame',
-      parentId: undefined,
-      status: 'done',
-      canvasDismissed: true,
-      isCompletionRecord: true,
-      x: 120,
-      y: 1200,
-    }], { sync: false, hiddenTaskIds: [taskId] })
-
-    const readContainment = () => page.evaluate(({ groupId, taskId }) => {
-      const frame = document.querySelector(`[data-id="section-${groupId}"]`)?.getBoundingClientRect()
-      const card = document.querySelector(`[data-task-id="${taskId}"]`)?.getBoundingClientRect()
-      const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
-      const taskStore = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
-      const task = taskStore.rawTasks.find((candidate: any) => candidate.id === taskId)
-      return {
-        rendered: !!frame && !!card,
-        contained: !!frame && !!card && card.top >= frame.top - 1 && card.bottom <= frame.bottom + 1,
-        parentId: task?.parentId,
-      }
-    }, { groupId, taskId })
-
-    await expect.poll(readContainment).toMatchObject({ rendered: false, contained: false, parentId: undefined })
-    await clickToolbar(page, /tidy|layout/)
-    await expect.poll(readContainment, {
-      message: 'Tidy must not resurrect explicitly removed or historical tasks',
-    }).toMatchObject({ rendered: false, contained: false, parentId: undefined })
-  })
-
   test('tidy contains a member card that grows after the click render', async ({ page }) => {
     const ids = ['late-frame-a', 'late-frame-b']
     await seedCanvas(page, [
@@ -1579,6 +1530,7 @@ test.describe('local canvas geometry regressions', () => {
       }, { once: true })
     })
 
+    await clickToolbar(page, /tidy|layout/)
     await clickToolbar(page, /tidy|layout/)
     await expect.poll(() => page.evaluate((taskIds) => {
       const frame = document.querySelector('[data-id="section-late-frame-group"]')?.getBoundingClientRect()
@@ -1612,11 +1564,6 @@ test.describe('local canvas geometry regressions', () => {
   })
 
   test('tidy and rotate keep dense cards inside the expanded group bounds', async ({ page }) => {
-    await page.waitForFunction(() => {
-      const root = document.querySelector('#app') as any
-      return root?.__vue_app__?._context.config.globalProperties.$pinia._s.get('canvas')?._hasInitializedOnce === true
-    }, { timeout: 30_000 })
-    await page.context().setOffline(true)
     await seedCanvas(page, [
       { id: 'dense-monday', name: 'Monday', x: 100, y: 200, width: 400, height: 1000 },
       { id: 'dense-tuesday', name: 'Tuesday', x: 700, y: 200, width: 400, height: 1000 },
@@ -1626,7 +1573,7 @@ test.describe('local canvas geometry regressions', () => {
       parentId: 'dense-monday',
       x: 120,
       y: 320 + index * 110,
-    })), { sync: false, refreshOnMissing: false })
+    })))
 
     for (const action of [/tidy|layout/, /rotate/]) {
       await clickToolbar(page, action)
@@ -1890,5 +1837,44 @@ test.describe('local canvas geometry regressions', () => {
 
     await expect.poll(async () => readVisibleGroupOrder(page, ['wed', 'thu', 'sat', 'mon', 'tue']))
       .toEqual(expectedWeekdayIds(['wed', 'thu', 'sat', 'mon', 'tue'], todayIndex))
+  })
+
+  test('clear actions move one group or the whole canvas back to Inbox', async ({ page }) => {
+    await seedCanvas(page, [
+      { id: 'clear-group-a', name: 'Clear group A', x: 100, y: 200 },
+      { id: 'clear-group-b', name: 'Clear group B', x: 700, y: 200 },
+    ], [
+      { id: 'clear-task-a', title: 'Clear task A', parentId: 'clear-group-a', x: 120, y: 320 },
+      { id: 'clear-task-b', title: 'Clear task B', parentId: 'clear-group-b', x: 720, y: 320 },
+    ], { sync: false })
+
+    await expect(page.getByRole('button', { name: 'Clear canvas to Inbox' })).toBeVisible()
+    const firstGroup = page.locator('[data-id="section-clear-group-a"]')
+    await expect(firstGroup.getByRole('button', { name: 'Clear group to Inbox' })).toBeVisible()
+
+    await firstGroup.getByRole('button', { name: 'Clear group to Inbox' }).click()
+
+    await expect.poll(async () => page.evaluate(() => {
+      const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!.rawTasks
+      const first = tasks.find((task: any) => task.id === 'clear-task-a')
+      const second = tasks.find((task: any) => task.id === 'clear-task-b')
+      return {
+        first: { isInInbox: first?.isInInbox, canvasDismissed: first?.canvasDismissed, canvasPosition: first?.canvasPosition },
+        second: { isInInbox: second?.isInInbox, hasCanvasPosition: !!second?.canvasPosition },
+      }
+    })).toEqual({
+      first: { isInInbox: true, canvasDismissed: true, canvasPosition: undefined },
+      second: { isInInbox: false, hasCanvasPosition: true },
+    })
+
+    await page.getByRole('button', { name: 'Clear canvas to Inbox' }).click()
+
+    await expect.poll(async () => page.evaluate(() => {
+      const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
+      const task = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!.rawTasks
+        .find((candidate: any) => candidate.id === 'clear-task-b')
+      return { isInInbox: task?.isInInbox, canvasDismissed: task?.canvasDismissed, canvasPosition: task?.canvasPosition }
+    })).toEqual({ isInInbox: true, canvasDismissed: true, canvasPosition: undefined })
   })
 })

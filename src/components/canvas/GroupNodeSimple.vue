@@ -84,7 +84,21 @@
           </div>
         </NPopover>
 
-        <!-- TASK-068: All actions moved to context menu for cleaner header -->
+        <BaseIconButton
+          v-if="taskCount > 0"
+          class="group-clear-btn nodrag nopan"
+          size="sm"
+          variant="warning"
+          title="Move all tasks in this group to Inbox"
+          aria-label="Clear group to Inbox"
+          @pointerdown.stop
+          @mousedown.stop
+          @touchstart.stop
+          @click.stop.prevent="emit('clearTasks', groupId)"
+        >
+          <Inbox :size="13" />
+        </BaseIconButton>
+
         <div class="section-count" :class="{ 'has-tasks': taskCount > 0 }">
           {{ taskCount }}
           <span v-if="isCollapsed && taskCount > 0" class="hidden-indicator" :title="`${taskCount} hidden tasks`">📦</span>
@@ -148,7 +162,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { ChevronDown, ChevronRight, CalendarCheck } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, CalendarCheck, Inbox } from 'lucide-vue-next'
 import { NodeResizer } from '@vue-flow/node-resizer'
 import '@vue-flow/node-resizer/dist/style.css'
 // TASK-072: Import useNode for live node data from Vue Flow state
@@ -168,6 +182,7 @@ import type { CanvasGroup } from '@/types/canvas'
 // TASK-1811: Resolve the group's effective due date to apply to its tasks
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasSectionProperties } from '@/composables/canvas/useCanvasSectionProperties'
+import BaseIconButton from '@/components/base/BaseIconButton.vue'
 
 type GroupNodeData = Partial<CanvasGroup> & {
   section?: CanvasGroup
@@ -191,6 +206,7 @@ const emit = defineEmits([
   'contextMenu',
   'open-settings',
   'applyGroupProps',
+  'clearTasks',
   'resizeStart',
   'resize',
   'resizeEnd'
@@ -202,6 +218,7 @@ const canvasStore = useCanvasStore()
 // Computed Properties
 // Ensure we handle both structure formats (direct props or nested in data)
 const section = computed<GroupNodeData>(() => props.data.section || props.data)
+const groupId = computed(() => props.data?.id || props.id.replace(/^section-/, ''))
 // Collapse state must be read reactively from the STORE, not from Vue Flow node
 // data. Toggling collapse (canvasStore.toggleSectionCollapse → updateGroup) does
 // NOT bump syncTrigger and the orchestrator only re-syncs groups on length

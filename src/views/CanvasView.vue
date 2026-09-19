@@ -70,6 +70,7 @@
       <CanvasToolbar
         @add-task="handleAddTask"
         @create-group="handleToolbarCreateGroup"
+        @clear-canvas="moveAllCanvasTasksToInbox"
         @rotate-day-groups="handleRotateDayGroups"
         @tidy-layout="handleTidyLayout"
         @debug-tidy-plan="debugTidyPlanOnlyToClipboard"
@@ -163,6 +164,7 @@
               @update="(data) => handleSectionUpdate(nodeProps.id, data)"
               @collect="collectTasksForSection"
               @apply-group-props="(payload) => applyGroupPropsToTasks(payload.groupId, payload.mode)"
+              @clear-tasks="moveGroupTasksToInbox"
               @context-menu="handleSectionContextMenu"
               @open-settings="handleOpenSectionSettings"
               @resize-start="handleSectionResizeStart"
@@ -339,13 +341,12 @@ import DayRotationBanner from '../components/canvas/DayRotationBanner.vue'
 import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenus'
 import { useCanvasOrchestrator } from '../composables/canvas/useCanvasOrchestrator'
 import { useDayGroupRotation } from '@/composables/canvas/useDayGroupRotation'
-import { getTidyGeometrySnapshot, useTidyLayout } from '@/composables/canvas/useTidyLayout'
+import { useTidyLayout } from '@/composables/canvas/useTidyLayout'
 import { useCurrentDay } from '@/composables/useCurrentDay'
 import { useCanvasImagesStore } from '@/stores/canvasImages'
 import { useAuthStore } from '@/stores/auth'
 import { getClipboardImage, compressImage, uploadCanvasImage } from '@/services/canvasImageUpload'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
-import { resolveVisualNodePosition } from '@/utils/canvas/visualNodePosition'
 import { getDeepestContainingGroup } from '@/utils/canvas/spatialContainment'
 import { lockManager } from '@/services/canvas/LockManager'
 import { hasOverlappingRects } from '@/composables/canvas/useCanonicalDayGroupLayout'
@@ -681,11 +682,25 @@ const dayRotation = useDayGroupRotation({
 })
 
 function getVisualNodePosition(nodeId: string): { x: number; y: number } | undefined {
-  return resolveVisualNodePosition(
-    nodeId,
-    (id) => findNode(id) as CanvasNodeRecord | undefined,
-    screenToFlowCoordinate,
-  )
+  const node = findNode(nodeId) as CanvasNodeRecord | undefined
+  if (!node?.position) return undefined
+
+  const computedPosition = node.computedPosition
+  if (Number.isFinite(computedPosition?.x) && Number.isFinite(computedPosition?.y)) {
+    return { x: computedPosition!.x, y: computedPosition!.y }
+  }
+
+  if (node.parentNode) {
+    const parentNode = findNode(node.parentNode) as CanvasNodeRecord | undefined
+    if (parentNode?.position) {
+      return {
+        x: parentNode.position.x + node.position.x,
+        y: parentNode.position.y + node.position.y,
+      }
+    }
+  }
+
+  return { x: node.position.x, y: node.position.y }
 }
 
 function getRenderedNodeSize(nodeId: string) {
@@ -742,18 +757,17 @@ async function waitForTidyGeometrySettled() {
   for (let frame = 0; frame < TIDY_SETTLE_MAX_FRAMES; frame += 1) {
     await nextTick()
     await nextAnimationFrame()
-    const { signature, complete } = getTidyGeometrySnapshot(
-      taskStore.rawTasks,
-      getRenderedNodeSize,
-    )
+    const signature = taskStore.rawTasks
+      .filter((task) => task.canvasPosition && !task._soft_deleted && !task.isCompletionRecord)
+      .map((task) => {
+        const size = getRenderedNodeSize(task.id)
+        return size ? `${task.id}:${Math.round(size.width)}x${Math.round(size.height)}` : null
+      })
+      .filter(Boolean)
+      .sort()
+      .join('|')
 
-    if (!complete) {
-      stableFrames = 0
-      previousSignature = signature
-      continue
-    }
-
-    if (signature === previousSignature) {
+    if (signature && signature === previousSignature) {
       stableFrames += 1
       if (stableFrames >= TIDY_SETTLE_STABLE_FRAMES) return
     } else {
@@ -1180,7 +1194,8 @@ const {
   handlePaneClick, handleCanvasRightClick, handlePaneContextMenu, handleDrop,
   // BUG-208: Canvas context menu state now comes from contextMenuStore, not orchestrator
   createTaskHere, createGroup, editGroup, deleteGroup,
-  moveSelectedTasksToInbox, doneForNowSelectedTasks, deleteSelectedTasks, createTaskInGroup,
+  moveSelectedTasksToInbox, moveAllCanvasTasksToInbox, moveGroupTasksToInbox,
+  doneForNowSelectedTasks, deleteSelectedTasks, createTaskInGroup,
   deleteNode, createGroupFromSelection,
   isSectionSettingsOpen, editingSection,
   handleQuickTaskCreate,

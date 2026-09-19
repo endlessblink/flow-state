@@ -1,44 +1,12 @@
 # FlowState MASTER_PLAN.md
 
-### ~~BUG-2092: Tidy and Rotate must repair stale renderer geometry~~ (✅ DONE)
+### BUG-2091: Tidy must contain cards after late renderer growth and repeated presses (🚧 IN PROGRESS)
 
-**Priority**: P0 | **Status**: ✅ DONE (2026-09-19)
-
-**User repro**: On the populated installed Canvas, Tidy can leave cards outside a day-group frame, Rotate by day can appear to do nothing even though the saved geometry is already canonical, and cards dated 22/09/2026 can remain visibly grouped under Tomorrow / 20/09/2026 instead of the matching weekday/date group.
-
-**Exact failure modes**: Tidy's settle signature silently omitted eligible cards whose Vue Flow dimensions were not available yet, so two stable frames from the already measured cards could authorize a partial layout. Rotate filtered canonical no-op moves before returning them to the renderer, so it could not repair stale Vue Flow positions when the store was already correct. Date reconciliation selected source cards from Today and Tomorrow correctly, but also limited destination lookup to those two groups; a future-dated card therefore could not move into its exact visible weekday/date group.
-
-**Acceptance**:
-
-1. Tidy treats every eligible unmeasured card as an incomplete geometry snapshot and waits for the full rendered set before planning.
-2. One Tidy press contains a card whose rendered height grows after the click; the regression must not mask failure with a second click.
-3. Explicit Rotate returns the complete canonical visual plan even when no persistence write is required, while repeated rotation remains API- and undo-idempotent.
-4. Dense cards remain inside the expanded day-group frame after both Tidy and Rotate in isolated Chromium and WebKit runs.
-5. A dated card originating in Today or Tomorrow moves into the visible weekday group whose resolved header date exactly equals its due date, while preserving that due date and leaving custom, protected, and already-weekday-owned cards unchanged.
-6. Ship through the Electron updater and verify the restarted installed Canvas without changing the user's completed-task visibility preference.
-
-**Failure-class matrix**:
-
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Unit regressions reproduce an eligible unmeasured Tidy card, a canonical store with stale renderer geometry, and a future-dated card under Tomorrow; local-browser scenarios exercise both toolbar actions and the exact three-card wrong-day membership shape. | Yes |
-| Data shape / membership | Yes | Rotate now searches all visible rotatable day groups for an exact-date destination while restricting automatic reconciliation to cards originating in Today or Tomorrow. Dismissed, pinned, completion-record, soft-deleted, positionless, custom-group, and already-weekday-owned records retain their existing protection. | Yes |
-| Renderer state | Yes | Tidy now blocks on missing eligible dimensions; Rotate returns the complete canonical renderer repair plan. | Yes |
-| Electron main/preload | Yes | The guarded 1.4.539 Electron build and package validator confirmed the renderer, main process, preload, route-compatible sidecar, and Linux launcher metadata. | No change required |
-| Localhost sidecar / KDE control | Yes | The packaged local API passed its route-compatible startup validation; no timer or KDE control code changed. | No change required |
-| Supabase persistence/realtime | Partial | Unit coverage proves repeated Rotate emits no redundant group/task persistence calls; authenticated transport is not changed. | Persistence write suppression preserved |
-| Updater/runtime version | Yes | The public updater manifest advertises 1.4.539; its AppImage and Debian package both return HTTP 200 with content lengths matching the manifest. | Yes |
-| Stale live process state | Yes | The prior 1.4.538 process was stopped, the installed AppImage was atomically replaced, and the restarted runtime and sidecar both report 1.4.539 with an installed hash matching the published artifact. | Yes |
-
-**Completion evidence (2026-09-19)**: The full ship gate passed 419 files / 4,891 tests with 3 expected skips, plus type-check, Electron bundle-environment validation, package validation, and dependency integrity. The exact wrong-day membership regression passed independently in Chromium and WebKit. FlowState 1.4.539 is public in the updater, the restarted installed AppImage hash matches the published artifact, and both the live app and sidecar report 1.4.539. Installed authenticated visual acceptance reproduced cards due 22/09 under Tomorrow / 20.9 before Rotate; one Rotate showed `7 day groups updated for today`, reduced Tomorrow from 10 cards to 2, removed the visible 22/09 mismatches from that group, and retained a 21/09 card under Monday / 21.9. No completed-task filter, task content, or Tidy state was changed. Tuesday's full destination column was outside the final viewport, so exhaustive exact-destination coverage remains supplied by the independent Chromium and WebKit regressions rather than by that screenshot alone.
-
-### ~~BUG-2091~~: Tidy must contain cards after late renderer growth and repeated presses (✅ DONE)
-
-**Priority**: P0 | **Status**: ✅ DONE (2026-09-13)
+**Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-13)
 
 **User repro**: In the installed Canvas, pressing Tidy can leave one or more visible member cards below the group frame. Repeating Tidy does not reliably repair the frame.
 
-**Exact failure modes**: First, the deferred Tidy pass used a zero-delay timer as its settle boundary, so later card growth could leave the persisted frame too short; repeated presses could also race the in-flight geometry transaction. Later fixes made rendered geometry authoritative and kept explicitly dismissed/history records out. The 1.4.536 installed read-back exposed a distinct data-shape class: completed history was visible because `hideCanvasDoneTasks=false` was persisted, while 12 of the 13 active rendered cards referenced group IDs that no longer existed. Tidy only treated root cards or cards owned by a current date group as loose, so the stale-parent cards were never adopted or framed.
+**Exact failure mode**: The deferred Tidy pass used a zero-delay timer as its settle boundary. Card height can still change on later animation frames, so the persisted plan and displayed frame are computed from stale dimensions. A second Tidy press can start another layout transaction before the first releases its geometry locks.
 
 **Acceptance**:
 
@@ -47,22 +15,35 @@
 3. After the final render, every visible member card is fully contained by its actual group frame, including a card whose height grows two animation frames after the click.
 4. Regression coverage exercises the real toolbar twice in quick succession and asserts rendered DOM containment, alongside unit coverage for the settle barrier and coalescing contract.
 5. Ship through the Electron updater and verify the installed authenticated Canvas against the user's populated layout.
-6. When completed cards are shown, spatial Tidy recovery includes every rendered completed card aligned with a visible group column; when they are hidden, Tidy leaves them excluded.
-7. A visible active card whose saved parent group no longer exists is treated as loose and adopted into its matching current date group; explicitly dismissed, completion-record, and soft-deleted tasks remain excluded.
 
 **Failure-class matrix**:
 
 | Class | Checked? | Evidence | Covered by this fix? |
 | --- | --- | --- | --- |
-| User repro shape | Yes | The 1.4.536 installed authenticated Canvas rendered 86 cards with completed work shown; after restoring the hidden-completed preference, 13 active cards remained and 12 had parent IDs absent from the current group set. The new unit and local-browser regression reproduce a dated card outside every lane with a deleted parent-group ID. | Yes |
-| Data shape / membership | Yes | Tidy now treats a parent ID absent from all visible groups as loose and may recover that active dated card into the matching current day group. Dismissed/history/deleted records remain excluded and no task record is deleted. | Yes |
+| User repro shape | In progress | Delayed-growth plus repeated-toolbar-click E2E is green; populated installed-app read-back remains. | Yes |
+| Data shape / membership | Yes | Existing Tidy membership and wrapped-frame regressions remain green; no task/group schema changes. | No change required |
 | Renderer state | Yes | Regression forces a member card to grow two animation frames after Tidy. | Yes |
-| Electron main/preload | Yes | Renderer-only change; the guarded Electron build and packaging validation passed for 1.4.537. | No change required |
-| Supabase persistence/realtime | Yes | The authenticated installed Tidy persisted all 12 dated stale-parent repairs through reload; the final read-back found every rendered card owned by a current group. | No transport change |
-| Updater/runtime version | Yes | The public manifest advertises 1.4.537 with the validated AppImage, and the restarted installed runtime reports 1.4.537. | Yes |
-| Stale live process state | Yes | The prior process was stopped and the installed 1.4.537 AppImage was relaunched against the real user profile. | Yes |
+| Electron main/preload | Pending | Renderer-only change; packaged runtime still requires release verification. | No change required |
+| Supabase persistence/realtime | Partial | Final plan still uses the existing persistence path; authenticated installed read-back remains. | No transport change |
+| Updater/runtime version | Pending | Requires 1.4.532 manifest, artifact, install, and running-version proof. | Yes |
+| Stale live process state | Pending | Requires replacement and restart of the installed AppImage. | Yes |
 
-**Completion evidence**: The new exact-shape unit regression failed before the candidate and now passes; the matching local-browser test passes in Chromium and WebKit and persists the repaired parent through reload. The full ship gate passed 4,889 tests with 3 expected skips, plus type-check, source lint, script syntax, diff validation, Electron build, and package validation. Version 1.4.537 was published, its installed AppImage hash matches the release artifact, and the restarted packaged runtime reports 1.4.537. On the authenticated populated Canvas, completed history is hidden again, all 5 currently filtered rendered cards have valid current parents, and a fresh installed Tidy reports 0 overlaps, 0 same-parent overlaps, 0 invalid rendered tasks, and 0 escaped group tasks. The unrelated whole-file E2E seed contamination remains tracked by TASK-1906.
+### BUG-2090: Redesign the Catalog controls and prevent metadata collisions (🚧 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-12)
+
+**User request**: Replace the visually crowded Catalog header with a coherent, usable design and ensure the Priority and Due columns never intersect.
+
+**Product rule**: Catalog has one authoritative local toolbar. Group and Global order remain visible; Global order explicitly states that it also governs Canvas and Calendar inboxes. Catalog-only controls use progressive disclosure. The global application header does not repeat Catalog state. Task metadata columns share one grid contract with reserved non-overlapping widths in both LTR and RTL.
+
+**Acceptance**:
+
+1. The Catalog header uses no duplicate or clipped state-summary pills.
+2. Group by and Global order are immediately visible, labeled, keyboard reachable, and rendered once.
+3. Status, density, tree expansion, completed visibility, and the due-group calendar option remain available as secondary view options.
+4. Priority and Due headers and values align and have visible separation at the reported desktop width and a narrower supported viewport.
+5. Catalog sorting and Canvas/Calendar Today-inbox inheritance continue to pass end-to-end regression coverage.
+6. Ship through the Electron updater and verify the installed authenticated desktop in LTR and Hebrew RTL.
 
 ### ~~TASK-2089: Expose global ordering and Catalog view context~~ (✅ DONE)
 
@@ -169,6 +150,12 @@
 **Regression added for reported repro**: Unit coverage asserts that only Priority, Due Date, and Category remain as Board modes and that a persisted legacy List selection migrates to Priority; authenticated route E2E asserts the independent Timeline view and icon-led navigation.
 
 **Live boundary proof**: The 1.4.525 updater manifest names the expected AppImage and Debian artifacts, both public artifact URLs return HTTP 200 with the manifest sizes, and fresh authenticated LTR/RTL captures show the released layout at the exact source commit.
+
+### TASK-2086: Clear all Canvas tasks or one group's tasks back to Inbox (🚧 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-10)
+
+Add an accessible clear action to the Canvas toolbar and each populated group header. The global action moves every canonical or projected Canvas task to Inbox; the group action moves only tasks in that group and its descendants. Both actions must preserve tasks, use one undoable batch, avoid drag/pan side effects, and leave unrelated groups untouched.
 
 ### ~~BUG-2085~~: Restore Board Kanban and separate the focused timeline (✅ DONE)
 

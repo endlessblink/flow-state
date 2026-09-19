@@ -26,6 +26,17 @@
         >
           <FolderPlus :size="14" />
         </button>
+
+        <BaseIconButton
+          class="clear-canvas-btn"
+          size="sm"
+          variant="warning"
+          title="Move all Canvas tasks to Inbox"
+          aria-label="Clear canvas to Inbox"
+          @click="$emit('clearCanvas')"
+        >
+          <Inbox :size="14" />
+        </BaseIconButton>
       </div>
 
       <!-- Separator -->
@@ -104,12 +115,14 @@
 </template>
 
 <script setup lang="ts">
-import { Plus, FolderPlus, Calendar, CalendarX, CheckCheck, CalendarClock, LayoutGrid, ClipboardList, ClipboardCheck } from 'lucide-vue-next'
+import { Plus, FolderPlus, Inbox, Calendar, CalendarX, CheckCheck, CalendarClock, LayoutGrid, ClipboardList, ClipboardCheck } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
+import BaseIconButton from '@/components/base/BaseIconButton.vue'
 
 defineEmits<{
   (e: 'addTask'): void
   (e: 'createGroup', event: MouseEvent): void
+  (e: 'clearCanvas'): void
   (e: 'rotateDayGroups'): void
   (e: 'tidyLayout'): void
   (e: 'debugTidyPlan'): void

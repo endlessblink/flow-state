@@ -42,66 +42,6 @@ export const removeTaskNodesFromCanvas = (taskIds: string[]) => {
     setNodes(getNodes.value.filter(node => !idsToRemove.has(node.id)))
 }
 
-type CanvasClearTask = Pick<Task, 'id' | 'parentId' | 'canvasPosition'> & {
-    _soft_deleted?: boolean
-    isCompletionRecord?: boolean
-}
-
-type CanvasClearGroup = {
-    id: string
-    parentGroupId?: string | null
-}
-
-type CanvasClearNode = {
-    id: string
-    type?: string
-    parentNode?: string
-}
-
-export function collectCanvasTaskIdsForInbox(
-    tasks: CanvasClearTask[],
-    groups: CanvasClearGroup[],
-    renderedNodes: CanvasClearNode[],
-    targetGroupId?: string
-) {
-    const canonicalTasks = new Map(
-        tasks
-            .filter(task => !task._soft_deleted && !task.isCompletionRecord)
-            .map(task => [task.id, task])
-    )
-    const targetGroupIds = new Set<string>()
-
-    if (targetGroupId) {
-        targetGroupIds.add(targetGroupId)
-        let addedDescendant = true
-        while (addedDescendant) {
-            addedDescendant = false
-            for (const group of groups) {
-                if (group.parentGroupId && targetGroupIds.has(group.parentGroupId) && !targetGroupIds.has(group.id)) {
-                    targetGroupIds.add(group.id)
-                    addedDescendant = true
-                }
-            }
-        }
-    }
-
-    const belongsToTarget = (parentId?: string | null) =>
-        !targetGroupId || (!!parentId && targetGroupIds.has(parentId.replace(/^section-/, '')))
-    const taskIds = new Set<string>()
-
-    for (const task of canonicalTasks.values()) {
-        if (task.canvasPosition && belongsToTarget(task.parentId)) taskIds.add(task.id)
-    }
-
-    for (const node of renderedNodes) {
-        if (node.type === 'taskNode' && canonicalTasks.has(node.id) && belongsToTarget(node.parentNode)) {
-            taskIds.add(node.id)
-        }
-    }
-
-    return [...taskIds]
-}
-
 export function useCanvasTaskActions(deps: TaskActionsDeps) {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
@@ -378,36 +318,6 @@ interface QuickTaskData {
             console.error('[ASYNC-ERROR] moveSelectedTasksToInbox failed', error)
         }
     }
-
-    const moveTaskIdsToInbox = async (taskIds: string[]) => {
-        if (taskIds.length === 0) {
-            useToast().showToast('No tasks to move to Inbox', 'info')
-            return
-        }
-
-        try {
-            await undoHistory.bulkMoveToInboxWithUndo(taskIds)
-            canvasStore.setSelectedNodes([])
-            if (deps.batchSyncNodes) deps.batchSyncNodes('high')
-            deps.closeCanvasContextMenu()
-
-            const label = taskIds.length === 1
-                ? 'Moved 1 task to Inbox'
-                : `Moved ${taskIds.length} tasks to Inbox`
-            useToast().showToast(label, 'success', { duration: 2000 })
-        } catch (error) {
-            console.error('[ASYNC-ERROR] moveTaskIdsToInbox failed', error)
-            useToast().showToast('Failed to move tasks to Inbox', 'error')
-        }
-    }
-
-    const moveAllCanvasTasksToInbox = () => moveTaskIdsToInbox(
-        collectCanvasTaskIdsForInbox(taskStore._rawTasks, canvasStore._rawGroups, getNodes.value)
-    )
-
-    const moveGroupTasksToInbox = (groupId: string) => moveTaskIdsToInbox(
-        collectCanvasTaskIdsForInbox(taskStore._rawTasks, canvasStore._rawGroups, getNodes.value, groupId)
-    )
 
     /**
      * "Done for now" - Moves selected tasks' due date to tomorrow with tracking badge.
@@ -1036,8 +946,6 @@ interface QuickTaskData {
         handleQuickTaskCreate,
         closeQuickTaskCreate,
         moveSelectedTasksToInbox,
-        moveAllCanvasTasksToInbox,
-        moveGroupTasksToInbox,
         doneForNowSelectedTasks,
         deleteSelectedTasks,
         confirmBulkDelete,

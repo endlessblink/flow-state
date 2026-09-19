@@ -461,6 +461,31 @@ describe('rotateDayGroupPositions()', () => {
     expect(task.dueDate).toBe('2026-04-08')
   })
 
+  it('reconciles a dated card from Tomorrow into the weekday group whose header date matches', () => {
+    const today = makeGroup({ id: 'today', name: 'Today', position: { x: 0, y: 0, width: 350, height: 600 } })
+    const tomorrow = makeGroup({ id: 'tomorrow', name: 'Tomorrow', position: { x: 416, y: 0, width: 350, height: 600 } })
+    const monday = makeGroup({ id: 'monday', name: 'Monday', position: { x: 832, y: 0, width: 350, height: 600 } })
+    const tuesday = makeGroup({ id: 'tuesday', name: 'Tuesday', position: { x: 1248, y: 0, width: 350, height: 600 } })
+    const task = makeTask({
+      id: 'future-tuesday-in-tomorrow',
+      parentId: tomorrow.id,
+      dueDate: '2026-04-14',
+      canvasPosition: { x: 436, y: 160 },
+    })
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, tomorrow, monday, tuesday])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([task])
+
+    const { taskMoves, release } = useDayGroupRotation({ isTaskVisible: () => true }).rotateDayGroupPositions()
+    release()
+
+    expect(taskMoves[0]?.parentId).toBe(tuesday.id)
+    expect(updateTask).toHaveBeenCalledWith(task.id, expect.objectContaining({
+      parentId: tuesday.id,
+      positionFormat: 'absolute',
+    }), 'DRAG')
+    expect(task.dueDate).toBe('2026-04-14')
+  })
+
   it('keeps explicitly rendered overdue cards in rotation layout', () => {
     const today = makeGroup({ id: 'today', name: 'Today', position: { x: 0, y: 0, width: 350, height: 600 } })
     const tomorrow = makeGroup({ id: 'tomorrow', name: 'Tomorrow', position: { x: 416, y: 0, width: 350, height: 600 } })

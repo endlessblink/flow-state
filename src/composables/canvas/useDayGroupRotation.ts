@@ -238,9 +238,12 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     const rehomedParents = collectDayGroupAdoptions(taskStore.rawTasks, groups, {
       mode: 'spatial',
     })
-    const rollingGroups = groups.filter((group) => {
+    const rotatableGroups = groups.filter((group) =>
+      group.isVisible !== false && isRotatableDayGroup(group.name)
+    )
+    const rollingGroups = rotatableGroups.filter((group) => {
       const keyword = detectPowerKeyword(group.name)
-      return group.isVisible !== false && keyword?.category === 'date'
+      return keyword?.category === 'date'
         && (keyword.keyword === 'today' || keyword.keyword === 'tomorrow')
     })
     const rollingIds = new Set(rollingGroups.map((group) => group.id))
@@ -250,7 +253,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     )
     for (const task of rollingTasks) {
       if (!isEligibleForDayGroupAdoption(task)) continue
-      const target = findMatchingGroupForDueDate(task.dueDate, rollingGroups)
+      const target = findMatchingGroupForDueDate(task.dueDate, rotatableGroups)
       if (!target) continue
       if (target.id === task.parentId) rehomedParents.delete(task.id)
       else rehomedParents.set(task.id, target.id)

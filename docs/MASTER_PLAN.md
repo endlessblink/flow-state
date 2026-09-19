@@ -4,9 +4,9 @@
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-09-19)
 
-**User repro**: On the populated installed Canvas, Tidy can leave cards outside a day-group frame and Rotate by day can appear to do nothing even though the saved geometry is already canonical.
+**User repro**: On the populated installed Canvas, Tidy can leave cards outside a day-group frame, Rotate by day can appear to do nothing even though the saved geometry is already canonical, and cards dated 22/09/2026 can remain visibly grouped under Tomorrow / 20/09/2026 instead of the matching weekday/date group.
 
-**Exact failure modes**: Tidy's settle signature silently omitted eligible cards whose Vue Flow dimensions were not available yet, so two stable frames from the already measured cards could authorize a partial layout. Rotate filtered canonical no-op moves before returning them to the renderer, so it could not repair stale Vue Flow positions when the store was already correct.
+**Exact failure modes**: Tidy's settle signature silently omitted eligible cards whose Vue Flow dimensions were not available yet, so two stable frames from the already measured cards could authorize a partial layout. Rotate filtered canonical no-op moves before returning them to the renderer, so it could not repair stale Vue Flow positions when the store was already correct. Date reconciliation selected source cards from Today and Tomorrow correctly, but also limited destination lookup to those two groups; a future-dated card therefore could not move into its exact visible weekday/date group.
 
 **Acceptance**:
 
@@ -14,14 +14,15 @@
 2. One Tidy press contains a card whose rendered height grows after the click; the regression must not mask failure with a second click.
 3. Explicit Rotate returns the complete canonical visual plan even when no persistence write is required, while repeated rotation remains API- and undo-idempotent.
 4. Dense cards remain inside the expanded day-group frame after both Tidy and Rotate in isolated Chromium and WebKit runs.
-5. Ship through the Electron updater and verify the restarted installed Canvas without changing the user's completed-task visibility preference.
+5. A dated card originating in Today or Tomorrow moves into the visible weekday group whose resolved header date exactly equals its due date, while preserving that due date and leaving custom, protected, and already-weekday-owned cards unchanged.
+6. Ship through the Electron updater and verify the restarted installed Canvas without changing the user's completed-task visibility preference.
 
 **Failure-class matrix**:
 
 | Class | Checked? | Evidence | Covered by this fix? |
 | --- | --- | --- | --- |
-| User repro shape | Yes | Unit regressions reproduce an eligible unmeasured Tidy card and a canonical store with stale renderer geometry; the dense local-browser scenario exercises both toolbar actions. | Yes |
-| Data shape / membership | Yes | Eligibility rules remain unchanged: dismissed, pinned, completion-record, soft-deleted, and positionless records stay outside the rendered settle set. | No data mutation change |
+| User repro shape | Yes | Unit regressions reproduce an eligible unmeasured Tidy card, a canonical store with stale renderer geometry, and a future-dated card under Tomorrow; local-browser scenarios exercise both toolbar actions and the exact three-card wrong-day membership shape. | Yes |
+| Data shape / membership | Yes | Rotate now searches all visible rotatable day groups for an exact-date destination while restricting automatic reconciliation to cards originating in Today or Tomorrow. Dismissed, pinned, completion-record, soft-deleted, positionless, custom-group, and already-weekday-owned records retain their existing protection. | Yes |
 | Renderer state | Yes | Tidy now blocks on missing eligible dimensions; Rotate returns the complete canonical renderer repair plan. | Yes |
 | Electron main/preload | Pending | Renderer-only candidate; Electron packaging remains to be verified. | No change expected |
 | Localhost sidecar / KDE control | Pending | No timer or KDE control path is changed; packaged runtime health remains to be checked. | No change expected |

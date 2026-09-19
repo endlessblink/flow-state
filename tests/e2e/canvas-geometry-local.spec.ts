@@ -1706,6 +1706,60 @@ test.describe('local canvas geometry regressions', () => {
     await expect.poll(readDateMembership).toEqual({ group: 'Today', dueDate: today })
   })
 
+  test('rotate moves future-dated cards out of Tomorrow into the matching weekday group', async ({ page }) => {
+    await page.waitForFunction(() => {
+      const root = document.querySelector('#app') as any
+      return root?.__vue_app__?._context.config.globalProperties.$pinia._s.get('canvas')?._hasInitializedOnce === true
+    }, { timeout: 30_000 })
+    await page.context().setOffline(true)
+    const target = await page.evaluate(() => {
+      const date = new Date()
+      date.setDate(date.getDate() + 3)
+      const dueDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+      return { dueDate, groupName: new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(date) }
+    })
+    const taskIds = ['rotate-future-a', 'rotate-future-b', 'rotate-future-c']
+    await seedCanvas(page, [
+      { id: 'rotate-future-today', name: 'Today', x: 100, y: 200 },
+      { id: 'rotate-future-tomorrow', name: 'Tomorrow', x: 700, y: 200 },
+      { id: 'rotate-future-target', name: target.groupName, x: 1300, y: 200 },
+    ], taskIds.map((id, index) => ({
+      id,
+      title: `Future dated ${index + 1}`,
+      parentId: 'rotate-future-tomorrow',
+      dueDate: target.dueDate,
+      x: 720,
+      y: 300 + index * 140,
+    })), { sync: false, refreshOnMissing: false })
+
+    await clickToolbar(page, /rotate/)
+    const readMembership = () => page.evaluate((ids) => {
+      const pinia = (document.querySelector('#app') as any).__vue_app__._context.config.globalProperties.$pinia
+      const tasks = pinia._s.get('tasks').rawTasks.filter((task: any) => ids.includes(task.id))
+      const groups = pinia._s.get('canvas').groups
+      return tasks.map((task: any) => ({
+        id: task.id,
+        dueDate: task.dueDate,
+        group: groups.find((group: any) => group.id === task.parentId)?.name,
+      })).sort((a: any, b: any) => a.id.localeCompare(b.id))
+    }, taskIds)
+    await expect.poll(readMembership).toEqual(taskIds.map((id) => ({
+      id,
+      dueDate: target.dueDate,
+      group: target.groupName,
+    })))
+
+    const geometry = await readGeometry(page)
+    const group = geometry.groups.find((candidate) => candidate.name === target.groupName)!
+    for (const task of geometry.tasks.filter((candidate) => taskIds.includes(candidate.id))) {
+      expect(task.parentId).toBe(group.id)
+      expect(task.x).toBeGreaterThanOrEqual(group.x)
+      expect(task.x).toBeLessThan(group.x + group.width)
+      expect(task.y).toBeGreaterThan(group.y)
+      expect(task.y + 100).toBeLessThanOrEqual(group.y + group.height)
+    }
+  })
+
   test('rotate orders Today, Tomorrow, then the day after tomorrow on Monday', async ({ page }) => {
     await seedCanvas(page, [
       { id: 'wed', name: 'Wednesday', x: 3000, y: 200 },

@@ -984,7 +984,7 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
     }
   } else if (result.isConflict) {
     // Conflict - need resolution
-    await markConflict(operation.id!, result.newVersion || 0)
+    await markConflict(operation.id!, result.newVersion || 0, undefined, result.error)
     state.value.lastError = result.error
     console.warn(`⚠️ [SYNC] Conflict: ${operation.entityType}:${operation.entityId.slice(0, 8)}`)
   } else if (result.isAuthError) {

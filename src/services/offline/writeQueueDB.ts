@@ -593,6 +593,7 @@ export async function markConflict(
   id: number,
   serverVersion: number,
   serverData?: Record<string, unknown>,
+  error?: string,
 ): Promise<WriteConflict> {
   const db = getWriteQueueDB();
   const operation = await db.operations.get(id);
@@ -604,6 +605,7 @@ export async function markConflict(
   // Update operation status
   await updateOperation(id, {
     status: "conflict",
+    ...(error ? { lastError: error } : {}),
   });
 
   // Record the conflict

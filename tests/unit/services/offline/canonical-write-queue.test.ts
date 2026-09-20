@@ -434,10 +434,13 @@ describe('canonical write queue durability', () => {
         patch: { title: 'Keep me' }, phase: 'queued',
       },
     })
-    await markConflict(op.id!, 2)
+    await markConflict(op.id!, 2, undefined, 'Version conflict: server changed this task')
 
     expect(await clearFailedOperations()).toBe(0)
-    expect(await getWriteQueueDB().operations.get(op.id!)).toBeDefined()
+    expect(await getWriteQueueDB().operations.get(op.id!)).toMatchObject({
+      status: 'conflict',
+      lastError: 'Version conflict: server changed this task',
+    })
     expect(await getConflicts()).toHaveLength(1)
   })
 

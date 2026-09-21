@@ -35,7 +35,7 @@
           <!-- Last Error Summary -->
           <div v-if="showErrorSummary" class="error-summary">
             <div class="error-message">
-              {{ lastError }}
+              {{ effectiveLastError }}
             </div>
             <div v-if="retryableCount === 0" class="resolution-hint">
               These local changes need review before they can sync. They are still saved on this device.
@@ -146,6 +146,12 @@ defineEmits<{
 
 const showAll = ref(false)
 
+// A queue record can contain the real server error even when the aggregate
+// error was cleared during a later status refresh.
+const effectiveLastError = computed(() =>
+  props.lastError || props.errors.find(error => error.lastError)?.lastError
+)
+
 // TASK-1183: Check if an error is permanent (cannot be retried)
 const isPermanentError = (error: WriteOperation): boolean => {
   if (!error.lastError) return false
@@ -162,7 +168,7 @@ const permanentCount = computed(() => {
 
 const displayedErrorCount = computed(() => props.errorCount ?? props.errors.length)
 
-const showErrorSummary = computed(() => Boolean(props.lastError) && displayedErrorCount.value > 0)
+const showErrorSummary = computed(() => Boolean(effectiveLastError.value) && displayedErrorCount.value > 0)
 
 // Only show first 3 errors unless expanded
 const displayedErrors = computed(() => {

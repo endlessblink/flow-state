@@ -100,6 +100,34 @@ describe('sync status auth-error watchdog', () => {
     expect(document.body.textContent).not.toContain('No failed sync operations')
   })
 
+  it('shows the operation error when the top-level sync error is missing', async () => {
+    const { default: SyncErrorPopover } = await import('@/components/sync/SyncErrorPopover.vue')
+
+    wrapper = mount(SyncErrorPopover, {
+      attachTo: document.body,
+      props: {
+        errors: [{
+          id: 45,
+          entityType: 'task',
+          entityId: 'task-with-conflict',
+          operation: 'update',
+          payload: { title: 'Still local' },
+          status: 'conflict',
+          retryCount: 1,
+          createdAt: Date.now(),
+          lastError: 'stale_revision: the task changed on another device',
+        }],
+      },
+      global: {
+        stubs: { Teleport: false },
+      },
+    })
+    await nextTick()
+
+    expect(document.body.textContent).toContain('stale_revision: the task changed on another device')
+    expect(document.body.textContent).not.toContain('Sync needs attention. The app will retry recoverable local changes.')
+  })
+
   it('does not offer retry for a task missing from the authoritative projection', async () => {
     const { default: SyncErrorPopover } = await import('@/components/sync/SyncErrorPopover.vue')
 

@@ -27,6 +27,13 @@ function positiveInteger(value: unknown): value is number {
   return Number.isSafeInteger(value) && Number(value) > 0
 }
 
+function positiveRevision(value: unknown): number | undefined {
+  const revision = typeof value === 'string' && /^\d+$/.test(value.trim())
+    ? Number(value)
+    : value
+  return positiveInteger(revision) ? revision : undefined
+}
+
 function timestamp(value: unknown): value is string {
   return typeof value === 'string' && Number.isFinite(Date.parse(value))
 }
@@ -172,7 +179,7 @@ function rejected(operation: WriteOperation, data: Record<string, unknown>): Syn
     operation,
     error: `${code}: ${message}`,
     isConflict: conflictCodes.has(code),
-    newVersion: positiveInteger(error.currentRevision) ? error.currentRevision : undefined,
+    newVersion: positiveRevision(error.currentRevision),
     isAuthError: code === 'not_authenticated',
     shouldRetry: false,
     classification: code === 'not_authenticated' ? 'auth' : conflictCodes.has(code) ? 'conflict' : 'permanent',
@@ -275,7 +282,7 @@ export async function executeQueuedCanonicalTaskPatch(
     }
     if (preview.data.ok !== true) {
       const error = object(preview.data.error) ? preview.data.error : {}
-      const currentRevision = positiveInteger(error.currentRevision) ? error.currentRevision : undefined
+      const currentRevision = positiveRevision(error.currentRevision)
       if (error.code === 'stale_revision' && currentRevision && staleRebaseAttempt === 0) {
         canonical = {
           ...canonical,
@@ -335,7 +342,7 @@ export async function executeQueuedCanonicalTaskPatch(
   }
   if (applied.data.ok !== true) {
     const error = object(applied.data.error) ? applied.data.error : {}
-    const currentRevision = positiveInteger(error.currentRevision) ? error.currentRevision : undefined
+    const currentRevision = positiveRevision(error.currentRevision)
     if (error.code === 'stale_revision' && currentRevision && staleRebaseAttempt === 0) {
       canonical = {
         ...canonical,

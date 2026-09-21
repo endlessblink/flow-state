@@ -137,6 +137,43 @@ describe('canonical queued task patch', () => {
     expect(persist).toHaveBeenCalledWith(expect.objectContaining({ baseRevision: 9, phase: 'queued' }))
   })
 
+  it('rebases when the server serializes the current revision as text', async () => {
+    const op = operation()
+    const rpc = vi.fn()
+      .mockResolvedValueOnce({
+        data: { ok: false, result: 'conflict', error: { code: 'stale_revision', message: 'changed', currentRevision: '9' } },
+        error: null,
+      })
+      .mockImplementationOnce(async (_name, args) => ({
+        data: {
+          ...preview(),
+          operationId: args.p_operation_id,
+          baseRevision: args.p_base_revision,
+          readBack: { ...preview().readBack, canonicalRevision: args.p_base_revision },
+        },
+        error: null,
+      }))
+      .mockImplementationOnce(async (_name, args) => ({
+        data: {
+          ok: true,
+          result: 'committed',
+          requestHash: REQUEST_HASH,
+          receipt: receipt({
+            operationId: args.p_operation_id,
+            canonicalRevision: 10,
+            readBack: { ...receipt().readBack, canonicalRevision: 10 },
+          }),
+        },
+        error: null,
+      }))
+
+    const result = await executeQueuedCanonicalTaskPatch({ rpc }, op, vi.fn())
+
+    expect(result.success).toBe(true)
+    expect(rpc).toHaveBeenCalledTimes(3)
+    expect(rpc.mock.calls[1][1]).toMatchObject({ p_preview: true, p_base_revision: 9 })
+  })
+
   it('re-previews a legacy queued update that was persisted before request hashes', async () => {
     const op = operation()
     op.canonicalTaskPatch = {

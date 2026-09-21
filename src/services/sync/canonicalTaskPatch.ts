@@ -183,6 +183,7 @@ export async function executeQueuedCanonicalTaskPatch(
   client: CanonicalRpcClient,
   operation: WriteOperation,
   persist: (state: CanonicalTaskPatchState) => Promise<void>,
+  staleRebaseAttempt = 0,
 ): Promise<SyncResult> {
   const initialCanonical = operation.canonicalTaskPatch
   if (!initialCanonical || operation.entityType !== 'task' || operation.operation !== 'update') {
@@ -272,7 +273,26 @@ export async function executeQueuedCanonicalTaskPatch(
         return { success: false, operation, error: 'invalid_canonical_preview', shouldRetry: false, classification: 'permanent' }
       }
     }
-    if (preview.data.ok !== true) return rejected(operation, preview.data)
+    if (preview.data.ok !== true) {
+      const error = object(preview.data.error) ? preview.data.error : {}
+      const currentRevision = positiveInteger(error.currentRevision) ? error.currentRevision : undefined
+      if (error.code === 'stale_revision' && currentRevision && staleRebaseAttempt === 0) {
+        canonical = {
+          ...canonical,
+          operationId: operationId(),
+          baseRevision: currentRevision,
+          phase: 'queued',
+          previewDigest: undefined,
+          previewExpiresAt: undefined,
+          requestHash: undefined,
+          normalizedPatch: undefined,
+        }
+        operation.canonicalTaskPatch = canonical
+        await persist(canonical)
+        return executeQueuedCanonicalTaskPatch(client, operation, persist, 1)
+      }
+      return rejected(operation, preview.data)
+    }
     if (!validPreview(preview.data, operation)) {
       return { success: false, operation, error: 'invalid_canonical_preview', shouldRetry: false, classification: 'permanent' }
     }
@@ -313,7 +333,26 @@ export async function executeQueuedCanonicalTaskPatch(
   if (!object(applied.data)) {
     return { success: false, operation, error: 'invalid_canonical_apply_response', shouldRetry: false, classification: 'permanent' }
   }
-  if (applied.data.ok !== true) return rejected(operation, applied.data)
+  if (applied.data.ok !== true) {
+    const error = object(applied.data.error) ? applied.data.error : {}
+    const currentRevision = positiveInteger(error.currentRevision) ? error.currentRevision : undefined
+    if (error.code === 'stale_revision' && currentRevision && staleRebaseAttempt === 0) {
+      canonical = {
+        ...canonical,
+        operationId: operationId(),
+        baseRevision: currentRevision,
+        phase: 'queued',
+        previewDigest: undefined,
+        previewExpiresAt: undefined,
+        requestHash: undefined,
+        normalizedPatch: undefined,
+      }
+      operation.canonicalTaskPatch = canonical
+      await persist(canonical)
+      return executeQueuedCanonicalTaskPatch(client, operation, persist, 1)
+    }
+    return rejected(operation, applied.data)
+  }
   if (applied.data.result !== 'committed'
     || (canonical.requestHash !== undefined && applied.data.requestHash !== canonical.requestHash)
     || !validCanonicalTaskReceipt(

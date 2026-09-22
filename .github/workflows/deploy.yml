@@ -34,8 +34,8 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version: "22"
+          cache: "npm"
 
       - name: Install Dependencies
         run: npm ci --ignore-scripts
@@ -56,18 +56,39 @@ jobs:
       # Setup SSH
       - name: Prepare SSH Key
         run: |
-            mkdir -p ~/.ssh/
-            echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-            chmod 600 ~/.ssh/id_rsa
-            ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
-            cat >> ~/.ssh/config << 'EOF'
-            Host *
-              ServerAliveInterval=30
-              ServerAliveCountMax=20
-              TCPKeepAlive=yes
-            EOF
-            cp ~/.ssh/id_rsa ~/.ssh/id_ed25519
-            chmod 600 ~/.ssh/id_ed25519
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+          cat >> ~/.ssh/config << 'EOF'
+          Host *
+            ServerAliveInterval=30
+            ServerAliveCountMax=20
+            TCPKeepAlive=yes
+          EOF
+          cp ~/.ssh/id_rsa ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      # Install the exact tombstone-scope probe required by shared-task delete
+      # retries before publishing a client that can invoke it.
+      - name: Apply and verify shared-task tombstone scope RPC
+        run: |
+          REMOTE_DB_CONTAINER=$(ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "docker ps --format '{{.Names}}' | grep -E 'supabase.*db|postgres' | head -1")
+          if [ -z "$REMOTE_DB_CONTAINER" ]; then
+            echo 'No production Supabase/Postgres container found'
+            exit 1
+          fi
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "docker exec -i '$REMOTE_DB_CONTAINER' psql -v ON_ERROR_STOP=1 -U postgres -d postgres" \
+            < supabase/migrations/20260922120000_shared_task_tombstone_scope_rpc.sql
+          VERIFIED=$(ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "docker exec '$REMOTE_DB_CONTAINER' psql -U postgres -d postgres -qAt -c \"SELECT p.prosecdef AND has_function_privilege('authenticated', p.oid, 'EXECUTE') AND NOT has_function_privilege('anon', p.oid, 'EXECUTE') FROM pg_catalog.pg_proc AS p JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND p.proname = 'flowstate_has_task_tombstone' AND pg_catalog.pg_get_function_identity_arguments(p.oid) = 'p_task_id text';\"")
+          if [ "$VERIFIED" != "t" ]; then
+            echo 'Production tombstone-scope RPC verification failed'
+            exit 1
+          fi
+          echo 'Verified production tombstone-scope RPC and grants'
 
       # Keep the desktop updater on the same source/version as the PWA deploy.
       # The script stages and promotes artifacts under a remote lock, then the
@@ -83,10 +104,10 @@ jobs:
       # static deployment cannot publish an Electron-shaped surface or lose sw.js.
       - name: Rebuild PWA release surface after Electron packaging
         run: |
-            npm run build
-            ./scripts/deploy/verify-build.sh dist
-            ./scripts/deploy/validate-manifest.sh dist/manifest.webmanifest
-            node scripts/create-flowstate-release-receipt.cjs "$PWD" "$PWD/release/flowstate-release-receipt.json"
+          npm run build
+          ./scripts/deploy/verify-build.sh dist
+          ./scripts/deploy/validate-manifest.sh dist/manifest.webmanifest
+          node scripts/create-flowstate-release-receipt.cjs "$PWD" "$PWD/release/flowstate-release-receipt.json"
         env:
           NODE_ENV: production
 
@@ -94,128 +115,128 @@ jobs:
       # System Caddy serves from /var/www/flowstate
       - name: Deploy Static Files
         run: |
-            # Deploy built files to web root
-            # --exclude='updates/' preserves Tauri auto-updater artifacts (FEATURE-1194)
-            rsync -avz --delete --exclude='updates/' \
-              --exclude='release-receipt.json' \
-              ./dist/ \
-              ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/flowstate/
+          # Deploy built files to web root
+          # --exclude='updates/' preserves Tauri auto-updater artifacts (FEATURE-1194)
+          rsync -avz --delete --exclude='updates/' \
+            --exclude='release-receipt.json' \
+            ./dist/ \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/flowstate/
 
-            scp ./release/flowstate-release-receipt.json \
-              ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/flowstate/.release-receipt.json.tmp
-            ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-              "mv -f /var/www/flowstate/.release-receipt.json.tmp /var/www/flowstate/release-receipt.json && cp -f /var/www/flowstate/release-receipt.json /var/www/flowstate/updates/electron/flowstate-release-receipt.json"
+          scp ./release/flowstate-release-receipt.json \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/flowstate/.release-receipt.json.tmp
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "mv -f /var/www/flowstate/.release-receipt.json.tmp /var/www/flowstate/release-receipt.json && cp -f /var/www/flowstate/release-receipt.json /var/www/flowstate/updates/electron/flowstate-release-receipt.json"
 
       # The receipt is promoted by the unified release transaction and must
       # survive the static PWA sync; verify the public boundary before moving on.
       - name: Verify unified release receipt
         run: |
-            MANIFEST=$(curl -fsS "${{ vars.SITE_URL }}/updates/electron/latest-linux.yml")
-            RECEIPT=$(curl -fsS "${{ vars.SITE_URL }}/release-receipt.json")
-            MANIFEST_VERSION=$(printf '%s\n' "$MANIFEST" | awk '/^version:/{print $2; exit}')
-            RECEIPT_VERSION=$(printf '%s\n' "$RECEIPT" | jq -r '.version')
-            if [ -z "$MANIFEST_VERSION" ] || [ "$MANIFEST_VERSION" = "null" ] || [ "$MANIFEST_VERSION" != "$RECEIPT_VERSION" ]; then
-              echo "Release receipt does not match the public updater"
-              exit 1
-            fi
-            printf 'Verified public unified release: %s\n' "$MANIFEST_VERSION"
+          MANIFEST=$(curl -fsS "${{ vars.SITE_URL }}/updates/electron/latest-linux.yml")
+          RECEIPT=$(curl -fsS "${{ vars.SITE_URL }}/release-receipt.json")
+          MANIFEST_VERSION=$(printf '%s\n' "$MANIFEST" | awk '/^version:/{print $2; exit}')
+          RECEIPT_VERSION=$(printf '%s\n' "$RECEIPT" | jq -r '.version')
+          if [ -z "$MANIFEST_VERSION" ] || [ "$MANIFEST_VERSION" = "null" ] || [ "$MANIFEST_VERSION" != "$RECEIPT_VERSION" ]; then
+            echo "Release receipt does not match the public updater"
+            exit 1
+          fi
+          printf 'Verified public unified release: %s\n' "$MANIFEST_VERSION"
 
       # Apply and verify the P-013 canonical task contract against the same
       # production Postgres used by the deployed FlowState instance. The SQL
       # migration is idempotent and the proof transaction always rolls back.
       - name: Apply and verify P-013 database contract
         run: |
-            REMOTE_DB_CONTAINER=$(ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-              "docker ps --format '{{.Names}}' | grep -E 'supabase.*db|postgres' | head -1")
-            if [ -z "$REMOTE_DB_CONTAINER" ]; then
-              echo 'No production Supabase/Postgres container found'
-              exit 1
-            fi
-            ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-              "docker exec -i '$REMOTE_DB_CONTAINER' psql -v ON_ERROR_STOP=1 -U postgres -d postgres" \
-              < supabase/migrations/20260819090000_p013_planning_fields.sql
-            ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-              "docker exec -i '$REMOTE_DB_CONTAINER' psql -v ON_ERROR_STOP=1 -U postgres -d postgres" \
-              < scripts/db/test-p013-planning-fields.sql
+          REMOTE_DB_CONTAINER=$(ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "docker ps --format '{{.Names}}' | grep -E 'supabase.*db|postgres' | head -1")
+          if [ -z "$REMOTE_DB_CONTAINER" ]; then
+            echo 'No production Supabase/Postgres container found'
+            exit 1
+          fi
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "docker exec -i '$REMOTE_DB_CONTAINER' psql -v ON_ERROR_STOP=1 -U postgres -d postgres" \
+            < supabase/migrations/20260819090000_p013_planning_fields.sql
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "docker exec -i '$REMOTE_DB_CONTAINER' psql -v ON_ERROR_STOP=1 -U postgres -d postgres" \
+            < scripts/db/test-p013-planning-fields.sql
 
       # One-time cleanup: Backup old .env file (TASK-351)
       - name: Backup Legacy Env File
         run: |
-            ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
-              if [ -f /var/www/flowstate/.env ]; then
-                echo 'Found legacy .env file, backing up...'
-                mv /var/www/flowstate/.env /var/www/flowstate/.env.backup-pre-doppler
-                echo '✓ Renamed to .env.backup-pre-doppler'
-              else
-                echo 'No legacy .env file found (already cleaned up or never existed)'
-              fi
-            "
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
+            if [ -f /var/www/flowstate/.env ]; then
+              echo 'Found legacy .env file, backing up...'
+              mv /var/www/flowstate/.env /var/www/flowstate/.env.backup-pre-doppler
+              echo '✓ Renamed to .env.backup-pre-doppler'
+            else
+              echo 'No legacy .env file found (already cleaned up or never existed)'
+            fi
+          "
 
       # Reload Caddy to pick up any potential changes (graceful, no downtime)
       - name: Reload Caddy
         run: |
-            ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
-              # Verify Caddy is running
-              if ! systemctl is-active --quiet caddy; then
-                echo 'Caddy is not running, starting it...'
-                sudo systemctl start caddy
-              else
-                echo 'Caddy is running, reloading config...'
-                sudo systemctl reload caddy
-              fi
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
+            # Verify Caddy is running
+            if ! systemctl is-active --quiet caddy; then
+              echo 'Caddy is not running, starting it...'
+              sudo systemctl start caddy
+            else
+              echo 'Caddy is running, reloading config...'
+              sudo systemctl reload caddy
+            fi
 
-              # Verify Caddy is healthy
-              sleep 2
-              if systemctl is-active --quiet caddy; then
-                echo '✓ Caddy is healthy'
-              else
-                echo '✗ Caddy failed to start!'
-                exit 1
-              fi
-            "
+            # Verify Caddy is healthy
+            sleep 2
+            if systemctl is-active --quiet caddy; then
+              echo '✓ Caddy is healthy'
+            else
+              echo '✗ Caddy failed to start!'
+              exit 1
+            fi
+          "
 
       # Purge Cloudflare cache for mutable content (index.html only)
       # Fingerprinted assets (index-abc123.js) auto-invalidate via hash change
       - name: Purge Cloudflare Cache
         run: |
-            SITE_URL="${{ vars.SITE_URL }}"
-            if [ -z "$SITE_URL" ]; then
-              echo "⚠ SITE_URL variable is not set — skipping Cloudflare cache purge"
-              echo "Set it via: gh variable set SITE_URL --body 'https://your-domain.com'"
-              exit 0
-            fi
+          SITE_URL="${{ vars.SITE_URL }}"
+          if [ -z "$SITE_URL" ]; then
+            echo "⚠ SITE_URL variable is not set — skipping Cloudflare cache purge"
+            echo "Set it via: gh variable set SITE_URL --body 'https://your-domain.com'"
+            exit 0
+          fi
 
-            echo "Purging Cloudflare cache for index.html, sw.js, and manifest..."
+          echo "Purging Cloudflare cache for index.html, sw.js, and manifest..."
 
-            # BUG-1089: Must purge sw.js to prevent stale ServiceWorker serving old asset hashes
-            RESPONSE=$(curl -s -X POST \
-              "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache" \
-              -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
-              -H "Content-Type: application/json" \
-              --data "{\"files\":[\"${SITE_URL}/\",\"${SITE_URL}/index.html\",\"${SITE_URL}/sw.js\",\"${SITE_URL}/manifest.webmanifest\"]}")
+          # BUG-1089: Must purge sw.js to prevent stale ServiceWorker serving old asset hashes
+          RESPONSE=$(curl -s -X POST \
+            "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            --data "{\"files\":[\"${SITE_URL}/\",\"${SITE_URL}/index.html\",\"${SITE_URL}/sw.js\",\"${SITE_URL}/manifest.webmanifest\"]}")
 
-            # Check if purge succeeded
-            SUCCESS=$(echo "$RESPONSE" | jq -r '.success')
-            if [ "$SUCCESS" != "true" ]; then
-              echo "✗ Cloudflare cache purge failed!"
-              echo "$RESPONSE" | jq .
-              exit 1
-            fi
+          # Check if purge succeeded
+          SUCCESS=$(echo "$RESPONSE" | jq -r '.success')
+          if [ "$SUCCESS" != "true" ]; then
+            echo "✗ Cloudflare cache purge failed!"
+            echo "$RESPONSE" | jq .
+            exit 1
+          fi
 
-            echo "✓ Cloudflare cache purged successfully"
+          echo "✓ Cloudflare cache purged successfully"
 
-            # Verify cache was purged (should get MISS or DYNAMIC)
-            echo "Verifying cache status..."
-            CF_STATUS=$(curl -sI "${SITE_URL}/" | grep -i "cf-cache-status" | tr -d '\r')
-            echo "  $CF_STATUS"
+          # Verify cache was purged (should get MISS or DYNAMIC)
+          echo "Verifying cache status..."
+          CF_STATUS=$(curl -sI "${SITE_URL}/" | grep -i "cf-cache-status" | tr -d '\r')
+          echo "  $CF_STATUS"
 
       # Validate CORS configuration after deployment
       - name: Validate CORS Configuration
         run: |
-            echo "Waiting 10s for services to stabilize..."
-            sleep 10
-            chmod +x ./scripts/validate-cors.sh
-            ./scripts/validate-cors.sh
+          echo "Waiting 10s for services to stabilize..."
+          sleep 10
+          chmod +x ./scripts/validate-cors.sh
+          ./scripts/validate-cors.sh
         env:
           API_URL: ${{ vars.API_URL }}
           ORIGIN: ${{ vars.SITE_URL }}
@@ -223,35 +244,35 @@ jobs:
       # Validate asset headers (prevents Cloudflare cache MIME type issues)
       - name: Validate Asset Headers
         run: |
-            chmod +x ./scripts/validate-asset-headers.sh
-            ./scripts/validate-asset-headers.sh
+          chmod +x ./scripts/validate-asset-headers.sh
+          ./scripts/validate-asset-headers.sh
         env:
           DOMAIN: ${{ vars.SITE_URL }}
 
       # Health check
       - name: Verify Deployment
         run: |
-            echo "Checking web app..."
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${{ vars.SITE_URL }})
-            if [ "$HTTP_CODE" != "200" ]; then
-              echo "✗ Web app returned HTTP $HTTP_CODE"
-              exit 1
-            fi
-            echo "✓ Web app is healthy (HTTP $HTTP_CODE)"
+          echo "Checking web app..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${{ vars.SITE_URL }})
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "✗ Web app returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+          echo "✓ Web app is healthy (HTTP $HTTP_CODE)"
 
-            echo "Checking API..."
-            API_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${{ vars.API_URL }}/rest/v1/)
-            if [ "$API_CODE" != "401" ] && [ "$API_CODE" != "200" ]; then
-              echo "✗ API returned unexpected HTTP $API_CODE"
-              exit 1
-            fi
-            echo "✓ API is healthy (HTTP $API_CODE)"
+          echo "Checking API..."
+          API_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${{ vars.API_URL }}/rest/v1/)
+          if [ "$API_CODE" != "401" ] && [ "$API_CODE" != "200" ]; then
+            echo "✗ API returned unexpected HTTP $API_CODE"
+            exit 1
+          fi
+          echo "✓ API is healthy (HTTP $API_CODE)"
 
       # BUG-1184: Verify every chunk referenced in index.html + main bundle actually loads.
       # Catches: stale assets after rsync --delete, partial deploys, SW/Cloudflare cache mismatches.
       - name: Verify Chunk Integrity
         run: |
-            chmod +x ./scripts/validate-chunks.sh
-            ./scripts/validate-chunks.sh
+          chmod +x ./scripts/validate-chunks.sh
+          ./scripts/validate-chunks.sh
         env:
           DOMAIN: ${{ vars.SITE_URL }}

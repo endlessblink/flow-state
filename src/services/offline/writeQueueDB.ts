@@ -753,7 +753,7 @@ export async function getFailedOperations(): Promise<WriteOperation[]> {
     operationsById.set(operationId, {
       ...operation,
       status: "conflict",
-      lastError: operation.lastError ?? conflict.operation.lastError,
+      lastError: operation.lastError || conflict.operation.lastError,
       conflictId: conflict.id,
       conflictServerVersion: conflict.serverVersion,
     });
@@ -904,22 +904,37 @@ export async function resolveConflictRetry(
     await db.transaction("rw", db.operations, db.conflicts, async () => {
       const operation = await db.operations.get(conflict.operation.id!);
       if (!operation) return;
+      const canonical = operation.canonicalTaskPatch;
+      const staleRevisionConflict = operation.lastError?.startsWith("stale_revision:") === true;
       if (
-        operation.canonicalTaskPatch?.phase === "previewed" ||
-        operation.canonicalTaskPatch?.phase === "committed"
+        canonical?.phase === "committed" ||
+        (canonical?.phase === "previewed" && !staleRevisionConflict)
       ) {
         throw new Error(
           "Cannot rebase a canonical operation after its preview binding was issued",
         );
       }
+      const rebasedCanonical = canonical
+        ? canonical.phase === "previewed"
+          ? {
+              ...canonical,
+              operationId: `web:${crypto.randomUUID()}`,
+              baseRevision: newBaseVersion,
+              phase: "queued" as const,
+              previewDigest: undefined,
+              previewExpiresAt: undefined,
+              requestHash: undefined,
+              normalizedPatch: undefined,
+            }
+          : { ...canonical, baseRevision: newBaseVersion }
+        : undefined;
       await db.operations.update(operation.id!, {
         status: "pending",
+        lastError: "",
         baseVersion: newBaseVersion,
         retryCount: 0,
         nextRetryAt: undefined,
-        canonicalTaskPatch: operation.canonicalTaskPatch
-          ? { ...operation.canonicalTaskPatch, baseRevision: newBaseVersion }
-          : undefined,
+        canonicalTaskPatch: rebasedCanonical,
       });
       await db.conflicts.delete(conflictId);
     });

@@ -59,6 +59,17 @@ export async function coalesceOperationsForEntity(
     }
   }
 
+  // A legacy entity index can return rows from multiple accounts/workspaces.
+  // Never merge or delete across those isolation boundaries.
+  const scopes = new Set(pendingOps.map(op => `${op.userId ?? 'anonymous'}:${op.workspaceId ?? 'personal'}`))
+  if (scopes.size > 1) {
+    return {
+      operation: pendingOps[0],
+      mergedOperationIds: [],
+      description: 'Multiple scopes preserved',
+    }
+  }
+
   // Sort by creation time
   pendingOps.sort((a, b) => a.createdAt - b.createdAt)
 
@@ -139,10 +150,12 @@ export async function coalesceOperationsForEntity(
     let mergedPayload = { ...createOp.payload }
 
     for (const op of pendingOps) {
-      if (op.operation === 'update' && op.id) {
+      if (op.id !== createOp.id && (op.operation === 'create' || op.operation === 'update')) {
         mergedPayload = mergePayloads(mergedPayload, op.payload)
-        mergedIds.push(op.id)
-        await deleteOperation(op.id)
+        if (op.id) {
+          mergedIds.push(op.id)
+          await deleteOperation(op.id)
+        }
       }
     }
 

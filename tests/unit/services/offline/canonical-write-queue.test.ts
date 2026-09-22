@@ -585,6 +585,23 @@ describe('canonical write queue durability', () => {
     expect(await getFailedOperations()).toHaveLength(0)
   })
 
+  it('restores conflict details when the live queue record has an empty error string', async () => {
+    const op = await enqueueOperation({
+      entityType: 'task', operation: 'update', entityId: 'task-empty-error', payload: { title: 'Retry' },
+      userId: 'user-1', workspaceId: null,
+    })
+    await markFailed(op.id!, 'stale_revision: Task changed after the requested base revision', Date.now())
+    const conflict = await markConflict(op.id!, 4)
+    await getWriteQueueDB().operations.update(op.id!, { lastError: '' })
+
+    expect(await getFailedOperations()).toContainEqual(expect.objectContaining({
+      id: op.id,
+      status: 'conflict',
+      lastError: 'stale_revision: Task changed after the requested base revision',
+      conflictId: conflict.id,
+    }))
+  })
+
   it('rebases only an unpreviewed canonical conflict when the user explicitly retries it', async () => {
     const op = await enqueueOperation({
       entityType: 'task', operation: 'update', entityId: 'task-1', payload: { title: 'Retry' },
@@ -624,5 +641,38 @@ describe('canonical write queue durability', () => {
       status: 'conflict', canonicalTaskPatch: { baseRevision: 1, phase: 'previewed' },
     })
     expect(await getConflicts()).toHaveLength(1)
+  })
+
+  it('rebinds a previewed canonical request only when explicitly retrying a stale revision conflict', async () => {
+    const op = await enqueueOperation({
+      entityType: 'task', operation: 'update', entityId: 'task-stale-revision', payload: { title: 'Retry stale' },
+      userId: 'user-1', workspaceId: null,
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:stale-bound', baseRevision: 1,
+        patch: { title: 'Retry stale' }, phase: 'previewed', previewDigest: 'c'.repeat(64),
+        previewExpiresAt: '2026-07-13T10:15:00Z', requestHash: 'd'.repeat(64),
+        normalizedPatch: { title: 'Retry stale' },
+      },
+    })
+    await markConflict(op.id!, 4, undefined, 'stale_revision: Task changed after the requested base revision')
+    const [conflict] = await getConflicts()
+
+    await resolveConflictRetry(conflict.id!, 4)
+
+    const retried = await getWriteQueueDB().operations.get(op.id!)
+    expect(retried).toMatchObject({
+      status: 'pending',
+      lastError: '',
+      canonicalTaskPatch: {
+        baseRevision: 4,
+        phase: 'queued',
+        previewDigest: undefined,
+        previewExpiresAt: undefined,
+        requestHash: undefined,
+        normalizedPatch: undefined,
+      },
+    })
+    expect(retried?.canonicalTaskPatch?.operationId).not.toBe('web:stale-bound')
+    expect(await getConflicts()).toHaveLength(0)
   })
 })

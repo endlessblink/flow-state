@@ -92,6 +92,7 @@ const writeQueueMocks = vi.hoisted(() => ({
     conflictCount: 0
   }),
   getFailedOperations: vi.fn().mockResolvedValue([]),
+  resolveConflictRetry: vi.fn().mockResolvedValue(undefined),
   recoverStaleSyncing: vi.fn().mockResolvedValue(0),
   repairStaleCanonicalPreviewFailures: vi.fn().mockResolvedValue(0),
   clearFailedOperations: vi.fn().mockResolvedValue(0),
@@ -2164,6 +2165,32 @@ describe('useSyncOrchestrator composable return shape', () => {
       status: 'pending',
       nextRetryAt: undefined,
     })
+  })
+
+  it('Retry All rebases a persisted stale canonical conflict using its server revision', async () => {
+    const staleConflict = makeOp({
+      id: 305,
+      status: 'conflict',
+      lastError: 'stale_revision: Task changed after the requested base revision',
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:preview-bound', baseRevision: 3,
+        patch: { title: 'Retry this task' }, phase: 'previewed',
+        previewDigest: 'a'.repeat(64), previewExpiresAt: '2026-09-22T12:00:00Z',
+      },
+    })
+    Object.assign(staleConflict, { conflictId: 17, conflictServerVersion: 8 })
+    writeQueueMocks.getFailedOperations.mockResolvedValue([staleConflict])
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    writeQueueMocks.resolveConflictRetry.mockClear()
+    writeQueueMocks.getPendingOperations.mockClear()
+
+    await sync.retryFailed()
+
+    expect(writeQueueMocks.resolveConflictRetry).toHaveBeenCalledOnce()
+    expect(writeQueueMocks.resolveConflictRetry).toHaveBeenCalledWith(17, 8)
+    expect(writeQueueMocks.getPendingOperations).toHaveBeenCalled()
   })
 
   it('does not retry a quarantined update for a task missing from the authoritative projection', async () => {

@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useSyncStatusStore } from '@/stores/syncStatus'
 import { publishDeviceSyncReceipt } from '@/services/sync/deviceSyncDiagnostics'
 import { consumeDeviceSyncRepair } from '@/services/sync/deviceSyncRepair'
+import { createSyncFailureDiagnostic } from '@/services/sync/syncFailureDiagnostic'
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 
 const HEARTBEAT_MS = 30_000
@@ -30,10 +31,11 @@ export function useDeviceSyncDiagnostics() {
         }),
       ])
     } catch (error) {
-      const code = error && typeof error === 'object' && 'code' in error
-        ? String((error as { code?: unknown }).code)
-        : error instanceof Error ? error.message : 'unknown'
-      console.warn('[SYNC-DIAGNOSTICS] Queue pass failed before receipt', { code })
+      const diagnostic = createSyncFailureDiagnostic(error, sync)
+      // Electron's console-message event flattens object arguments to
+      // `[object Object]`; stringify this safe summary so the on-device
+      // runtime log retains the actual failure signal without task contents.
+      console.warn('[SYNC-DIAGNOSTICS] Queue pass failed before receipt', JSON.stringify(diagnostic))
     }
     try {
       await publishDeviceSyncReceipt({

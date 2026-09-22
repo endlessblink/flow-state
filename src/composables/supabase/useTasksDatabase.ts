@@ -396,6 +396,22 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                     if (tombstoneError) throw tombstoneError
                     if (tombstone) return
                 }
+                // Workspace task tombstones are written under the original task
+                // owner, not necessarily the member who issued the delete. Ask a
+                // narrow SECURITY DEFINER RPC whether this exact immutable task id
+                // has any permanent task tombstone; never infer deletion from an
+                // absent row alone.
+                const { data: hasTaskTombstone, error: scopeError } = await sb.rpc(
+                    'flowstate_has_task_tombstone',
+                    { p_task_id: taskId },
+                )
+                logPermanentDeleteTrace(taskId, 'supabase-db.global-tombstone-check', {
+                    found: hasTaskTombstone === true,
+                    errorCode: scopeError?.code,
+                    errorMessage: scopeError?.message,
+                })
+                if (scopeError) throw scopeError
+                if (hasTaskTombstone === true) return
                 // An absent row may be personal, shared, already deleted, or hidden by
                 // membership/RLS. Inventing personal scope here can corrupt recovery truth.
                 logPermanentDeleteTrace(taskId, 'supabase-db.unscoped-zero-row')

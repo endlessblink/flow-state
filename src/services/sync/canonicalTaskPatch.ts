@@ -7,6 +7,7 @@ import type {
 
 const CONTRACT_VERSION = 'task-v1' as const
 const SOURCE = 'web-pwa' as const
+const MAX_STALE_REVISION_REBASES = 3
 const SHA256_HEX = /^[0-9a-f]{64}$/
 const DB_TO_PATCH_FIELD = {
   title: 'title',
@@ -283,7 +284,7 @@ export async function executeQueuedCanonicalTaskPatch(
     if (preview.data.ok !== true) {
       const error = object(preview.data.error) ? preview.data.error : {}
       const currentRevision = positiveRevision(error.currentRevision)
-      if (error.code === 'stale_revision' && currentRevision && staleRebaseAttempt === 0) {
+      if (error.code === 'stale_revision' && currentRevision && staleRebaseAttempt < MAX_STALE_REVISION_REBASES) {
         canonical = {
           ...canonical,
           operationId: operationId(),
@@ -296,7 +297,7 @@ export async function executeQueuedCanonicalTaskPatch(
         }
         operation.canonicalTaskPatch = canonical
         await persist(canonical)
-        return executeQueuedCanonicalTaskPatch(client, operation, persist, 1)
+        return executeQueuedCanonicalTaskPatch(client, operation, persist, staleRebaseAttempt + 1)
       }
       return rejected(operation, preview.data)
     }
@@ -343,7 +344,7 @@ export async function executeQueuedCanonicalTaskPatch(
   if (applied.data.ok !== true) {
     const error = object(applied.data.error) ? applied.data.error : {}
     const currentRevision = positiveRevision(error.currentRevision)
-    if (error.code === 'stale_revision' && currentRevision && staleRebaseAttempt === 0) {
+    if (error.code === 'stale_revision' && currentRevision && staleRebaseAttempt < MAX_STALE_REVISION_REBASES) {
       canonical = {
         ...canonical,
         operationId: operationId(),
@@ -356,7 +357,7 @@ export async function executeQueuedCanonicalTaskPatch(
       }
       operation.canonicalTaskPatch = canonical
       await persist(canonical)
-      return executeQueuedCanonicalTaskPatch(client, operation, persist, 1)
+      return executeQueuedCanonicalTaskPatch(client, operation, persist, staleRebaseAttempt + 1)
     }
     return rejected(operation, applied.data)
   }

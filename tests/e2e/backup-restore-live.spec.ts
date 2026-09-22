@@ -21,9 +21,20 @@ test.describe.serial('absolute task backup and recovery', () => {
 
   test('backs up, loses, restores, reads back, and reloads a complete task', async ({ page }) => {
     const backupLogs: string[] = []
+    const reloadDiagnostics: string[] = []
     page.on('console', message => {
       const text = message.text()
       if (text.includes('[Backup]') || text.includes('[TASK-344]')) backupLogs.push(text)
+      if (message.type() === 'error') reloadDiagnostics.push(`console: ${text}`)
+    })
+    page.on('pageerror', error => reloadDiagnostics.push(`pageerror: ${error.message}`))
+    page.on('requestfailed', request => {
+      reloadDiagnostics.push(`requestfailed: ${new URL(request.url()).pathname} ${request.failure()?.errorText ?? ''}`)
+    })
+    page.on('response', response => {
+      if (response.status() >= 400) {
+        reloadDiagnostics.push(`response ${response.status()}: ${new URL(response.url()).pathname}`)
+      }
     })
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -159,11 +170,15 @@ test.describe.serial('absolute task backup and recovery', () => {
       })
 
       await page.reload()
-      await page.waitForFunction((taskId) => {
-        const root = document.querySelector('#app') as any
-        const tasks = root?.__vue_app__?._context.config.globalProperties.$pinia?._s.get('tasks')
-        return tasks?.rawTasks.some((task: any) => task.id === taskId)
-      }, TASK_ID, { timeout: 30_000 })
+      try {
+        await page.waitForFunction((taskId) => {
+          const root = document.querySelector('#app') as any
+          const tasks = root?.__vue_app__?._context.config.globalProperties.$pinia?._s.get('tasks')
+          return tasks?.rawTasks.some((task: any) => task.id === taskId)
+        }, TASK_ID, { timeout: 30_000 })
+      } catch (error) {
+        throw new Error(`${String(error)}\nReload diagnostics:\n${reloadDiagnostics.join('\n') || 'none'}`)
+      }
       await expect.poll(async () => page.evaluate(async () => {
         const { getStats } = await import('/src/services/offline/writeQueueDB.ts')
         const stats = await getStats()

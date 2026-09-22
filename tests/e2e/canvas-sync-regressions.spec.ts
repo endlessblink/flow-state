@@ -3540,9 +3540,10 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
     });
     await clientA.locator(".sync-indicator.status-error").click();
     await expect(clientA.getByText("Retry All", { exact: true })).toBeVisible();
-    await expect(
-      clientA.getByText(/Service Unavailable: injected temporary persistence rejection/),
-    ).toBeVisible();
+    await expect(clientA.locator(".error-summary .error-message"))
+      .toBeVisible();
+    await expect(clientA.locator(".error-summary .error-message"))
+      .toContainText(/Service Unavailable: injected temporary persistence rejection/);
     await expect(
       clientA.getByText("Discard local changes", { exact: true }),
     ).toBeVisible();

@@ -144,6 +144,12 @@ export interface WriteOperation {
 
   /** Durable recurrence transaction intent created while the renderer is offline. */
   doneForNow?: QueuedDoneForNowState
+
+  /** IndexedDB conflict record backing the review surface, when present. */
+  conflictId?: number
+
+  /** Server version captured when the conflict was detected. */
+  conflictServerVersion?: number
 }
 
 /**

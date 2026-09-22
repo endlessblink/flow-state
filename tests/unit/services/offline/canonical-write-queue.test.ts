@@ -6,6 +6,7 @@ import {
   clearAll,
   clearFailedOperations,
   cleanupCompleted,
+  deleteOperationsForEntity,
   completeCanonicalOperation,
   completeLegacyTaskOperation,
   enqueueOperation,
@@ -544,6 +545,44 @@ describe('canonical write queue durability', () => {
     expect(await getFailedOperations()).toEqual([
       expect.objectContaining({ id: op.id, status: 'conflict' }),
     ])
+  })
+
+  it('restores conflict records when their queue row no longer has conflict status', async () => {
+    const op = await enqueueOperation({
+      entityType: 'task', operation: 'update', entityId: 'task-orphaned-conflict',
+      payload: { title: 'Keep this local' }, userId: 'user-1', workspaceId: null,
+    })
+    await getWriteQueueDB().operations.update(op.id!, {
+      status: 'completed',
+      lastError: 'stale_revision: Task changed after the requested base revision',
+    })
+    await getWriteQueueDB().conflicts.add({
+      operation: op,
+      serverVersion: 9,
+      localVersion: 8,
+      detectedAt: Date.now(),
+    })
+
+    expect(await getFailedOperations()).toEqual([
+      expect.objectContaining({
+        id: op.id,
+        status: 'conflict',
+        lastError: 'stale_revision: Task changed after the requested base revision',
+      }),
+    ])
+  })
+
+  it('removes conflict records when an entity is intentionally deleted locally', async () => {
+    const op = await enqueueOperation({
+      entityType: 'group', operation: 'update', entityId: 'group-removed',
+      payload: { position_json: { x: 10, y: 20 } }, userId: 'user-1', workspaceId: null,
+    })
+    await markConflict(op.id!, 4, undefined, 'stale_revision: group changed')
+
+    await deleteOperationsForEntity('group', 'group-removed')
+
+    expect(await getConflicts()).toHaveLength(0)
+    expect(await getFailedOperations()).toHaveLength(0)
   })
 
   it('rebases only an unpreviewed canonical conflict when the user explicitly retries it', async () => {

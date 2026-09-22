@@ -93,6 +93,16 @@ export const useCanvasStore = defineStore('canvas', () => {
     return groupsModule.updateGroup(...args)
   }
 
+  const createGroup = async (...args: Parameters<typeof groupsModule.createGroup>) => {
+    lastLocalSyncAt.value = Date.now()
+    return groupsModule.createGroup(...args)
+  }
+
+  const deleteGroup = async (...args: Parameters<typeof groupsModule.deleteGroup>) => {
+    lastLocalSyncAt.value = Date.now()
+    return groupsModule.deleteGroup(...args)
+  }
+
   const setGroups = (
     newGroups: CanvasGroup[],
     forceEmpty = false,
@@ -473,9 +483,9 @@ export const useCanvasStore = defineStore('canvas', () => {
     // Actions
     loadFromDatabase,
     hasRemoteGroupChanges,
-    createGroup: groupsModule.createGroup,
+    createGroup,
     updateGroup,
-    deleteGroup: groupsModule.deleteGroup,
+    deleteGroup,
     setGroups,
     patchGroups: groupsModule.patchGroups,
     updateGroupFromSync: groupsModule.updateGroupFromSync,
@@ -515,23 +525,23 @@ export const useCanvasStore = defineStore('canvas', () => {
     clearConnection: () => { connectingFrom.value = null; connectMode.value = false },
     togglePowerMode: async (id: string, active?: boolean) => {
       const g = groupsModule._rawGroups.value.find(gr => gr.id === id)
-      await groupsModule.updateGroup(id, { isPowerMode: active ?? !(g?.isPowerMode) })
+      await updateGroup(id, { isPowerMode: active ?? !(g?.isPowerMode) })
     },
     toggleSectionVisibility: (id: string) => {
       const g = groupsModule._rawGroups.value.find(gr => gr.id === id)
-      if (g) groupsModule.updateGroup(id, { isVisible: !g.isVisible })
+      if (g) updateGroup(id, { isVisible: !g.isVisible })
     },
     toggleSectionCollapse: (id: string) => {
       const g = groupsModule._rawGroups.value.find(gr => gr.id === id)
-      if (g) groupsModule.updateGroup(id, { isCollapsed: !g.isCollapsed })
+      if (g) updateGroup(id, { isCollapsed: !g.isCollapsed })
     },
     // Compatibility aliases
     sections: groupsModule.sections,
     _rawSections: groupsModule._rawGroups,
-    createSection: groupsModule.createGroup,
-    updateSection: groupsModule.updateGroup,
-    deleteSection: groupsModule.deleteGroup,
-    updateSectionWithUndo: groupsModule.updateGroup,
+    createSection: createGroup,
+    updateSection: updateGroup,
+    deleteSection: deleteGroup,
+    updateSectionWithUndo: updateGroup,
     recalculateAllTaskCounts: (_tasks?: Task[]) => { groupsModule.bumpTaskParentVersion() },
     getMatchingTaskCount: (groupId: string, tasks?: Task[]) => {
       const sourceTasks = tasks || (taskStoreRef.value?.tasks || [])

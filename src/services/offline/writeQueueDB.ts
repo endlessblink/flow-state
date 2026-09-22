@@ -660,9 +660,21 @@ export async function deleteOperationsForEntity(
   const db = getWriteQueueDB();
 
   const operations = await getOperationsForEntity(entityType, entityId);
-  if (operations.length > 0) {
-    await db.operations.bulkDelete(operations.map((op) => op.id!));
-  }
+  const operationIds = operations.map((op) => op.id!).filter((id) => id !== undefined);
+  await db.transaction("rw", db.operations, db.conflicts, async () => {
+    if (operationIds.length > 0) {
+      await db.operations.bulkDelete(operationIds);
+    }
+
+    const conflicts = (await db.conflicts.toArray()).filter(
+      (conflict) =>
+        conflict.operation.entityType === entityType &&
+        conflict.operation.entityId === entityId,
+    );
+    if (conflicts.length > 0) {
+      await db.conflicts.bulkDelete(conflicts.map((conflict) => conflict.id!));
+    }
+  });
 
   return operations.length;
 }
@@ -723,8 +735,31 @@ export async function getFailedCount(): Promise<number> {
  */
 export async function getFailedOperations(): Promise<WriteOperation[]> {
   const db = getWriteQueueDB();
+  const [failedOperations, conflicts] = await Promise.all([
+    db.operations.where("status").anyOf(["failed", "conflict"]).toArray(),
+    db.conflicts.toArray(),
+  ]);
+  const operationsById = new Map<number, WriteOperation>();
 
-  return db.operations.where("status").anyOf(["failed", "conflict"]).toArray();
+  for (const operation of failedOperations) {
+    if (operation.id !== undefined) operationsById.set(operation.id, operation);
+  }
+
+  for (const conflict of conflicts) {
+    const operationId = conflict.operation.id;
+    if (operationId === undefined) continue;
+    const currentOperation = await db.operations.get(operationId);
+    const operation = currentOperation ?? conflict.operation;
+    operationsById.set(operationId, {
+      ...operation,
+      status: "conflict",
+      lastError: operation.lastError ?? conflict.operation.lastError,
+      conflictId: conflict.id,
+      conflictServerVersion: conflict.serverVersion,
+    });
+  }
+
+  return [...operationsById.values()];
 }
 
 /**

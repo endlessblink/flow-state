@@ -137,6 +137,70 @@ describe('canonical queued task patch', () => {
     expect(persist).toHaveBeenCalledWith(expect.objectContaining({ baseRevision: 9, phase: 'queued' }))
   })
 
+  it('rebases again when the task changes during the first rebase attempt', async () => {
+    const op = operation()
+    const rpc = vi.fn()
+      .mockResolvedValueOnce({
+        data: { ok: false, result: 'conflict', error: { code: 'stale_revision', message: 'changed', currentRevision: 9 } },
+        error: null,
+      })
+      .mockImplementationOnce(async (_name, args) => ({
+        data: {
+          ...preview(),
+          operationId: args.p_operation_id,
+          baseRevision: args.p_base_revision,
+          readBack: { ...preview().readBack, canonicalRevision: args.p_base_revision },
+        },
+        error: null,
+      }))
+      .mockResolvedValueOnce({
+        data: { ok: false, result: 'conflict', error: { code: 'stale_revision', message: 'changed again', currentRevision: 10 } },
+        error: null,
+      })
+      .mockImplementationOnce(async (_name, args) => ({
+        data: {
+          ...preview(),
+          operationId: args.p_operation_id,
+          baseRevision: args.p_base_revision,
+          readBack: { ...preview().readBack, canonicalRevision: args.p_base_revision },
+        },
+        error: null,
+      }))
+      .mockImplementationOnce(async (_name, args) => ({
+        data: {
+          ok: true,
+          result: 'committed',
+          requestHash: REQUEST_HASH,
+          receipt: receipt({
+            operationId: args.p_operation_id,
+            canonicalRevision: 11,
+            readBack: { ...receipt().readBack, canonicalRevision: 11 },
+          }),
+        },
+        error: null,
+      }))
+
+    const result = await executeQueuedCanonicalTaskPatch({ rpc }, op, vi.fn())
+
+    expect(result.success).toBe(true)
+    expect(rpc).toHaveBeenCalledTimes(5)
+    expect(rpc.mock.calls[3][1]).toMatchObject({ p_preview: true, p_base_revision: 10 })
+    expect(rpc.mock.calls[4][1]).toMatchObject({ p_preview: false, p_base_revision: 10 })
+  })
+
+  it('stops rebasing after the bounded stale-revision limit', async () => {
+    const rpc = vi.fn()
+      .mockResolvedValueOnce({ data: { ok: false, error: { code: 'stale_revision', currentRevision: 9 } }, error: null })
+      .mockResolvedValueOnce({ data: { ok: false, error: { code: 'stale_revision', currentRevision: 10 } }, error: null })
+      .mockResolvedValueOnce({ data: { ok: false, error: { code: 'stale_revision', currentRevision: 11 } }, error: null })
+      .mockResolvedValueOnce({ data: { ok: false, error: { code: 'stale_revision', currentRevision: 12 } }, error: null })
+
+    const result = await executeQueuedCanonicalTaskPatch({ rpc }, operation(), vi.fn())
+
+    expect(result).toMatchObject({ success: false, isConflict: true, classification: 'conflict', newVersion: 12 })
+    expect(rpc).toHaveBeenCalledTimes(4)
+  })
+
   it('rebases when the server serializes the current revision as text', async () => {
     const op = operation()
     const rpc = vi.fn()

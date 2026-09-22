@@ -58,12 +58,23 @@ describe('production deployment convergence gates', () => {
     expect(script).not.toContain('npm run electron:build\n')
 
     const electronStep = workflow.indexOf('Build and deploy Electron update')
+    const tombstoneRpcStep = workflow.indexOf('Apply and verify shared-task tombstone scope RPC')
     const pwaStep = workflow.indexOf('Rebuild PWA release surface after Electron packaging')
     const staticStep = workflow.indexOf('Deploy Static Files')
     expect(electronStep).toBeGreaterThanOrEqual(0)
+    expect(tombstoneRpcStep).toBeGreaterThanOrEqual(0)
+    expect(tombstoneRpcStep).toBeLessThan(electronStep)
     expect(pwaStep).toBeGreaterThan(electronStep)
     expect(staticStep).toBeGreaterThan(pwaStep)
     expect(workflow.slice(pwaStep, staticStep)).toContain('./scripts/deploy/verify-build.sh dist')
+  })
+
+  it('applies and verifies the shared-task tombstone RPC on the VPS database', () => {
+    const workflow = readFileSync('.github/workflows/deploy.yml', 'utf8')
+
+    expect(workflow).toContain('20260922120000_shared_task_tombstone_scope_rpc.sql')
+    expect(workflow).toContain("p.proname = 'flowstate_has_task_tombstone'")
+    expect(workflow).toContain("pg_get_function_identity_arguments(p.oid) = 'p_task_id text'")
   })
 
   it('refuses to publish an Electron update when any regression gate is skipped', () => {

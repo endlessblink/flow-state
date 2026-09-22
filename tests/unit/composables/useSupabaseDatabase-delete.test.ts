@@ -88,7 +88,7 @@ describe('useSupabaseDatabase permanent task delete', () => {
     responseQueue.clear()
     fromMock.mockClear()
     refreshSessionMock.mockClear()
-    rpcMock.mockReset()
+    rpcMock.mockReset().mockResolvedValue({ data: false, error: null })
     reportMock.mockClear()
     authStoreMock.user = { id: 'user-1' }
 
@@ -164,12 +164,31 @@ describe('useSupabaseDatabase permanent task delete', () => {
     expect(queryCalls).toContainEqual({ table: 'tombstones', method: 'maybeSingle', args: [] })
   })
 
+  it('recognizes an existing shared-task tombstone owned by another workspace member', async () => {
+    queueResponse('tasks', [
+      { data: [], error: null },
+      { data: null, error: null }
+    ])
+    queueResponse('tombstones', [{ data: null, error: null }])
+    rpcMock.mockResolvedValueOnce({ data: true, error: null })
+
+    const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
+    const db = useSupabaseDatabase()
+
+    await expect(db.permanentlyDeleteTask('shared-task-already-deleted')).resolves.toBeUndefined()
+
+    expect(rpcMock).toHaveBeenCalledWith('flowstate_has_task_tombstone', {
+      p_task_id: 'shared-task-already-deleted'
+    })
+  })
+
   it('fails closed when an absent task has no matching tombstone', async () => {
     queueResponse('tasks', [
       { data: [], error: null },
       { data: null, error: null }
     ])
     queueResponse('tombstones', [{ data: null, error: null }])
+    rpcMock.mockResolvedValueOnce({ data: false, error: null })
 
     const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
     const db = useSupabaseDatabase()
@@ -177,6 +196,9 @@ describe('useSupabaseDatabase permanent task delete', () => {
     await expect(db.permanentlyDeleteTask('task-unknown')).rejects.toThrow(
       'cannot establish deletion scope'
     )
+    expect(rpcMock).toHaveBeenCalledWith('flowstate_has_task_tombstone', {
+      p_task_id: 'task-unknown'
+    })
   })
 
   it('checks for, but does not create, a tombstone after an unscoped zero-row delete', async () => {

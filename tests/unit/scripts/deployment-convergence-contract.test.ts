@@ -51,7 +51,8 @@ describe('production deployment convergence gates', () => {
     const script = readFileSync('scripts/deploy-electron-update.sh', 'utf8')
     const workflow = readFileSync('.github/workflows/deploy.yml', 'utf8')
 
-    expect(script).toContain('npx vitest run --maxWorkers=1')
+    expect(script).toContain('npm run test -- --maxWorkers=1')
+    expect(script).not.toContain('npx vitest run --maxWorkers=1')
     expect(script).toContain('HIDDEN_ENV_PRODUCTION')
     expect(script).toContain('trap restore_env_production EXIT')
     expect(script).toContain('npm run electron:build:locked')

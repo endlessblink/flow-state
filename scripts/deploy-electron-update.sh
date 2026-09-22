@@ -114,7 +114,9 @@ else
     mv "$PROJECT_DIR/.env.production" "$HIDDEN_ENV_PRODUCTION"
     trap restore_env_production EXIT
   fi
-  NODE_ENV=test npx vitest run --maxWorkers=1
+  # Use the repository test entrypoint so the suite runs under the canonical
+  # Asia/Jerusalem timezone used by its date-sensitive regression tests.
+  NODE_ENV=test npm run test -- --maxWorkers=1
   restore_env_production
   trap - EXIT
   echo -e "${GREEN}  ✓ Ship gate green${NC}"

@@ -74,6 +74,19 @@ Important boundaries:
 
 ## Recurring Issue Closeout Model
 
+### Canonical record of the 2026-09-23 sync incident
+
+Before changing offline sync, conflict recovery, IndexedDB queue handling, or
+the Electron sync-error UI, read the canonical Obsidian incident record:
+
+`MAIN VULT/🚀 My Projects/🤖 AI Development/⚡ Productivity/flow-state/FlowState Sync Incident and Prevention - 2026-09-23.md`
+
+It records the production-shaped failure, the shipped `1.4.548` fix, live
+VPS-backed verification, and the regression/prevention contract. Treat it as
+required historical context, not as a substitute for fresh tests and live
+read-back. Update the record when the failure class or prevention contract
+changes; do not create a competing sync incident note elsewhere.
+
 When a FlowState issue keeps recurring, was described as already fixed, or appears under a broad symptom, do not assume the previous fix regressed. Treat it as a failure-class investigation.
 
 Before claiming the issue is fixed:

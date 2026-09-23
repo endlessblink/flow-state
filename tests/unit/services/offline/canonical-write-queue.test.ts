@@ -708,4 +708,58 @@ describe('canonical write queue durability', () => {
     expect(await getConflicts()).toHaveLength(0)
     expect(storedConflict?.operation.id).toBe(op.id)
   })
+
+  it('surfaces and rehydrates legacy conflicts whose embedded operation has no id', async () => {
+    const operation = {
+      entityType: 'task' as const,
+      operation: 'update' as const,
+      entityId: 'task-idless-conflict',
+      payload: { title: 'Recover this local edit' },
+      status: 'conflict' as const,
+      retryCount: 1,
+      createdAt: 100,
+      baseVersion: 2,
+      lastError: 'stale_revision: Task changed after the requested base revision',
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1' as const,
+        operationId: 'web:idless-conflict',
+        baseRevision: 2,
+        patch: { title: 'Recover this local edit' },
+        phase: 'queued' as const,
+      },
+    }
+    const conflict = await getWriteQueueDB().conflicts.add({
+      operation,
+      serverVersion: 4,
+      localVersion: 2,
+      detectedAt: 100,
+    })
+    await getWriteQueueDB().conflicts.add({
+      operation: { ...operation, payload: { ...operation.payload } },
+      serverVersion: 4,
+      localVersion: 2,
+      detectedAt: 101,
+    })
+
+    const displayed = await getFailedOperations()
+    expect(displayed).toHaveLength(2)
+    expect(displayed[0]).toMatchObject({
+      entityId: 'task-idless-conflict',
+      status: 'conflict',
+      conflictId: conflict,
+    })
+
+    await resolveConflictRetry(conflict, 4)
+
+    await expect(getWriteQueueDB().operations.toArray()).resolves.toHaveLength(1)
+    await expect(getWriteQueueDB().operations.toArray()).resolves.toMatchObject([
+      {
+        entityId: 'task-idless-conflict',
+        status: 'pending',
+        baseVersion: 4,
+        canonicalTaskPatch: { baseRevision: 4 },
+      },
+    ])
+    await expect(getConflicts()).resolves.toHaveLength(0)
+  })
 })

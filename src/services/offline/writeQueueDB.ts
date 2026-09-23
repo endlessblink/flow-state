@@ -747,11 +747,18 @@ export async function getFailedOperations(): Promise<WriteOperation[]> {
 
   for (const conflict of conflicts) {
     const operationId = conflict.operation.id;
-    if (operationId === undefined) continue;
-    const currentOperation = await db.operations.get(operationId);
+    const currentOperation = operationId === undefined
+      ? undefined
+      : await db.operations.get(operationId);
     const operation = currentOperation ?? conflict.operation;
-    operationsById.set(operationId, {
+    // Legacy conflict rows can retain the full write intent without Dexie's
+    // auto-generated operation id. Give the renderer a stable per-conflict
+    // display key so the row remains actionable instead of disappearing.
+    const displayId = operation.id ?? (conflict.id === undefined ? undefined : -conflict.id);
+    if (displayId === undefined) continue;
+    operationsById.set(displayId, {
       ...operation,
+      id: displayId,
       status: "conflict",
       lastError: operation.lastError || conflict.operation.lastError,
       conflictId: conflict.id,
@@ -900,12 +907,16 @@ export async function resolveConflictRetry(
   const db = getWriteQueueDB();
   const conflict = await db.conflicts.get(conflictId);
 
-  if (conflict && conflict.operation.id) {
+  if (conflict) {
     await db.transaction("rw", db.operations, db.conflicts, async () => {
-      const storedOperation = await db.operations.get(conflict.operation.id!);
+      const storedOperation = conflict.operation.id === undefined
+        ? undefined
+        : await db.operations.get(conflict.operation.id);
       const operation = storedOperation ?? conflict.operation;
       const canonical = operation.canonicalTaskPatch;
-      const staleRevisionConflict = operation.lastError?.startsWith("stale_revision:") === true;
+      const staleRevisionConflict =
+        operation.lastError?.startsWith("stale_revision:") === true ||
+        (operation.id === undefined && conflict.serverVersion > conflict.localVersion);
       if (
         canonical?.phase === "committed" ||
         (canonical?.phase === "previewed" && !staleRevisionConflict)
@@ -938,11 +949,28 @@ export async function resolveConflictRetry(
       } as const;
       if (storedOperation) {
         await db.operations.update(storedOperation.id!, updates);
-      } else {
+      } else if (operation.id !== undefined) {
         await db.operations.put({ ...operation, ...updates });
+      } else {
+        await db.operations.add({ ...operation, ...updates, id: undefined });
       }
       const relatedConflicts = (await db.conflicts.toArray())
-        .filter((candidate) => candidate.operation.id === operation.id)
+        .filter((candidate) => {
+          const candidateOperation = candidate.operation;
+          if (candidateOperation.id !== undefined && operation.id !== undefined) {
+            return candidateOperation.id === operation.id;
+          }
+          const candidateCanonicalId = candidateOperation.canonicalTaskPatch?.operationId;
+          const operationCanonicalId = operation.canonicalTaskPatch?.operationId;
+          if (candidateCanonicalId && operationCanonicalId) {
+            return candidateCanonicalId === operationCanonicalId;
+          }
+          return candidateOperation.entityType === operation.entityType &&
+            candidateOperation.entityId === operation.entityId &&
+            candidateOperation.operation === operation.operation &&
+            candidateOperation.createdAt === operation.createdAt &&
+            JSON.stringify(candidateOperation.payload) === JSON.stringify(operation.payload);
+        })
         .map((candidate) => candidate.id)
         .filter((id): id is number => id !== undefined);
       await db.conflicts.bulkDelete(relatedConflicts);

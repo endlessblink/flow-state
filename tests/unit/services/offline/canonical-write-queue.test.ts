@@ -675,4 +675,37 @@ describe('canonical write queue durability', () => {
     expect(retried?.canonicalTaskPatch?.operationId).not.toBe('web:stale-bound')
     expect(await getConflicts()).toHaveLength(0)
   })
+
+  it('reconstructs an orphaned stale canonical conflict when retrying after its queue row was cleaned up', async () => {
+    const op = await enqueueOperation({
+      entityType: 'task', operation: 'update', entityId: 'task-orphaned-stale', payload: { title: 'Retry stale' },
+      userId: 'user-1', workspaceId: null,
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:orphaned-stale', baseRevision: 1,
+        patch: { title: 'Retry stale' }, phase: 'queued',
+      },
+    })
+    await markConflict(op.id!, 4, undefined, 'stale_revision: Task changed after the requested base revision')
+    const [conflict] = await getConflicts()
+    const storedConflict = await getWriteQueueDB().conflicts.get(conflict.id!)
+    expect(storedConflict).toBeDefined()
+    await getWriteQueueDB().conflicts.add({
+      operation: storedConflict!.operation,
+      serverVersion: storedConflict!.serverVersion,
+      localVersion: storedConflict!.localVersion,
+      detectedAt: storedConflict!.detectedAt + 1,
+    })
+    await getWriteQueueDB().operations.delete(op.id!)
+
+    await resolveConflictRetry(conflict.id!, 4)
+
+    await expect(getWriteQueueDB().operations.get(op.id!)).resolves.toMatchObject({
+      id: op.id,
+      status: 'pending',
+      baseVersion: 4,
+      canonicalTaskPatch: { operationId: 'web:orphaned-stale', baseRevision: 4, phase: 'queued' },
+    })
+    expect(await getConflicts()).toHaveLength(0)
+    expect(storedConflict?.operation.id).toBe(op.id)
+  })
 })

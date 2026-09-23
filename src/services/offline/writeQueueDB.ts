@@ -902,8 +902,8 @@ export async function resolveConflictRetry(
 
   if (conflict && conflict.operation.id) {
     await db.transaction("rw", db.operations, db.conflicts, async () => {
-      const operation = await db.operations.get(conflict.operation.id!);
-      if (!operation) return;
+      const storedOperation = await db.operations.get(conflict.operation.id!);
+      const operation = storedOperation ?? conflict.operation;
       const canonical = operation.canonicalTaskPatch;
       const staleRevisionConflict = operation.lastError?.startsWith("stale_revision:") === true;
       if (
@@ -928,15 +928,24 @@ export async function resolveConflictRetry(
             }
           : { ...canonical, baseRevision: newBaseVersion }
         : undefined;
-      await db.operations.update(operation.id!, {
+      const updates = {
         status: "pending",
         lastError: "",
         baseVersion: newBaseVersion,
         retryCount: 0,
         nextRetryAt: undefined,
         canonicalTaskPatch: rebasedCanonical,
-      });
-      await db.conflicts.delete(conflictId);
+      } as const;
+      if (storedOperation) {
+        await db.operations.update(storedOperation.id!, updates);
+      } else {
+        await db.operations.put({ ...operation, ...updates });
+      }
+      const relatedConflicts = (await db.conflicts.toArray())
+        .filter((candidate) => candidate.operation.id === operation.id)
+        .map((candidate) => candidate.id)
+        .filter((id): id is number => id !== undefined);
+      await db.conflicts.bulkDelete(relatedConflicts);
     });
   }
 }

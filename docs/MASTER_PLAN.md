@@ -4,11 +4,11 @@
 
 **Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-24)
 
-**User repro**: Releasing a dragged task in a catalogue group feels slow and laggy.
+**User repro**: Releasing a dragged task selection in a catalogue group still makes rows update slowly, one by one, after 1.4.553.
 
-**Failure mode**: The grouped drop handler waits for every sequential order write to finish before clearing the drag state. The floating selection and drop feedback can remain active throughout persistence.
+**Failure mode**: 1.4.553 clears the drag feedback promptly, but the undo-aware bulk save still updates task rows sequentially. The grouped list renders each intermediate order, making the selection appear to settle row by row.
 
-**Acceptance**: Clear drag feedback and switch to manual order when the task is released, before the order save settles. Preserve the undo-aware save, group transfer, and final order. Verify a delayed save regression, the Electron build, updater publication, and installed catalogue behavior.
+**Acceptance**: Show the complete dropped order together on release and keep it stable through intermediate task writes. Preserve durable sequential writes, rollback, undo, group transfer, and the final order. Verify a delayed multi-selection regression, typecheck, lint, Electron build, updater publication, and installed catalogue behavior.
 
 ### TASK-2093: Expose truthful local task API readiness for agents (🚧 IN PROGRESS)
 

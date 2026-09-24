@@ -32,7 +32,10 @@ describe('daily regression hunt script', () => {
     expect(report.mode).toBe('daily')
     expect(report.dryRun).toBe(true)
     expect(report.provenance).toEqual({
-      branch: 'main',
+      branch: execFileSync('git', ['branch', '--show-current'], {
+        cwd: process.cwd(),
+        encoding: 'utf8',
+      }).trim(),
       commit: expect.stringMatching(/^[0-9a-f]{40}$/),
     })
     expect(ids).toEqual(expect.arrayContaining([

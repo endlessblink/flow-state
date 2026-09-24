@@ -624,12 +624,12 @@ const onGroupDrop = async (event: DragEvent, group: TaskGroup) => {
     .filter(({ task, order }) => !task || task.order !== order)
     .map(({ id, order }) => ({ id, updates: { order } }))
 
+  emit('reorder')
+  endDrag()
+
   if (orderUpdates.length > 0) {
     await taskStore.bulkUpdateTasksWithUndo(orderUpdates, 'Reorder task group')
   }
-
-  emit('reorder')
-  endDrag()
 }
 
 // --- AI Smart Suggest Popover ---

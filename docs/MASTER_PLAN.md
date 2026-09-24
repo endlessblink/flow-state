@@ -8,7 +8,7 @@
 
 **Acceptance**: Reorder all active tasks using the canonical shared order, including filtered tasks; keep completed task slots in place. Restack existing Canvas group members without changing group membership or position. Make the action available in both controls, preserve later manual moves, reset sort preferences only after success, and provide one undo for order and geometry. Verify focused regressions, typecheck, lint, Electron packaging, updater publication, and installed desktop behavior.
 
-**Current evidence**: Focused shuffle regressions and typecheck passed in the isolated branch. Electron packaging, updater, and installed visual checks remain open.
+**Current evidence**: Focused shuffle and undo regressions (13 tests), full unit suite (4,930 passed), typecheck, lint, task consistency guard (37 passed), and Electron sync guard (378 passed). Electron 1.4.555 packaged and published on 2026-09-24; the public updater manifest and both artifacts returned successfully. The running desktop is still 1.4.554, so installed visual and authenticated task-order checks remain open.
 
 ### BUG-2097: Catalogue drag remains active after release (🚧 IN PROGRESS)
 

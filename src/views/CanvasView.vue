@@ -72,6 +72,7 @@
         @create-group="handleToolbarCreateGroup"
         @rotate-day-groups="handleRotateDayGroups"
         @tidy-layout="handleTidyLayout"
+        @shuffle-tasks="handleShuffleTasks"
         @debug-tidy-plan="debugTidyPlanOnlyToClipboard"
         @debug-tidy-apply="debugTidyLayoutToClipboard"
       />
@@ -314,6 +315,7 @@ import '../assets/vue-flow-overrides.css'
 import { useEventListener } from '@vueuse/core'
 
 import { useTaskStore } from '../stores/tasks'
+import { useToast } from '@/composables/useToast'
 import { useCanvasStore } from '../stores/canvas'
 import { useUIStore } from '../stores/ui'
 import { useCanvasContextMenuStore } from '../stores/canvas/contextMenus'
@@ -340,6 +342,8 @@ import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenu
 import { useCanvasOrchestrator } from '../composables/canvas/useCanvasOrchestrator'
 import { useDayGroupRotation } from '@/composables/canvas/useDayGroupRotation'
 import { getTidyGeometrySnapshot, useTidyLayout } from '@/composables/canvas/useTidyLayout'
+import { planTaskShuffleCanvasGeometry } from '@/composables/canvas/planTaskShuffleCanvasGeometry'
+import { planTaskShuffleOrders, runTaskShuffle, type TaskShuffleMode } from '@/composables/tasks/useTaskShuffle'
 import { useCurrentDay } from '@/composables/useCurrentDay'
 import { useCanvasImagesStore } from '@/stores/canvasImages'
 import { useAuthStore } from '@/stores/auth'
@@ -351,6 +355,7 @@ import { lockManager } from '@/services/canvas/LockManager'
 import { hasOverlappingRects } from '@/composables/canvas/useCanonicalDayGroupLayout'
 
 const taskStore = useTaskStore()
+const { showToast } = useToast()
 const canvasStore = useCanvasStore()
 const uiStore = useUIStore()
 const modalsStore = useCanvasModalsStore()
@@ -795,6 +800,42 @@ function handleRotateDayGroups() {
 
 const TIDY_HYDRATION_MAX_RETRIES = 20
 let tidyInFlight: Promise<void> | null = null
+let shuffleInFlight: Promise<void> | null = null
+
+async function handleShuffleTasks(mode: TaskShuffleMode) {
+  if (shuffleInFlight) return shuffleInFlight
+
+  shuffleInFlight = (async () => {
+    const orderedTasks = planTaskShuffleOrders(taskStore.rawTasks, mode)
+    const groups = canvasStore._rawGroups?.length ? canvasStore._rawGroups : canvasStore.groups
+    const geometry = planTaskShuffleCanvasGeometry(groups, orderedTasks, (id) => getRenderedNodeSize(id))
+    const saved = await runTaskShuffle(mode, geometry)
+    if (!saved) return
+
+    const groupMoves = [...geometry.groupPositions].map(([groupId, position]) => ({
+      nodeId: CanvasIds.groupNodeId(groupId),
+      groupId,
+      position: { x: position.x, y: position.y },
+      size: { width: position.width, height: position.height },
+    }))
+    const taskMoves = [...geometry.taskPositions].flatMap(([taskId, position]) => {
+      const parentId = taskStore.getTask(taskId)?.parentId
+      return parentId ? [{ taskId, parentId, position }] : []
+    })
+    applyCanonicalMoves(groupMoves, taskMoves)
+    await nextTick()
+    syncNodes(undefined, { force: true })
+  })()
+
+  try {
+    await shuffleInFlight
+  } catch (error) {
+    console.error('[CANVAS:SHUFFLE] Could not save task order', error)
+    showToast('Task shuffle could not be saved. Try again.', 'error')
+  } finally {
+    shuffleInFlight = null
+  }
+}
 
 async function handleTidyLayout(hydrationRetriesRemaining = TIDY_HYDRATION_MAX_RETRIES) {
   // BUG-1899: Tidy plans from the CURRENT store — if the initial canvas load is

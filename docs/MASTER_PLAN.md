@@ -1,5 +1,15 @@
 # FlowState MASTER_PLAN.md
 
+### FEATURE-2098: One-time shared task shuffle from Board and Canvas (🚧 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-24)
+
+**User request**: Add a shuffle action to the focused task timeline and Canvas controls. Rank tasks once by priority or shortest duration, and show the resulting manual order in every view.
+
+**Acceptance**: Reorder all active tasks using the canonical shared order, including filtered tasks; keep completed task slots in place. Restack existing Canvas group members without changing group membership or position. Make the action available in both controls, preserve later manual moves, reset sort preferences only after success, and provide one undo for order and geometry. Verify focused regressions, typecheck, lint, Electron packaging, updater publication, and installed desktop behavior.
+
+**Current evidence**: Focused shuffle regressions and typecheck passed in the isolated branch. Electron packaging, updater, and installed visual checks remain open.
+
 ### BUG-2097: Catalogue drag remains active after release (🚧 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-24)

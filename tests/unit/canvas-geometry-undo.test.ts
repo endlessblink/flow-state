@@ -99,6 +99,7 @@ vi.mock('@/stores/canvas/canvasUi', () => ({
 
 import { useTaskStore } from '@/stores/tasks'
 import { getUndoSystem, resetUndoSystem } from '@/composables/undoSingleton'
+import { runTaskShuffle } from '@/composables/tasks/useTaskShuffle'
 import { createMockTask } from '../factories'
 
 describe('canvas geometry undo', () => {
@@ -168,6 +169,32 @@ describe('canvas geometry undo', () => {
       expect(afterRedo?.canvasPosition).toEqual({ x: 500, y: 600 })
       expect(mockGroups[0].position).toEqual({ x: 120, y: 140, width: 360, height: 220 })
     }
+  })
+
+  it('undoes and redoes a one-time priority shuffle with its Canvas restack', async () => {
+    const taskStore = useTaskStore()
+    const undoSystem = getUndoSystem()
+    taskStore._rawTasks.push(
+      createMockTask({ id: 'low', title: 'Low', priority: 'low', order: 0,
+        parentId: 'group-geometry', canvasPosition: { x: 30, y: 90 } }),
+      createMockTask({ id: 'high', title: 'High', priority: 'high', order: 1,
+        parentId: 'group-geometry', canvasPosition: { x: 30, y: 200 } }),
+    )
+
+    await runTaskShuffle('priority')
+    expect(taskStore._rawTasks.map(task => [task.id, task.order, task.canvasPosition?.y]))
+      .toEqual([['low', 1, 460], ['high', 0, 90]])
+    expect(mockGroups[0].position.height).toBeGreaterThan(200)
+
+    await undoSystem.undo()
+    expect(taskStore._rawTasks.map(task => [task.id, task.order, task.canvasPosition?.y]))
+      .toEqual([['low', 0, 90], ['high', 1, 200]])
+    expect(mockGroups[0].position.height).toBe(200)
+
+    await undoSystem.redo()
+    expect(taskStore._rawTasks.map(task => [task.id, task.order, task.canvasPosition?.y]))
+      .toEqual([['low', 1, 460], ['high', 0, 90]])
+    expect(mockGroups[0].position.height).toBeGreaterThan(200)
   })
 
   it('undoes and redoes a synchronous layout snapshot three consecutive times', async () => {

@@ -1,5 +1,18 @@
 # FlowState MASTER_PLAN.md
 
+### TASK-2093: Expose truthful local task API readiness for agents (🚧 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-24)
+
+**Failure mode**: `/api/health` reports a live sidecar even when the Electron auth bridge is signed out, waiting for re-authentication, or unavailable. Agents cannot safely distinguish process liveness from task-operation readiness and may retry protected routes without an actionable state.
+
+**Acceptance**:
+
+1. Preserve `/api/health` as a backward-compatible process heartbeat.
+2. Add loopback-only `/api/readiness` with explicit `live`, `ready`, auth state, action, and task capability fields.
+3. Cover signed-out, re-authentication, bridge-failure, and ready states with regression tests; document that agents must gate task calls on `ready`.
+4. Ship through the Electron updater and verify the installed runtime and public artifact read-back.
+
 ### ~~BUG-2092: Tidy and Rotate must repair stale renderer geometry~~ (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-09-19)

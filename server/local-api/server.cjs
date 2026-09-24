@@ -40,6 +40,7 @@ const { executeCompleteTask } = require('./complete-task.cjs')
 const { executeSubtaskBatch } = require('./subtask-batch.cjs')
 const { executeNotionActivation } = require('./notion-activation.cjs')
 const { classifyMissingAuthContext } = require('./auth-availability.cjs')
+const { buildApiReadiness } = require('./api-readiness.cjs')
 const { executeAuditCoverageReport } = require('./audit-coverage-report.cjs')
 const { resolveLocalTimerSnapshot } = require('./localTimerSnapshot.cjs')
 const { buildRecurrenceChainRead } = require('./recurrence-chain.cjs')
@@ -1543,6 +1544,16 @@ const server = http.createServer(async (req, res) => {
     // not require the Life OS bearer token. Task routes below remain protected.
     if (req.method === 'GET' && path === '/api/health') {
       return send(res, 200, { ok: true })
+    }
+
+    if (req.method === 'GET' && path === '/api/readiness') {
+      const readiness = buildApiReadiness({
+        ctx,
+        rendererAuthState,
+        mode: TOKEN_MODE ? 'token' : 'service-role',
+        appVersion: APP_VERSION,
+      })
+      return send(res, readiness.status, readiness.body)
     }
 
     if (req.method === 'GET' && path === '/api/provenance') {

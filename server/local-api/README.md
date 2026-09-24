@@ -68,6 +68,46 @@ until the app forwards a session (and after sign-out).
 { "ok": true }
 ```
 
+This is a process heartbeat only. It remains `200` while the sidecar is alive,
+including when the Electron session is signed out or not yet bridged.
+
+### `GET /api/readiness`
+
+Use this before task reads or mutations. It is loopback-only and does not
+require the external-app bearer token. `200` means the sidecar has an
+authenticated task context; `503` means the process is alive but task access is
+not currently safe. Agents must stop task calls and follow `action` instead of
+blindly retrying.
+
+Ready response:
+
+```json
+{
+  "schemaVersion": "flowstate-api-readiness-v1",
+  "service": "task-api",
+  "live": true,
+  "ok": true,
+  "ready": true,
+  "auth": "ready",
+  "capabilities": { "taskReads": true, "taskMutations": true }
+}
+```
+
+Unavailable response (`503`, examples):
+
+```json
+{
+  "schemaVersion": "flowstate-api-readiness-v1",
+  "service": "task-api",
+  "live": true,
+  "ok": false,
+  "ready": false,
+  "auth": "reauth_required",
+  "action": "sign_in_again",
+  "capabilities": { "taskReads": false, "taskMutations": false }
+}
+```
+
 ### `GET /api/timer/current`
 Loopback-only read endpoint used by the KDE widget. It does not require the Life
 OS bearer token, but it does require the Electron app to be signed in and to have

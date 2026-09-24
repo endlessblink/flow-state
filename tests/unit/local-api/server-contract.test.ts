@@ -68,6 +68,19 @@ describe("Local API sidecar timer endpoint regression contract", () => {
     expect(tasksRoute).toBeGreaterThan(tokenCheck);
   });
 
+  it("keeps process liveness separate from authenticated task readiness", () => {
+    const healthRoute = SERVER_CJS.indexOf("path === '/api/health'");
+    const readinessRoute = SERVER_CJS.indexOf("path === '/api/readiness'");
+    const tokenCheck = SERVER_CJS.indexOf("if (TOKEN)");
+
+    expect(healthRoute, "health route not found").toBeGreaterThan(-1);
+    expect(readinessRoute, "readiness route not found").toBeGreaterThan(-1);
+    expect(readinessRoute).toBeLessThan(tokenCheck);
+    expect(SERVER_CJS).toContain("require('./api-readiness.cjs')");
+    expect(README).toContain("### `GET /api/readiness`");
+    expect(README).toContain("Agents must stop task calls and follow `action`");
+  });
+
   it("serves a renderer-owned KDE timer snapshot before requiring Supabase auth context", () => {
     const ctxCheck = SERVER_CJS.indexOf(
       "if (!ctx) return send(res, 503, { error: 'not signed in' })",

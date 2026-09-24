@@ -1,5 +1,15 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2097: Catalogue drag remains active after release (🚧 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-24)
+
+**User repro**: Releasing a dragged task in a catalogue group feels slow and laggy.
+
+**Failure mode**: The grouped drop handler waits for every sequential order write to finish before clearing the drag state. The floating selection and drop feedback can remain active throughout persistence.
+
+**Acceptance**: Clear drag feedback and switch to manual order when the task is released, before the order save settles. Preserve the undo-aware save, group transfer, and final order. Verify a delayed save regression, the Electron build, updater publication, and installed catalogue behavior.
+
 ### TASK-2093: Expose truthful local task API readiness for agents (🚧 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-24)

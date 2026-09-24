@@ -10,6 +10,20 @@ export interface ElectronAutoStartApi {
   getSystemIdleTime: () => Promise<number>
 }
 
+const DISMISSED_TODAY_KEY = 'flowstate:timer-suggestion-dismissed-day'
+
+function localDay(date: Date): string {
+  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
+}
+
+export function isTimerSuggestionDismissedToday(storage: Pick<Storage, 'getItem'>, now = new Date()): boolean {
+  return storage.getItem(DISMISSED_TODAY_KEY) === localDay(now)
+}
+
+export function dismissTimerSuggestionForToday(storage: Pick<Storage, 'setItem'>, now = new Date()): void {
+  storage.setItem(DISMISSED_TODAY_KEY, localDay(now))
+}
+
 export function shouldStartAutomaticPomodoro({
   enabled,
   isTimerActive,

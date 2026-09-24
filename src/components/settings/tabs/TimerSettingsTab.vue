@@ -11,7 +11,6 @@ const timerStore = useTimerStore()
 const workDurations = [15, 20, 25, 30]
 const shortBreakDurations = [3, 5, 10]
 const longBreakDurations = [10, 15, 20]
-const autoStartAfterIdleDurations = [15, 25, 30, 45, 60]
 
 const updateWorkDuration = (minutes: number) => {
   settingsStore.updateSetting('workDuration', minutes * 60)
@@ -39,9 +38,6 @@ const updateAutoStartPomodoros = (value: boolean) => {
   timerStore.settings.autoStartPomodoros = value
 }
 
-const updateAutoStartAfterIdleMinutes = (minutes: number) => {
-  settingsStore.updateSetting('autoStartAfterIdleMinutes', minutes)
-}
 </script>
 
 <template>
@@ -53,7 +49,6 @@ const updateAutoStartAfterIdleMinutes = (minutes: number) => {
         :value="settingsStore.workDuration / 60"
         @update="updateWorkDuration"
       />
-
       <SettingsDurationPicker
         label="Short Break"
         :options="shortBreakDurations"
@@ -75,16 +70,9 @@ const updateAutoStartAfterIdleMinutes = (minutes: number) => {
       />
 
       <SettingsToggle
-        label="Auto-start after a long absence"
+        label="Suggest a timer after 15 seconds of inactivity"
         :value="settingsStore.autoStartPomodoros"
         @update="updateAutoStartPomodoros"
-      />
-
-      <SettingsDurationPicker
-        label="Start after idle"
-        :options="autoStartAfterIdleDurations"
-        :value="settingsStore.autoStartAfterIdleMinutes"
-        @update="updateAutoStartAfterIdleMinutes"
       />
     </SettingsSection>
   </div>

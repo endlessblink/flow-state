@@ -496,8 +496,6 @@ const handleDatePickerSelect = async (timestamp: number) => {
   // TASK-1362: Capture calendar instance info before menu closes
   const taskId = currentTask.value.id
   const calendarInstanceId = (currentTask.value as unknown as Record<string, unknown>)?.instanceId as string | undefined
-  const isCalendarEvent = (currentTask.value as unknown as Record<string, unknown>)?.isCalendarEvent as boolean | undefined
-
   closeAllSubmenusNow()
 
   // Update the task directly via task store
@@ -505,14 +503,21 @@ const handleDatePickerSelect = async (timestamp: number) => {
     // BUG-1909: stale PAST instances follow an explicit due-date pick, else the
     // badge stays pinned to "Overdue <old date>" and the pick looks like a no-op
     const reconciled = reconcileStaleInstancesForDueDate(taskStore.getTask(taskId), formattedDate)
+    const existing = taskStore.getTask(taskId)
+    const instances = calendarInstanceId && existing?.instances
+      ? (reconciled ?? existing.instances).map(instance =>
+          instance.id === calendarInstanceId && instance.status !== 'completed' && instance.status !== 'skipped'
+            ? { ...instance, scheduledDate: formattedDate, scheduledTime: undefined }
+            : instance
+        )
+      : reconciled
     await taskStore.updateTaskWithUndo(taskId, {
       dueDate: formattedDate,
-      ...(reconciled ? { instances: reconciled } : {})
+      dueTime: undefined,
+      scheduledDate: undefined,
+      scheduledTime: undefined,
+      ...(instances ? { instances } : {})
     })
-    // TASK-1362: Also move calendar instance to selected date
-    if (isCalendarEvent && calendarInstanceId) {
-      await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: formattedDate })
-    }
     canvasStore.requestSync('user:context-menu')
     // Auto-route to matching canvas group (Today, Tomorrow, day-of-week groups).
     // TASK-1756 v6: skipDueDateInheritance — we JUST set dueDate above from
@@ -586,7 +591,10 @@ const handleDoneForNowTomorrow = async () => {
       : {
         dueDate: tomorrowStr,
         doneForNowUntil: tomorrowStr,
-        ...(task?.scheduledDate ? { scheduledDate: tomorrowStr } : {})
+        dueTime: undefined,
+        scheduledDate: undefined,
+        scheduledTime: undefined,
+        instances: task?.instances?.filter(instance => instance.status === 'completed' || instance.status === 'skipped') || []
       }
     await taskStore.updateTaskWithUndo(taskId, updatePayload)
     canvasStore.requestSync('user:context-menu')
@@ -665,17 +673,17 @@ const handleDoneForNowPickDate = async (timestamp: number) => {
       showToast(`Completed for today, next on ${dateStr}`, 'success', { duration: 2000 })
     } else {
       // Non-recurring: same as tomorrow but with custom date
-      const updatePayload: Record<string, string> = {
-        dueDate: dateStr,
-        doneForNowUntil: dateStr
-      }
-      if (task?.scheduledDate) {
-        updatePayload.scheduledDate = dateStr
-      }
+      const updatePayload = isCalendarEvent && calendarInstanceId && task
+        ? buildCalendarDoneForTodayUpdate(task, calendarInstanceId, dateStr)
+        : {
+            dueDate: dateStr,
+            doneForNowUntil: dateStr,
+            dueTime: undefined,
+            scheduledDate: undefined,
+            scheduledTime: undefined,
+            instances: task?.instances?.filter(instance => instance.status === 'completed' || instance.status === 'skipped') || []
+          }
       await taskStore.updateTaskWithUndo(taskId, updatePayload)
-      if (isCalendarEvent && calendarInstanceId) {
-        await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: dateStr })
-      }
       canvasStore.requestSync('user:context-menu')
       showToast(`Moved to ${dateStr}`, 'success', { duration: 2000 })
     }

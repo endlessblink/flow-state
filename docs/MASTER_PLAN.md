@@ -11,6 +11,41 @@
 **Acceptance**: Read back Doppler/server equality without exposing values; prove retired keys receive 401 and current anonymous key receives 200; regression-test stale/privileged build rejection; publish a newer Electron/PWA release preserving already shipped catalogue behavior; verify manifest, artifact, installed runtime, and authenticated task read-back. Existing user sessions may require sign-in after signing-secret rotation. No old secret restoration or local-data deletion.
 
 **Remaining proof**: Guard tests, release, installed authentication and task sync.
+### BUG-2096: Calendar Inbox Priority selection must actually reorder tasks (🚧 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-24)
+
+**User repro**: Selecting Priority in the Calendar Inbox sort control leaves the visible task order unchanged.
+
+**Failure mode**: The selected inbox sort is only a secondary tie-break after the global Main Sort, so a non-tied global order hides the user's choice.
+
+**Acceptance**: An explicit inbox sort and its direction control the visible order; Main order follows the global sort. Test conflicting global/local priority orders and deterministic ties in the desktop inbox, then ship and read back the Electron release.
+
+**Implementation evidence (2026-09-24)**: Explicit local sorting now precedes Main order, with priority direction and tie regressions passing. Typecheck, focused tests, and source lint pass. Electron 1.4.554 package validation passes; updater publication and installed inbox read-back remain open.
+
+### BUG-2095: Calendar dates must not invent or retain clock times (🚧 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-24)
+
+**User repro**: Untimed tasks appear as hourly calendar blocks; Done for now and date-only moves carry an old event time onto a new date.
+
+**Product rule**: Date-only tasks remain in the Calendar Inbox. Only an explicit occurrence time or drop into a clock slot creates a timed calendar block. Done for now and date-only moves clear the affected occurrence's time; completed historical occurrences keep their original date and time.
+
+**Acceptance**: Remove default 09:00 projections and task-editor defaults; align day, week, month, recurrence preview, inbox eligibility, date moves, and local/authenticated Done-for-now paths. Preserve unrelated explicitly timed occurrences. Regression tests cover create, edit, move, completion, recurring RPC, and authenticated desktop read-back before Electron updater delivery.
+
+**Implementation evidence (2026-09-24)**: Calendar projections, creation, editing, date moves, and local Done for now now require explicit times; the authenticated RPC migration is written with a fail-closed source contract. Focused tests and Electron 1.4.554 package validation pass. Local Supabase E2E, production migration, updater publication, and authenticated desktop read-back remain open.
+
+### BUG-2094: Trace and prevent historical completions moving onto today (🚧 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-24)
+
+**User repro**: A crossed-out “לשטוף כלים” block appeared at 2:00 PM on 2026-09-24 although the user did not mark it done that day.
+
+**Failure class under investigation**: Date-change helpers rebase past instances onto the picked date without excluding completed instances, retaining their completed status and time. This is a code-level mechanism, not yet a proven history for the specific task.
+
+**Acceptance**: Identify the exact task ID and read its canonical instance/completion history before any record correction. Never redate completed history during due-date or Board moves; keep due badges correct without moving that history. Correct the affected record only if its original date is proven. Add a production-shaped regression and verify the installed authenticated calendar after release.
+
+**Implementation evidence (2026-09-24)**: Date-reconciliation and Board moves now preserve completed/skipped occurrence dates and times; regression tests pass. The screenshot alone cannot establish the specific task's original completion date. The installed task API is unavailable, so exact-record audit, any correction, and authenticated visual read-back remain open.
 
 ### BUG-2097: Catalogue drag remains active after release (🚧 IN PROGRESS)
 

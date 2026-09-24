@@ -79,7 +79,10 @@ export function useCalendarInboxState() {
     // Helper: Check if task is scheduled
     const isScheduledOnCalendar = (task: Task): boolean => {
         if (!task.instances || task.instances.length === 0) return false
-        return task.instances.some(inst => inst.scheduledDate)
+        return task.instances.some(inst =>
+            inst.status !== 'completed' && inst.status !== 'skipped' &&
+            Boolean(inst.scheduledDate && inst.scheduledTime?.trim())
+        )
     }
 
     const embeddedSubtaskIds = computed(() => {
@@ -190,17 +193,25 @@ export function useCalendarInboxState() {
             })
         }
 
-        const unsortedTasks = [...tasks]
+        const mainSort: TaskSortSpec = {
+            key: mainSortKey.value,
+            direction: mainSortDirection.value,
+        }
 
-        // TASK-1412: Build the optional inbox-specific secondary ordering.
-        const priorityOrder = { immediate: 0, high: 1, medium: 2, low: 3, relaxed: 4, undefined: 5 }
-        const dir = sortDirection.value === 'desc' ? -1 : 1
+        // The inbox selection owns its order. "Main order" explicitly delegates to
+        // the shared task sort; a local selection must not be hidden behind it.
+        if (sortBy.value === 'none') {
+            return [...tasks].sort((a, b) =>
+                compareTaskSortField(a, b, mainSort) || compareTasksBySharedOrder(a, b)
+            )
+        }
 
         if (sortBy.value === 'canvasOrder') {
             // TASK-1412 + BUG-1758: Direction-aware canvas-order sort — group X sort and
             // task-row X tiebreaker both honor isRTL. Without the X tiebreaker, grid rows
             // (tasks sharing the same Y) come out in arbitrary array order.
             const groups = canvasStore.groups || []
+            tasks = [...tasks].sort(compareTasksBySharedOrder)
 
             // Reading-order comparator: Y ascending primary (top→bottom),
             // X direction-aware secondary (LTR: left→right, RTL: right→left).
@@ -210,7 +221,7 @@ export function useCalendarInboxState() {
                 if (ay !== by) return ay - by
                 const ax = a.canvasPosition?.x ?? 0
                 const bx = b.canvasPosition?.x ?? 0
-                return isRTL.value ? bx - ax : ax - bx
+                return (isRTL.value ? bx - ax : ax - bx) || compareTasksBySharedOrder(a, b)
             }
 
             // Build a map of parentId → tasks for DFS bucketing
@@ -225,7 +236,7 @@ export function useCalendarInboxState() {
             const sortedGroups = [...groups].sort((a, b) => {
                 const ax = a.position?.x ?? 0
                 const bx = b.position?.x ?? 0
-                return isRTL.value ? bx - ax : ax - bx
+                return (isRTL.value ? bx - ax : ax - bx) || a.id.localeCompare(b.id)
             })
 
             // DFS: push a task then recursively push its children (by parentTaskId), in reading order
@@ -269,46 +280,14 @@ export function useCalendarInboxState() {
             // Catch tasks that weren't visited (edge cases: groups not in canvasStore.groups)
             for (const t of tasks) dfs(t)
 
-            tasks = sortDirection.value === 'desc' ? result.reverse() : result
+            return sortDirection.value === 'desc' ? result.reverse() : result
         } else {
-            tasks = [...tasks].sort((a, b) => {
-                switch (sortBy.value) {
-                    case 'priority': {
-            const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 5
-            const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 5
-                        if (aPriority !== bPriority) return dir * (aPriority - bPriority)
-                        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-                    }
-                    case 'dueDate': {
-                        const aDue = a.dueDate ? new Date(a.dueDate).getTime() : Infinity
-                        const bDue = b.dueDate ? new Date(b.dueDate).getTime() : Infinity
-                        if (aDue !== bDue) return dir * (aDue - bDue)
-                        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-                    }
-                    case 'newest':
-                    default:
-                        return dir * (new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-                }
-            })
+            const key = sortBy.value === 'newest' ? 'created' : sortBy.value
+            const localSort: TaskSortSpec = { key, direction: sortDirection.value }
+            return [...tasks].sort((a, b) =>
+                compareTaskSortField(a, b, localSort) || compareTasksBySharedOrder(a, b)
+            )
         }
-
-        const secondaryRank = new Map(tasks.map((task, index) => [task.id, index]))
-        const mainSort: TaskSortSpec = {
-            key: mainSortKey.value,
-            direction: mainSortDirection.value,
-        }
-
-        return [...unsortedTasks].sort((a, b) => {
-            const mainComparison = compareTaskSortField(a, b, mainSort)
-            if (mainComparison !== 0) return mainComparison
-
-            if (sortBy.value !== 'none') {
-                const secondaryComparison = (secondaryRank.get(a.id) ?? 0) - (secondaryRank.get(b.id) ?? 0)
-                if (secondaryComparison !== 0) return secondaryComparison
-            }
-
-            return compareTasksBySharedOrder(a, b)
-        })
     })
 
     // --- Actions ---

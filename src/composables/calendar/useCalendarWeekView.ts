@@ -161,12 +161,12 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
           instances
             .filter((instance) => {
               if (processedCount >= MAX_INSTANCES_PER_TASK) return false
-              const matches = instance.scheduledDate === day.dateString
+              const matches = instance.scheduledDate === day.dateString && !!instance.scheduledTime
               if (matches) processedCount++
               return matches
             })
             .forEach((instance) => {
-              const [hour, minute] = (instance.scheduledTime || '12:00').split(':').map(Number)
+              const [hour, minute] = instance.scheduledTime!.split(':').map(Number)
               const baseDuration = instance.duration || task.estimatedDuration || 30
 
               // TASK-1285: Apply timer growth if active
@@ -220,13 +220,14 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
       )
 
       for (const virtual of virtualEvents) {
+        if (!virtual.scheduledTime) continue
         const dayIndex = weekDays.value.findIndex(d => d.dateString === virtual.scheduledDate)
         if (dayIndex >= 0) {
-          const [hour, minute] = (virtual.scheduledTime || '09:00').split(':').map(Number)
+          const [hour, minute] = virtual.scheduledTime.split(':').map(Number)
           const duration = virtual.duration || 30
 
           if (hour >= 6 && hour < 23) {
-            const startTime = new Date(`${virtual.scheduledDate}T${virtual.scheduledTime || '09:00'}`)
+            const startTime = new Date(`${virtual.scheduledDate}T${virtual.scheduledTime}`)
             const endTime = new Date(startTime.getTime() + duration * 60000)
 
             eventsByDay[dayIndex].push({

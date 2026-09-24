@@ -50,7 +50,7 @@ describe('getDateColumnUpdates', () => {
     expect(getDateColumnUpdates(makeTask(), 'tomorrow')?.dueDate).toBe('2026-03-07')
   })
 
-  it('rebases a past instance onto the target day, preserving time and identity', () => {
+  it('rebases a past instance onto the target day without carrying its clock time', () => {
     mockToday()
     const task = makeTask({ instances: [inst({ scheduledDate: '2026-03-02', scheduledTime: '18:30' })] })
 
@@ -58,7 +58,7 @@ describe('getDateColumnUpdates', () => {
 
     expect(updates?.dueDate).toBe('2026-03-06')
     expect(updates?.instances).toEqual([
-      { id: 'inst-1', scheduledDate: '2026-03-06', scheduledTime: '18:30', duration: 60 },
+      { id: 'inst-1', scheduledDate: '2026-03-06', scheduledTime: undefined, duration: 60 },
     ])
   })
 
@@ -77,6 +77,15 @@ describe('getDateColumnUpdates', () => {
     mockToday()
     const task = makeTask({ instances: [inst({ scheduledDate: '2026-03-02', isLater: true })] })
     expect(getDateColumnUpdates(task, 'today')).not.toHaveProperty('instances')
+  })
+
+  it('leaves completed history on its original date when moving a task', () => {
+    mockToday()
+    const completed = inst({ id: 'dishes', scheduledDate: '2026-03-02', scheduledTime: '14:00', status: 'completed' })
+    const task = makeTask({ instances: [completed, inst({ id: 'next', scheduledDate: '2026-03-02' })] })
+    const updates = getDateColumnUpdates(task, 'today')
+    expect(updates?.instances?.[0]).toEqual(completed)
+    expect(updates?.instances?.[1]).toMatchObject({ scheduledDate: '2026-03-06', scheduledTime: undefined })
   })
 
   it('rebases recurringInstances too', () => {
@@ -98,7 +107,7 @@ describe('getDateColumnUpdates', () => {
 
     const updates = getDateColumnUpdates(task, 'noDate')
 
-    expect(updates).toEqual({ dueDate: undefined, instances: [], recurringInstances: [] })
+    expect(updates).toEqual({ dueDate: undefined, dueTime: undefined, scheduledDate: undefined, scheduledTime: undefined, instances: [], recurringInstances: [] })
   })
 
   it('inbox clears dates and flags the task as inbox', () => {

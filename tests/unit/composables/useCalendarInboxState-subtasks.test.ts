@@ -63,11 +63,11 @@ describe('useCalendarInboxState subtask filtering', () => {
     mockTaskStore.toggleCalendarDoneTasks.mockClear()
   })
 
-  it('defaults to Today and follows the shared main sort before its local tie-breaker', () => {
+  it('defaults to Today and applies the selected local sort ahead of the shared main sort', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-20T12:00:00+03:00'))
     mockTaskStore.calendarFilteredTasks = [
-      task({ id: 'medium', title: 'A', priority: 'medium', dueDate: '2026-08-20', order: 0 }),
+      task({ id: 'medium', title: 'A', priority: 'medium', dueDate: '2026-08-20', createdAt: new Date('2026-08-20T12:00:00Z'), order: 0 }),
       task({ id: 'high-late', title: 'Z', priority: 'high', dueDate: '2026-08-20', createdAt: new Date('2026-08-20T10:00:00Z'), order: 1 }),
       task({ id: 'high-early', title: 'B', priority: 'high', dueDate: '2026-08-20', createdAt: new Date('2026-08-20T08:00:00Z'), order: 2 }),
     ]
@@ -79,7 +79,60 @@ describe('useCalendarInboxState subtask filtering', () => {
     state.sortBy.value = 'newest'
 
     expect(state.showTodayOnly.value).toBe(true)
-    expect(state.inboxTasks.value.map(item => item.id)).toEqual(['high-late', 'high-early', 'medium'])
+    expect(state.inboxTasks.value.map(item => item.id)).toEqual(['medium', 'high-late', 'high-early'])
+  })
+
+  it('sorts by local priority in both directions even when the main sort conflicts', () => {
+    mockTaskStore.calendarFilteredTasks = [
+      task({ id: 'medium', title: 'A', priority: 'medium', order: 0 }),
+      task({ id: 'high-second', title: 'Y', priority: 'high', order: 2 }),
+      task({ id: 'low', title: 'B', priority: 'low', order: 3 }),
+      task({ id: 'high-first', title: 'Z', priority: 'high', order: 1 }),
+    ]
+    const mainSort = useTaskSortStore()
+    mainSort.mainSortKey = 'title'
+    mainSort.mainSortDirection = 'asc'
+
+    const state = useCalendarInboxState()
+    state.showTodayOnly.value = false
+    state.sortBy.value = 'priority'
+
+    expect(state.inboxTasks.value.map(item => item.id)).toEqual([
+      'high-first', 'high-second', 'medium', 'low',
+    ])
+
+    state.sortDirection.value = 'desc'
+    expect(state.inboxTasks.value.map(item => item.id)).toEqual([
+      'low', 'medium', 'high-first', 'high-second',
+    ])
+
+    state.sortBy.value = 'none'
+    expect(state.inboxTasks.value.map(item => item.id)).toEqual([
+      'medium', 'low', 'high-second', 'high-first',
+    ])
+  })
+
+  it('keeps missing due dates last and breaks local-sort ties by shared task order', () => {
+    mockTaskStore.calendarFilteredTasks = [
+      task({ id: 'no-due', title: 'A', order: 0 }),
+      task({ id: 'later', title: 'B', dueDate: '2026-08-22', order: 1 }),
+      task({ id: 'same-second', title: 'C', dueDate: '2026-08-20', order: 3 }),
+      task({ id: 'same-first', title: 'D', dueDate: '2026-08-20', order: 2 }),
+    ]
+    const mainSort = useTaskSortStore()
+    mainSort.mainSortKey = 'title'
+
+    const state = useCalendarInboxState()
+    state.showTodayOnly.value = false
+    state.sortBy.value = 'dueDate'
+    expect(state.inboxTasks.value.map(item => item.id)).toEqual([
+      'same-first', 'same-second', 'later', 'no-due',
+    ])
+
+    state.sortDirection.value = 'desc'
+    expect(state.inboxTasks.value.map(item => item.id)).toEqual([
+      'later', 'same-first', 'same-second', 'no-due',
+    ])
   })
 
   it('keeps parent tasks visible while hiding tasks linked by parentTaskId', () => {
@@ -250,11 +303,17 @@ describe('useCalendarInboxState subtask filtering', () => {
   it('keeps due-date-only tasks in the calendar inbox', () => {
     mockTaskStore.calendarFilteredTasks = [
       task({ id: 'due-date-only-task', title: 'Due date only', dueDate: '2026-08-02' }),
+      task({
+        id: 'untimed-instance',
+        title: 'Untimed instance',
+        dueDate: '2026-08-02',
+        instances: [{ scheduledDate: '2026-08-02', status: 'scheduled' }],
+      }),
     ]
 
     const state = useCalendarInboxState()
     state.showTodayOnly.value = false
 
-    expect(state.inboxTasks.value.map(item => item.id)).toEqual(['due-date-only-task'])
+    expect(state.inboxTasks.value.map(item => item.id)).toEqual(['due-date-only-task', 'untimed-instance'])
   })
 })

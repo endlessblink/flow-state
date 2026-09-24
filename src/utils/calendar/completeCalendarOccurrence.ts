@@ -1,15 +1,12 @@
-import type { Task, TaskInstance } from '@/types/tasks'
+import type { Task } from '@/types/tasks'
 
-export type CalendarOccurrenceUpdate = Pick<Task, 'dueDate' | 'doneForNowUntil'> & {
-  scheduledDate?: string
-  instances?: TaskInstance[]
-}
+export type CalendarOccurrenceUpdate = Pick<Task, 'dueDate' | 'doneForNowUntil' | 'dueTime' | 'scheduledDate' | 'scheduledTime' | 'instances'>
 
 export function buildCalendarDoneForTodayUpdate(
   task: Task,
   instanceId: string,
   tomorrow: string,
-  createInstanceId: () => string = () => crypto.randomUUID()
+  _createInstanceId: () => string = () => crypto.randomUUID()
 ): CalendarOccurrenceUpdate {
   const instances = task.instances || []
   const currentInstance = instances.find(instance => instance.id === instanceId)
@@ -18,26 +15,23 @@ export function buildCalendarDoneForTodayUpdate(
     return {
       dueDate: tomorrow,
       doneForNowUntil: tomorrow,
-      ...(task.scheduledDate ? { scheduledDate: tomorrow } : {})
+      dueTime: undefined,
+      scheduledDate: undefined,
+      scheduledTime: undefined,
+      instances: instances.filter(instance => instance.status === 'completed' || instance.status === 'skipped')
     }
-  }
-
-  const tomorrowInstance: TaskInstance = {
-    ...currentInstance,
-    id: createInstanceId(),
-    taskId: task.id,
-    scheduledDate: tomorrow,
-    status: 'scheduled'
   }
 
   return {
     dueDate: tomorrow,
     doneForNowUntil: tomorrow,
-    ...(task.scheduledDate ? { scheduledDate: tomorrow } : {}),
+    dueTime: undefined,
+    scheduledDate: undefined,
+    scheduledTime: undefined,
     instances: instances.map(instance =>
       instance.id === instanceId
         ? { ...instance, status: 'completed' as const }
         : instance
-    ).concat(tomorrowInstance)
+    ).filter(instance => instance.status === 'completed' || instance.status === 'skipped')
   }
 }

@@ -55,9 +55,8 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
         .forEach(task => {
           const instances = getTaskInstances(task)
           instances
-            .filter((instance) => instance.scheduledDate === dateString)
+            .filter((instance) => instance.scheduledDate === dateString && !!instance.scheduledTime)
             .forEach((instance) => {
-              const [_hour, _minute] = (instance.scheduledTime || '12:00').split(':').map(Number)
               const duration = instance.duration || task.estimatedDuration || 30
 
               dayEvents.push({
@@ -99,6 +98,7 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
       )
 
       for (const virtual of virtualEvents) {
+        if (!virtual.scheduledTime) continue
         const dayEntry = days.find(d => d.dateString === virtual.scheduledDate)
         if (dayEntry) {
           dayEntry.events.push({
@@ -107,8 +107,8 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
             instanceId: virtual.id,
             title: virtual.title,
             projectId: virtual.projectId,
-            startTime: new Date(`${virtual.scheduledDate}T${virtual.scheduledTime || '09:00'}`),
-            endTime: new Date(`${virtual.scheduledDate}T${virtual.scheduledTime || '09:00'}`),
+            startTime: new Date(`${virtual.scheduledDate}T${virtual.scheduledTime}`),
+            endTime: new Date(`${virtual.scheduledDate}T${virtual.scheduledTime}`),
             duration: virtual.duration || 30,
             startSlot: 0,
             slotSpan: 0,
@@ -150,25 +150,26 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
     if (existingTask.instances && existingTask.instances.length > 0 && instanceId) {
       // Update the specific instance's scheduledDate (move, not duplicate)
       const updatedInstances = existingTask.instances.map((inst: TaskInstance) =>
-        inst.id === instanceId
-          ? { ...inst, scheduledDate: targetDate }
+        inst.id === instanceId && inst.status !== 'completed' && inst.status !== 'skipped'
+          ? { ...inst, scheduledDate: targetDate, scheduledTime: undefined }
           : inst
       )
       await taskStore.updateTaskWithUndo(taskId, {
-        instances: updatedInstances
+        dueDate: targetDate,
+        dueTime: undefined,
+        scheduledDate: undefined,
+        scheduledTime: undefined,
+        instances: updatedInstances,
+        isInInbox: true
       })
     } else {
-      // BUG-1325: Create an explicit instance instead of using legacy scheduledDate fields.
-      // This is an explicit user action (month view drag), so it SHOULD create calendar visibility.
-      const scheduledTime = existingTask.scheduledTime || '09:00'
+      // A month-cell drop chooses a date but not a clock time.
       await taskStore.updateTaskWithUndo(taskId, {
-        instances: [{
-          id: `instance-${taskId}-${Date.now()}`,
-          scheduledDate: targetDate,
-          scheduledTime: scheduledTime,
-          duration: existingTask.estimatedDuration || 60
-        }],
-        isInInbox: false
+        dueDate: targetDate,
+        dueTime: undefined,
+        scheduledDate: undefined,
+        scheduledTime: undefined,
+        isInInbox: true
       })
     }
   }

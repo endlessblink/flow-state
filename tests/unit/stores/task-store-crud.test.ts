@@ -371,14 +371,9 @@ describe('Task Store — CRUD', () => {
       doneForNowUntil: '2026-07-24',
       recurrenceCount: 1,
     })
-    expect(livingTask?.instances).toEqual([
-      expect.objectContaining({
-        taskId: task.id,
-        scheduledDate: '2026-07-24',
-        duration: 25,
-        status: 'scheduled',
-      }),
-    ])
+    expect(livingTask?.instances).toEqual([])
+    expect(livingTask?.scheduledTime).toBeUndefined()
+    expect(livingTask?.dueTime).toBeUndefined()
 
     const completionRecord = store._rawTasks.find(candidate => candidate.recurrenceParentId === task.id && candidate.isCompletionRecord)
     expect(completionRecord).toMatchObject({
@@ -1064,6 +1059,30 @@ describe('Task Store — Operations', () => {
     expect(updated?.dueDate).toBe(tomorrowStr)
   })
 
+  it('moving a timed task by date clears its active time and keeps completed history on its original date', async () => {
+    const store = useTaskStore()
+    const task = await store.createTask({
+      title: 'Dishes',
+      dueDate: '2026-09-23',
+      dueTime: '14:00',
+      scheduledDate: '2026-09-23',
+      scheduledTime: '14:00',
+      instances: [
+        { id: 'old-done', scheduledDate: '2026-09-22', scheduledTime: '14:00', status: 'completed', duration: 30 },
+        { id: 'current', scheduledDate: '2026-09-23', scheduledTime: '14:00', duration: 30 },
+      ],
+    })
+
+    await store.moveTaskToSmartGroup(task.id, 'today')
+
+    const moved = store._rawTasks.find(t => t.id === task.id)
+    expect(moved?.dueTime).toBeUndefined()
+    expect(moved?.scheduledTime).toBeUndefined()
+    expect(moved?.instances).toEqual([
+      expect.objectContaining({ id: 'old-done', scheduledDate: '2026-09-22', scheduledTime: '14:00', status: 'completed' }),
+    ])
+  })
+
   it('moveTaskToSmartGroup("later") clears dueDate', async () => {
     const store = useTaskStore()
     const task = await store.createTask({ title: 'Later Task', dueDate: '2026-03-21' })
@@ -1105,6 +1124,23 @@ describe('Task Store — Operations', () => {
 
     const updated = store._rawTasks.find(t => t.id === task.id)
     expect(updated?.dueDate ?? '').toBe('')
+  })
+
+  it('clearing a date does not restore it from a completed historical instance', async () => {
+    const store = useTaskStore()
+    const task = await store.createTask({
+      title: 'Dishes',
+      dueDate: '2026-09-24',
+      instances: [{ id: 'old-done', scheduledDate: '2026-09-22', scheduledTime: '14:00', status: 'completed', duration: 30 }],
+    })
+
+    await store.moveTaskToDate(task.id, 'noDate')
+
+    const moved = store._rawTasks.find(t => t.id === task.id)
+    expect(moved?.dueDate).toBeUndefined()
+    expect(moved?.instances).toEqual([
+      expect.objectContaining({ id: 'old-done', scheduledDate: '2026-09-22', scheduledTime: '14:00', status: 'completed' }),
+    ])
   })
 
   it('batch update multiple tasks via sequential updateTask calls', async () => {

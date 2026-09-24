@@ -305,8 +305,8 @@ describe('task operation undo/redo three-cycle invariants', () => {
             taskId: task.id,
             status: 'todo',
             dueDate: '2026-07-16',
-            scheduledTime: '20:00',
-            duration: 25
+            scheduledTime: null,
+            duration: null
           },
           recurrence: { nextDueDateAfter: '2026-07-16', cadencePreserved: true }
         },
@@ -322,12 +322,9 @@ describe('task operation undo/redo three-cycle invariants', () => {
       recurrenceCount: 1,
       isInInbox: true
     })
-    expect(advancedTask?.instances).toEqual([expect.objectContaining({
-      id: 'instance-next',
-      scheduledDate: '2026-07-16',
-      scheduledTime: '20:00',
-      status: 'scheduled'
-    })])
+    expect(advancedTask?.instances).toEqual([])
+    expect(advancedTask?.scheduledTime).toBeUndefined()
+    expect(advancedTask?.dueTime).toBeUndefined()
     expect(advancedTask?.completedAt).toBeUndefined()
     expect(taskStore._rawTasks).toContainEqual(expect.objectContaining({
       id: 'completion-record-1',

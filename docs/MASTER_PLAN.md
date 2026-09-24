@@ -10,7 +10,7 @@
 
 **Acceptance**: An explicit inbox sort and its direction control the visible order; Main order follows the global sort. Test conflicting global/local priority orders and deterministic ties in the desktop inbox, then ship and read back the Electron release.
 
-**Implementation evidence (2026-09-24)**: Explicit local sorting now precedes Main order, with priority direction and tie regressions passing. Typecheck, focused tests, and source lint pass. Electron 1.4.554 package validation passes; updater publication and installed inbox read-back remain open.
+**Implementation evidence (2026-09-24)**: Explicit local sorting now precedes Main order, with priority direction and tie regressions passing. Typecheck, focused tests, source lint, full release test gate, and Electron 1.4.554 package validation passed. Version 1.4.554 is published, installed, and running with matching sidecar provenance; installed inbox interaction read-back remains open.
 
 ### BUG-2095: Calendar dates must not invent or retain clock times (🚧 IN PROGRESS)
 
@@ -22,7 +22,7 @@
 
 **Acceptance**: Remove default 09:00 projections and task-editor defaults; align day, week, month, recurrence preview, inbox eligibility, date moves, and local/authenticated Done-for-now paths. Preserve unrelated explicitly timed occurrences. Regression tests cover create, edit, move, completion, recurring RPC, and authenticated desktop read-back before Electron updater delivery.
 
-**Implementation evidence (2026-09-24)**: Calendar projections, creation, editing, date moves, and local Done for now now require explicit times; the authenticated RPC migration is written with a fail-closed source contract. Focused tests and Electron 1.4.554 package validation pass. Local Supabase E2E, production migration, updater publication, and authenticated desktop read-back remain open.
+**Implementation evidence (2026-09-24)**: Calendar projections, creation, editing, date moves, and local Done for now now require explicit times. The authenticated RPC migration applied to production and live function read-back confirmed empty next instances and cleared time fields. Focused tests, the full release test gate, and Electron 1.4.554 package validation passed. Version 1.4.554 is published, installed, and running with matching sidecar provenance; local Supabase E2E and authenticated calendar interaction read-back remain open.
 
 ### BUG-2094: Trace and prevent historical completions moving onto today (🚧 IN PROGRESS)
 
@@ -30,11 +30,11 @@
 
 **User repro**: A crossed-out “לשטוף כלים” block appeared at 2:00 PM on 2026-09-24 although the user did not mark it done that day.
 
-**Failure class under investigation**: Date-change helpers rebase past instances onto the picked date without excluding completed instances, retaining their completed status and time. This is a code-level mechanism, not yet a proven history for the specific task.
+**Failure class under investigation**: Date-change helpers rebase past instances onto the picked date without excluding completed instances, retaining their completed status and time. The live task has a completed occurrence dated 2026-09-24 at 14:00 while the task itself is planned. Its creation audit is from 2026-09-13 and contains no earlier occurrence date, so the precise historical move and original completion date remain unproven.
 
 **Acceptance**: Identify the exact task ID and read its canonical instance/completion history before any record correction. Never redate completed history during due-date or Board moves; keep due badges correct without moving that history. Correct the affected record only if its original date is proven. Add a production-shaped regression and verify the installed authenticated calendar after release.
 
-**Implementation evidence (2026-09-24)**: Date-reconciliation and Board moves now preserve completed/skipped occurrence dates and times; regression tests pass. The screenshot alone cannot establish the specific task's original completion date. The installed task API is unavailable, so exact-record audit, any correction, and authenticated visual read-back remain open.
+**Implementation evidence (2026-09-24)**: Date-reconciliation and Board moves now preserve completed/skipped occurrence dates and times; regression tests and the full release gate passed. Production task `0d9df0d6-f460-407e-a235-e7ef7211cdeb` has status `planned`, one `completed` instance on 2026-09-24 at 14:00, and a 2026-09-13 creation audit without prior instance values. Version 1.4.554 is published, installed, and running. Any historical record correction requires proof of the original date; authenticated visual read-back remains open.
 
 ### BUG-2097: Catalogue drag remains active after release (🚧 IN PROGRESS)
 

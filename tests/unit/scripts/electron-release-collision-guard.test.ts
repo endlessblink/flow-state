@@ -42,6 +42,7 @@ describe('Electron release collision guard', () => {
     const manifestPublishIndex = promoteSource.indexOf('mv "$STAGE_DIR/latest-linux.yml"')
     expect(guardIndex).toBeGreaterThan(-1)
     expect(manifestPublishIndex).toBeGreaterThan(guardIndex)
+    expect(promoteSource).toContain('$(dirname "$(dirname "$TARGET_DIR")")/release-receipt.json')
   })
 
   it('requires a non-empty local manifest before staging any artifact', () => {

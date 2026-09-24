@@ -39,8 +39,11 @@ for artifact in "${ARTIFACTS[@]}"; do
 done
 
 # The receipt is published before the manifest so the manifest remains the final
-# visibility switch for the complete release transaction.
+# visibility switch for the complete release transaction. Keep both historical
+# locations in sync: the public canonical URL is at the web root, while older
+# consumers read the copy beside the Electron update directory.
 cp -f -- "$RECEIPT" "$(dirname "$TARGET_DIR")/release-receipt.json"
+cp -f -- "$RECEIPT" "$(dirname "$(dirname "$TARGET_DIR")")/release-receipt.json"
 
 # Publish this last: clients never observe a manifest before its files exist.
 mv "$STAGE_DIR/latest-linux.yml" "$TARGET_DIR/latest-linux.yml"

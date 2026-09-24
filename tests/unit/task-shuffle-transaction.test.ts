@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Task } from '@/types/tasks'
 import type { CanvasGroup } from '@/types/canvas'
 
@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('@/stores/tasks', () => ({
   useTaskStore: () => ({ rawTasks: mocks.tasks, updateTask: mocks.updateTask }),
+  getTaskInstances: () => [],
+  parseDateKey: (key: string) => new Date(`${key}T00:00:00`),
 }))
 vi.mock('@/stores/canvas', () => ({
   useCanvasStore: () => ({ _rawGroups: mocks.groups, groups: mocks.groups, updateGroup: vi.fn() }),
@@ -38,6 +40,8 @@ function task(id: string, order: number, priority: Task['priority']): Task {
 }
 
 describe('task shuffle transaction', () => {
+  afterEach(() => vi.useRealTimers())
+
   beforeEach(() => {
     mocks.tasks = [task('low', 0, 'low'), task('high', 1, 'high')]
     mocks.groups = []
@@ -88,5 +92,27 @@ describe('task shuffle transaction', () => {
 
     expect(mocks.tasks[1].canvasPosition).toEqual({ x: 120, y: 100 })
     expect(mocks.tasks[0].canvasPosition).toEqual({ x: 120, y: 470 })
+  })
+
+  it('restacks a due-today floating card into the visible Today order from another view', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-24T12:00:00'))
+    mocks.groups = [{
+      id: 'today', name: 'Today', type: 'custom', layout: 'vertical', color: '#fff',
+      isVisible: true, isCollapsed: false,
+      position: { x: 100, y: 30, width: 320, height: 500 },
+    } as CanvasGroup]
+    mocks.tasks[0].parentId = 'today'
+    mocks.tasks[0].canvasPosition = { x: 120, y: 100 }
+    mocks.tasks[1].parentId = ''
+    mocks.tasks[1].dueDate = '2026-09-24'
+    mocks.tasks[1].canvasPosition = { x: 20, y: 220 }
+
+    await runTaskShuffle('priority')
+
+    expect(mocks.tasks[1].canvasPosition).toEqual({ x: 120, y: 100 })
+    expect(mocks.tasks[0].canvasPosition).toEqual({ x: 120, y: 470 })
+    expect(mocks.tasks[1].parentId).toBe('')
+    expect(mocks.tasks.map(item => [item.id, item.order])).toEqual([['low', 1], ['high', 0]])
   })
 })

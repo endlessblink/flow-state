@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CanvasGroup } from '@/types/canvas'
 import type { Task } from '@/types/tasks'
 import { planTaskShuffleCanvasGeometry } from '../planTaskShuffleCanvasGeometry'
@@ -13,6 +13,22 @@ const task = (id: string, parentId: string): Task => ({
 } as Task)
 
 describe('planTaskShuffleCanvasGeometry', () => {
+  afterEach(() => vi.useRealTimers())
+
+  it('restacks a Today task projected from a floating card without changing its parent', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-24T12:00:00'))
+    const today = { ...group('today', 100), name: 'Today' }
+    const lowerRank = { ...task('lower', 'today'), order: 1, canvasPosition: { x: 120, y: 100 } }
+    const higherRank = { ...task('higher', ''), order: 0, dueDate: '2026-09-24', canvasPosition: { x: 20, y: 220 } }
+
+    const result = planTaskShuffleCanvasGeometry([today], [higherRank, lowerRank], () => ({ width: 220, height: 100 }))
+
+    expect(result.taskPositions.get('higher')).toEqual({ x: 120, y: 100 })
+    expect(result.taskPositions.get('lower')).toEqual({ x: 120, y: 210 })
+    expect(higherRank.parentId).toBe('')
+  })
+
   it('restacks sorted members inside their existing groups, including hidden cards', () => {
     const groups = [group('today', 100), group('tomorrow', 500, 1000)]
     const tasks = [task('hidden', 'today'), task('other', 'tomorrow'), task('first', 'today')]

@@ -1,6 +1,8 @@
 import { CANVAS } from '@/constants/canvas'
 import type { CanvasGroup } from '@/types/canvas'
 import type { Task } from '@/types/tasks'
+import { detectPowerKeyword } from '@/composables/usePowerKeywords'
+import { getCanonicalTodayTaskIds } from '@/utils/todayTaskProjection'
 
 type Position = { x: number; y: number }
 type Size = { width: number; height: number }
@@ -16,6 +18,11 @@ export function planTaskShuffleCanvasGeometry(
 } {
   const taskPositions = new Map<string, Position>()
   const groupPositions = new Map<string, Position & Size>()
+  const todayGroup = groups.find(group => {
+    const keyword = detectPowerKeyword(group.name)
+    return group.isVisible && keyword?.category === 'date' && keyword.keyword === 'today'
+  })
+  const todayTaskIds = todayGroup ? getCanonicalTodayTaskIds(orderedTasks) : new Set<string>()
 
   for (const group of groups) {
     if (!group.position) continue
@@ -23,7 +30,9 @@ export function planTaskShuffleCanvasGeometry(
     let taskCount = 0
 
     for (const task of orderedTasks) {
-      if (task.parentId !== group.id || !task.canvasPosition) continue
+      const projectedToday = todayTaskIds.has(task.id)
+      const effectiveParentId = projectedToday ? todayGroup?.id : task.parentId
+      if (effectiveParentId !== group.id || (!task.canvasPosition && !projectedToday)) continue
       if (task._soft_deleted || task.isCompletionRecord || task.canvasDismissed) continue
 
       taskPositions.set(task.id, {

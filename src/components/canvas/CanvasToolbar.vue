@@ -80,31 +80,22 @@
         >
           <LayoutGrid :size="14" />
         </button>
-        <div ref="shuffleMenuRef" class="shuffle-menu-anchor">
+        <NDropdown
+          trigger="click"
+          placement="left-start"
+          :z-index="1200"
+          :options="shuffleOptions"
+          @select="selectShuffle"
+        >
           <button
             class="toolbar-btn"
             title="Shuffle task order"
             aria-label="Shuffle task order"
             aria-haspopup="menu"
-            :aria-expanded="shuffleMenuOpen"
-            @click="shuffleMenuOpen = !shuffleMenuOpen"
           >
             <ListFilter :size="14" />
           </button>
-          <div
-            v-if="shuffleMenuOpen"
-            class="shuffle-menu"
-            role="menu"
-            aria-label="Shuffle tasks"
-          >
-            <button role="menuitem" @click="selectShuffle('priority')">
-              Shuffle by priority
-            </button>
-            <button role="menuitem" @click="selectShuffle('duration')">
-              Shuffle by duration
-            </button>
-          </div>
-        </div>
+        </NDropdown>
         <button
           v-if="showTidyDebug"
           class="toolbar-btn"
@@ -129,8 +120,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { onClickOutside } from '@vueuse/core'
+import { NDropdown } from 'naive-ui'
 import { Plus, FolderPlus, Calendar, CalendarX, CheckCheck, CalendarClock, LayoutGrid, ListFilter, ClipboardList, ClipboardCheck } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 
@@ -146,13 +136,13 @@ const emit = defineEmits<{
 
 const taskStore = useTaskStore()
 const showTidyDebug = import.meta.env.DEV
-const shuffleMenuRef = ref<HTMLElement | null>(null)
-const shuffleMenuOpen = ref(false)
-onClickOutside(shuffleMenuRef, () => { shuffleMenuOpen.value = false })
+const shuffleOptions = [
+  { label: 'Shuffle by priority', key: 'priority' },
+  { label: 'Shuffle by duration', key: 'duration' },
+]
 
-function selectShuffle(mode: 'priority' | 'duration') {
-  shuffleMenuOpen.value = false
-  emit('shuffleTasks', mode)
+function selectShuffle(key: string | number) {
+  if (key === 'priority' || key === 'duration') emit('shuffleTasks', key)
 }
 </script>
 
@@ -198,29 +188,6 @@ function selectShuffle(mode: 'priority' | 'duration') {
   background: var(--glass-border);
   margin: var(--space-0_5) 0;
 }
-
-.shuffle-menu-anchor { position: relative; }
-.shuffle-menu {
-  position: absolute;
-  right: calc(100% + 8px);
-  top: 0;
-  width: 176px;
-  padding: 4px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  background: var(--overlay-component-bg-strong);
-  box-shadow: var(--shadow-md);
-}
-.shuffle-menu button {
-  display: block;
-  width: 100%;
-  padding: 8px;
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  text-align: left;
-  cursor: pointer;
-}
-.shuffle-menu button:hover { background: var(--glass-border); }
 
 /* Icon buttons - compact size */
 .toolbar-btn {

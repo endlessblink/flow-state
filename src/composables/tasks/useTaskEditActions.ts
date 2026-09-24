@@ -103,9 +103,7 @@ export function useTaskEditActions(
     // --- Core Scheduling & Parsing Logic ---
 
     const handleScheduledDateChange = () => {
-        if (editedTask.value.scheduledDate && !editedTask.value.scheduledTime) {
-            editedTask.value.scheduledTime = '09:00'
-        }
+        // Choosing a date does not choose a clock time.
     }
 
     // --- Canvas Interaction ---
@@ -286,8 +284,14 @@ export function useTaskEditActions(
                 updates.parentId = editedTask.value.parentId
             }
 
-            // Preserve existing instances
-            if (editedTask.value.instances && editedTask.value.instances.length > 0) {
+            // Date-only edits reset the moved occurrence's time and retain completed history.
+            if (dueDateChanged && !hasNewSchedule) {
+                const { reconcileStaleInstancesForDueDate } = await import('@/utils/dueDateInstances')
+                const reconciled = reconcileStaleInstancesForDueDate(originalTask, editedDueDate)
+                updates.instances = reconciled ?? editedTask.value.instances
+                updates.scheduledTime = undefined
+                updates.dueTime = undefined
+            } else if (editedTask.value.instances && editedTask.value.instances.length > 0) {
                 updates.instances = editedTask.value.instances
             }
 

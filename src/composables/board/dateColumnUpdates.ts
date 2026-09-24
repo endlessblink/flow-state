@@ -26,14 +26,14 @@ const targetDateFor = (column: DateColumn, today: Date): Date | null => {
 }
 
 /**
- * Rebase instances that sit in the past onto `targetKey`, preserving time of day,
- * duration and identity. Future instances are deliberately left alone — the user
+ * Rebase active instances that sit in the past onto `targetKey` without a clock time.
+ * Future instances and completed history are deliberately left alone — the user
  * scheduled those on purpose and grouping keys on dueDate anyway.
  *
  * Returns `null` when nothing changed, so the caller can omit the key entirely and
  * avoid tripping syncDateFields' instances→dueDate back-sync (taskOperations.ts).
  */
-const rebasePastInstances = <T extends Pick<TaskInstance, 'scheduledDate' | 'isLater'>>(
+const rebasePastInstances = <T extends Pick<TaskInstance, 'scheduledDate' | 'scheduledTime' | 'isLater'> & { status?: string }>(
     instances: T[] | undefined,
     targetKey: string,
     today: Date
@@ -42,11 +42,11 @@ const rebasePastInstances = <T extends Pick<TaskInstance, 'scheduledDate' | 'isL
 
     let changed = false
     const rebased = instances.map(instance => {
-        if (instance.isLater) return instance
+        if (instance.isLater || instance.status === 'completed' || instance.status === 'skipped') return instance
         const scheduled = parseDateKey(instance.scheduledDate)
-        if (!scheduled || scheduled >= today) return instance
+        if (!scheduled || scheduled > today || instance.scheduledDate === targetKey) return instance
         changed = true
-        return { ...instance, scheduledDate: targetKey }
+        return { ...instance, scheduledDate: targetKey, scheduledTime: undefined }
     })
 
     return changed ? rebased : null
@@ -64,10 +64,13 @@ export function getDateColumnUpdates(task: Task, column: string): Partial<Task> 
     if (column === 'inbox' || column === 'noDate') {
         return {
             dueDate: undefined,
-            instances: [],
+            dueTime: undefined,
+            scheduledDate: undefined,
+            scheduledTime: undefined,
+            instances: task.instances?.filter(instance => instance.status === 'completed' || instance.status === 'skipped') ?? [],
             // BUG-1935: getTaskInstances() falls back to recurringInstances, so clearing
             // only `instances` left recurring tasks stuck in their old column.
-            recurringInstances: [],
+            recurringInstances: task.recurringInstances?.filter(instance => 'status' in instance && (instance.status === 'completed' || instance.status === 'skipped')) ?? [],
             ...(column === 'inbox' ? { isInInbox: true } : {})
         }
     }
@@ -76,7 +79,7 @@ export function getDateColumnUpdates(task: Task, column: string): Partial<Task> 
     if (!target) return {}
 
     const targetKey = formatDateKey(target)
-    const updates: Partial<Task> = { dueDate: targetKey }
+    const updates: Partial<Task> = { dueDate: targetKey, dueTime: undefined, scheduledDate: undefined, scheduledTime: undefined }
 
     const instances = rebasePastInstances(task.instances, targetKey, today)
     if (instances) updates.instances = instances

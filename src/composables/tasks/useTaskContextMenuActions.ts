@@ -131,13 +131,18 @@ export function useTaskContextMenuActions(
         const instances = calendarInstanceId && base
             ? base.map(instance =>
                 instance.id === calendarInstanceId
-                    ? { ...instance, scheduledDate: dueDate }
+                    ? instance.status === 'completed' || instance.status === 'skipped'
+                        ? instance
+                        : { ...instance, scheduledDate: dueDate, scheduledTime: undefined }
                     : instance
             )
             : reconciled
 
         await taskStore.updateTaskWithUndo(taskId, {
             dueDate,
+            dueTime: undefined,
+            scheduledDate: undefined,
+            scheduledTime: undefined,
             ...(instances ? { instances } : {})
         })
     }

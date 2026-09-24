@@ -34,7 +34,8 @@ export function useCalendarDragCreate() {
   const quickCreateData = reactive({
     startTime: null as Date | null,
     endTime: null as Date | null,
-    duration: 30
+    duration: 30,
+    timeSelected: true
   })
 
   let pendingExternalDrag: {
@@ -205,6 +206,7 @@ export function useCalendarDragCreate() {
     quickCreateData.startTime = startTime
     quickCreateData.endTime = endTime
     quickCreateData.duration = duration
+    quickCreateData.timeSelected = true
     showQuickCreateModal.value = true
 
     resetCreateDrag()

@@ -499,7 +499,7 @@ export function useTaskOperations(
     }
 
     // CASE 2: instances changed (calendar interaction) → always sync dueDate to earliest instance
-    if (updates.instances !== undefined && updates.dueDate === undefined) {
+    if (updates.instances !== undefined && !Object.prototype.hasOwnProperty.call(updates, "dueDate")) {
       const instances = updates.instances || [];
       if (instances.length > 0) {
         const earliest = instances.reduce((a, b) =>
@@ -2002,23 +2002,15 @@ export function useTaskOperations(
         canvasPosition: undefined,
         isInInbox: false,
       };
-      const nextInstances: TaskInstance[] = nextDueDate
-        ? [
-            {
-              id: crypto.randomUUID(),
-              taskId,
-              scheduledDate: nextDueDate,
-              scheduledTime: task.dueTime,
-              duration: task.estimatedDuration || 25,
-              status: "scheduled",
-            },
-          ]
-        : [];
+      const nextInstances: TaskInstance[] = [];
       const updatedTask: Task = {
         ...task,
         status: nextDueDate ? "todo" : "done",
         completedAt: nextDueDate ? undefined : completedAt,
         dueDate: nextDueDate || currentDueDate,
+        dueTime: undefined,
+        scheduledDate: undefined,
+        scheduledTime: undefined,
         doneForNowUntil: nextDueDate || undefined,
         recurrenceCount: (task.recurrenceCount || 0) + 1,
         instances: nextInstances,
@@ -2087,18 +2079,12 @@ export function useTaskOperations(
         status: "todo",
         completedAt: undefined,
         dueDate: nextDueDate,
+        dueTime: undefined,
+        scheduledDate: undefined,
+        scheduledTime: undefined,
         doneForNowUntil: nextDueDate,
         recurrenceCount: (task.recurrenceCount || 0) + 1,
-        instances: [
-          {
-            id: crypto.randomUUID(),
-            taskId,
-            scheduledDate: nextDueDate,
-            scheduledTime: task.dueTime,
-            duration: task.estimatedDuration || 25,
-            status: "scheduled",
-          },
-        ],
+        instances: [],
         subtasks:
           task.subtasks?.map((st) => ({
             ...st,
@@ -2202,23 +2188,15 @@ export function useTaskOperations(
       canvasPosition: undefined,
       isInInbox: false,
     };
-    const nextInstances: TaskInstance[] = next
-      ? [
-          {
-            id: next.id,
-            taskId,
-            scheduledDate: next.dueDate,
-            scheduledTime: next.scheduledTime,
-            duration: next.duration || task.estimatedDuration || 25,
-            status: "scheduled",
-          },
-        ]
-      : [];
+    const nextInstances: TaskInstance[] = [];
     const updatedTask: Task = {
       ...task,
       status: next ? "todo" : "done",
       completedAt: next ? undefined : new Date(completed.completedAt),
       dueDate: next?.dueDate || task.dueDate,
+      dueTime: undefined,
+      scheduledDate: undefined,
+      scheduledTime: undefined,
       doneForNowUntil: next?.dueDate,
       recurrenceCount: (task.recurrenceCount || 0) + 1,
       instances: nextInstances,
@@ -2493,6 +2471,8 @@ export function useTaskOperations(
   };
 
   const moveTaskToSmartGroup = async (taskId: string, type: string) => {
+    const task = _rawTasks.value.find((candidate) => candidate.id === taskId);
+    if (!task) return;
     const today = new Date();
     let dueDate = "";
     switch (type.toLowerCase()) {
@@ -2530,7 +2510,14 @@ export function useTaskOperations(
         );
         return;
     }
-    await updateTask(taskId, { dueDate });
+    await updateTask(taskId, {
+      dueDate,
+      dueTime: undefined,
+      scheduledDate: undefined,
+      scheduledTime: undefined,
+      instances: task.instances?.filter((instance) => instance.status === "completed" || instance.status === "skipped") ?? [],
+      recurringInstances: task.recurringInstances?.filter((instance) => "status" in instance && (instance.status === "completed" || instance.status === "skipped")) ?? [],
+    });
   };
 
   const moveTaskToDate = async (taskId: string, dateColumn: string) => {
@@ -2542,15 +2529,26 @@ export function useTaskOperations(
     // BUG-1189: Handle 'inbox' and 'noDate' columns
     if (dateColumn === "inbox") {
       await updateTask(taskId, {
-        instances: [],
+        instances: task.instances?.filter((instance) => instance.status === "completed" || instance.status === "skipped") ?? [],
+        recurringInstances: task.recurringInstances?.filter((instance) => "status" in instance && (instance.status === "completed" || instance.status === "skipped")) ?? [],
         dueDate: undefined,
+        dueTime: undefined,
+        scheduledDate: undefined,
+        scheduledTime: undefined,
         isInInbox: true,
       });
       return;
     }
 
     if (dateColumn === "noDate") {
-      await updateTask(taskId, { instances: [], dueDate: undefined });
+      await updateTask(taskId, {
+        instances: task.instances?.filter((instance) => instance.status === "completed" || instance.status === "skipped") ?? [],
+        recurringInstances: task.recurringInstances?.filter((instance) => "status" in instance && (instance.status === "completed" || instance.status === "skipped")) ?? [],
+        dueDate: undefined,
+        dueTime: undefined,
+        scheduledDate: undefined,
+        scheduledTime: undefined,
+      });
       return;
     }
 
@@ -2588,6 +2586,11 @@ export function useTaskOperations(
       // Board date-column drag sets a deadline, not a calendar time slot.
       // Calendar scheduling requires explicit user action (drag to calendar, "Start Now", or edit modal).
       updates.dueDate = targetDateStr;
+      updates.dueTime = undefined;
+      updates.scheduledDate = undefined;
+      updates.scheduledTime = undefined;
+      updates.instances = task.instances?.filter((instance) => instance.status === "completed" || instance.status === "skipped") ?? [];
+      updates.recurringInstances = task.recurringInstances?.filter((instance) => "status" in instance && (instance.status === "completed" || instance.status === "skipped")) ?? [];
     }
     await updateTask(taskId, updates);
   };

@@ -37,6 +37,7 @@
       :start-time="dragCreate.quickCreateData.startTime || new Date()"
       :end-time="dragCreate.quickCreateData.endTime || new Date()"
       :duration="dragCreate.quickCreateData.duration"
+      :time-selected="dragCreate.quickCreateData.timeSelected"
       @close="dragCreate.showQuickCreateModal.value = false"
       @created="handleTaskCreated"
     />
@@ -335,6 +336,7 @@ const handleWeekCellDblClick = (event: MouseEvent, dateString: string, hour: num
   dragCreate.quickCreateData.startTime = startTime
   dragCreate.quickCreateData.endTime = endTime
   dragCreate.quickCreateData.duration = 30
+  dragCreate.quickCreateData.timeSelected = true
   dragCreate.showQuickCreateModal.value = true
 }
 
@@ -351,6 +353,7 @@ const handleMonthCellDblClick = (dateString: string) => {
   dragCreate.quickCreateData.startTime = startTime
   dragCreate.quickCreateData.endTime = endTime
   dragCreate.quickCreateData.duration = 30
+  dragCreate.quickCreateData.timeSelected = false
   dragCreate.showQuickCreateModal.value = true
 }
 const eventHelpers = useCalendarCore()

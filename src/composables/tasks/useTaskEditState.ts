@@ -19,7 +19,7 @@ export function useTaskEditState(
         subtasks: [],
         dueDate: '',
         scheduledDate: '',
-        scheduledTime: '09:00',
+        scheduledTime: '',
         estimatedDuration: 60,
         projectId: '' as string,
         recurrence: {
@@ -171,7 +171,7 @@ export function useTaskEditState(
             // BUG-1097 FIX: Explicitly copy date fields to ensure they're not lost
             dueDate: newTask.dueDate || '',
             scheduledDate: newTask.scheduledDate || '',
-            scheduledTime: newTask.scheduledTime || '09:00'
+            scheduledTime: newTask.scheduledTime || ''
         }
 
         // BUG-1872 FIX: While the modal owns THIS task, the in-editor description is the
@@ -224,7 +224,7 @@ export function useTaskEditState(
                     subtasks: [...(freshTask.subtasks || [])],
                     dueDate: freshTask.dueDate || '',
                     scheduledDate: freshTask.scheduledDate || '',
-                    scheduledTime: freshTask.scheduledTime || '09:00'
+                    scheduledTime: freshTask.scheduledTime || ''
                 }
                 // Snapshot the SERVER value first — a restored draft must read as dirty so
                 // autosave re-persists it (otherwise the recovered text would never be saved).

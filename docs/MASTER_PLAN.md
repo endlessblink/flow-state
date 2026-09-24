@@ -996,19 +996,21 @@ The 2026-08-19 regression hunt reported three failures under `auth/sync`, but th
 **Live boundary proof**: Electron package validation passed; authenticated live mutation/readback remains unverified.
 
 
-### FEATURE-2021: Start a quiet Pomodoro after returning from a long absence
+### ~~FEATURE-2021: Suggest a focus timer after returning from inactivity~~ (✅ DONE)
 
-**Priority**: P1 | **Status**: IN PROGRESS (2026-09-24)
+**Priority**: P1 | **Status**: ✅ DONE (2026-09-24)
 
 **2026-09-24 user change**: Replace the automatic start with a timer suggestion when activity returns after at least 15 seconds of system inactivity. The prompt offers Start timer, Not now, and Discard for today. The last choice persists for the current local calendar day and resets the next day. No timer should start until Start timer is selected; an already active timer suppresses the prompt. The former 25-minute duration picker is removed from settings. Verify the prompt and both dismissal paths in the installed Electron app before closing this task.
 
+**Delivered proof (2026-09-24)**: Electron 1.4.552 was built, published, and installed; the public updater manifest and downloaded AppImage SHA512 match. The live desktop settings show the new 15-second suggestion preference enabled. In a separate display using the same installed AppImage, return from system inactivity showed the visually reviewed prompt with all three actions. Discard for today persisted the local date and suppressed a second return prompt; Not now closed the prompt without saving a daily dismissal. Start timer opened a task-free work session, and the isolated local timer endpoint reported the same active session after 12 seconds. The isolated app used port 5578 to avoid colliding with the normal desktop sidecar on 5577. The 422-file test run passed 4,918 tests with three skips; typecheck, lint, and Electron build passed. Natural return from inactivity in the authenticated desktop profile was not observed during verification because its idle counter repeatedly reset before 15 seconds.
+
 Previously, the Electron app started a task-free, silent work Pomodoro after returning from 25 minutes of inactivity. The 2026-09-24 request above supersedes that behavior. Timer completion keeps the existing flow.
 
-**Required proof before closeout**: focused idle-return regression coverage, Electron bridge/type coverage, timer/settings coverage, typecheck, lint for changed source, Electron build, and a live installed-app check of long absence, no active timer, no task prompt, and existing-timer protection.
+**Closeout scope**: Focused idle-return regressions, Electron bridge/type coverage, timer/settings coverage, typecheck, lint, Electron build, installed settings, packaged prompt and actions, and a persistent timer read-back. Existing-timer protection is covered by regression tests; the authenticated profile's natural idle-return behavior remains a follow-up observation.
 
-**Local evidence (2026-08-14)**: The focused Electron/timer suite passes 63 tests, typecheck passes, the locked Electron package build passes for 1.4.379, and the local updater manifest names 1.4.379 artifacts. The full unit suite and canonical preflight still expose unrelated existing failures in board task ordering and recurring R33 sync; VPS publication and installed-app proof remain externally blocked.
+**Historical baseline (2026-08-14)**: The earlier 25-minute automatic-start version passed its focused Electron/timer suite and Electron build at 1.4.379. Its publication and installed-app proof were open at that time; the 1.4.552 evidence above supersedes those delivery limits.
 
-**Exact failure mode fixed**: There is currently no Electron return-from-away trigger; the existing auto-start work preference is not connected to system activity and is explicitly ignored by the timer completion notification path.
+**Exact failure mode fixed**: Returning from inactivity previously started a work timer automatically under the old preference. It now offers a deliberate Start timer action after 15 seconds and supports dismissal for the current local day.
 
 **Explicitly not covered**: Browser/PWA clients, automatic task selection, or changes to the existing break/completion policy.
 

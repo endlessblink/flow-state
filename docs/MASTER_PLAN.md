@@ -988,9 +988,11 @@ The 2026-08-19 regression hunt reported three failures under `auth/sync`, but th
 
 ### FEATURE-2021: Start a quiet Pomodoro after returning from a long absence
 
-**Priority**: P1 | **Status**: IN PROGRESS (2026-08-14)
+**Priority**: P1 | **Status**: IN PROGRESS (2026-09-24)
 
-After 25 minutes without computer activity, the Electron app should start a standard work Pomodoro on the first return activity when no timer is working. The session is task-free and silent so returning to work does not trigger task-selection popups or a sound; timer completion keeps the existing flow.
+**2026-09-24 user change**: Replace the automatic start with a timer suggestion when activity returns after at least 15 seconds of system inactivity. The prompt offers Start timer, Not now, and Discard for today. The last choice persists for the current local calendar day and resets the next day. No timer should start until Start timer is selected; an already active timer suppresses the prompt. The former 25-minute duration picker is removed from settings. Verify the prompt and both dismissal paths in the installed Electron app before closing this task.
+
+Previously, the Electron app started a task-free, silent work Pomodoro after returning from 25 minutes of inactivity. The 2026-09-24 request above supersedes that behavior. Timer completion keeps the existing flow.
 
 **Required proof before closeout**: focused idle-return regression coverage, Electron bridge/type coverage, timer/settings coverage, typecheck, lint for changed source, Electron build, and a live installed-app check of long absence, no active timer, no task prompt, and existing-timer protection.
 

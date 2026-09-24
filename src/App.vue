@@ -26,6 +26,30 @@
           <MainLayout v-else ref="mainLayout" />
         </ErrorBoundary>
         <ModalManager ref="modalManager" />
+        <NModal :show="showTimerSuggestion" @update:show="dismissTimerSuggestion">
+          <NCard
+            class="timer-suggestion"
+            title="Ready to focus?"
+            role="dialog"
+            aria-modal="true"
+          >
+            <p>You were inactive for at least 15 seconds. Start a focus timer?</p>
+            <p v-if="timerSuggestionError" role="alert">
+              {{ timerSuggestionError }}
+            </p>
+            <div class="timer-suggestion-actions">
+              <NButton type="primary" :loading="isStartingSuggestedTimer" @click="startSuggestedTimer">
+                Start timer
+              </NButton>
+              <NButton @click="discardTimerSuggestionForToday">
+                Discard for today
+              </NButton>
+              <NButton quaternary @click="dismissTimerSuggestion">
+                Not now
+              </NButton>
+            </div>
+          </NCard>
+        </NModal>
         <FaviconManager />
         <!-- PWA Reload Prompt (Browser/PWA Only — not native apps) -->
         <ReloadPrompt v-if="!isTauriApp && !isCapacitorApp" />
@@ -62,7 +86,7 @@
 import '@/assets/design-tokens.css'
 import '@/assets/global-overrides.css'
 
-import { NConfigProvider, NMessageProvider, NGlobalStyle, darkTheme, type GlobalThemeOverrides } from 'naive-ui'
+import { NButton, NCard, NConfigProvider, NMessageProvider, NModal, NGlobalStyle, darkTheme, type GlobalThemeOverrides } from 'naive-ui'
 
 // Date Picker Theme Override - Clean minimal design
 // Today: white text (no special indicator)
@@ -162,7 +186,7 @@ const onStartupReady = () => {
 
 // Initialize App Logic
 // BUG-1339: Capture isDataReady to gate view rendering until tasks are loaded
-const { isDataReady } = useAppInitialization()
+const { isDataReady, showTimerSuggestion, isStartingSuggestedTimer, timerSuggestionError, startSuggestedTimer, dismissTimerSuggestion, discardTimerSuggestionForToday } = useAppInitialization()
 useDeviceSyncDiagnostics()
 
 // Intercept external link clicks so they open in the system browser (Electron)
@@ -266,6 +290,17 @@ onUnmounted(() => {
 </script>
 
 <style>
+.timer-suggestion {
+  width: min(28rem, calc(100vw - 2 * var(--space-4)));
+}
+
+.timer-suggestion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
 /* Global styles that shouldn't be scoped */
 html, body, #app {
   margin: 0;

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createElectronAutoStartMonitor, shouldStartAutomaticPomodoro } from '@/composables/timer/useElectronAutoStart'
+import { createElectronAutoStartMonitor, dismissTimerSuggestionForToday, isTimerSuggestionDismissedToday, shouldStartAutomaticPomodoro } from '@/composables/timer/useElectronAutoStart'
 
 describe('Electron auto-start after absence', () => {
   beforeEach(() => {
@@ -61,5 +61,40 @@ describe('Electron auto-start after absence', () => {
 
     expect(onReturn).toHaveBeenCalledTimes(1)
     monitor.stop()
+  })
+
+  it('offers a timer after 15 seconds away and only when activity returns', async () => {
+    let idleSeconds = 0
+    const onReturn = vi.fn()
+    const monitor = createElectronAutoStartMonitor({
+      absenceSeconds: 15,
+      getSystemIdleSeconds: () => idleSeconds,
+      onReturn,
+    })
+    monitor.start()
+    idleSeconds = 14
+    await vi.advanceTimersByTimeAsync(1_000)
+    idleSeconds = 0
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(onReturn).not.toHaveBeenCalled()
+    idleSeconds = 15
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(onReturn).not.toHaveBeenCalled()
+    idleSeconds = 0
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(onReturn).toHaveBeenCalledOnce()
+    monitor.stop()
+  })
+
+  it('suppresses suggestions for the local day, including after reload, then resets tomorrow', () => {
+    const values = new Map<string, string>()
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => { values.set(key, value) },
+    }
+    const today = new Date(2026, 8, 24, 23, 59)
+    dismissTimerSuggestionForToday(storage, today)
+    expect(isTimerSuggestionDismissedToday(storage, today)).toBe(true)
+    expect(isTimerSuggestionDismissedToday(storage, new Date(2026, 8, 25, 0, 1))).toBe(false)
   })
 })

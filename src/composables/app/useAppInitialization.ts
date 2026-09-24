@@ -41,7 +41,7 @@ import { createCanonicalChangeSupabaseReader } from '@/services/sync/canonicalCh
 import { realtimeRowMatchesScope } from '@/services/sync/realtimeScopeGuard'
 import { startServiceWorkerUpdateRecovery } from '@/services/pwa/serviceWorkerUpdateRecovery'
 import { useDeviceSyncDiagnostics } from '@/composables/sync/useDeviceSyncDiagnostics'
-import { createElectronAutoStartMonitor, getElectronAutoStartApi, shouldStartAutomaticPomodoro } from '@/composables/timer/useElectronAutoStart'
+import { createElectronAutoStartMonitor, dismissTimerSuggestionForToday, getElectronAutoStartApi, isTimerSuggestionDismissedToday, shouldStartAutomaticPomodoro } from '@/composables/timer/useElectronAutoStart'
 
 export function useAppInitialization() {
     const STARTUP_READ_TIMEOUT_MS = 5000
@@ -71,6 +71,39 @@ export function useAppInitialization() {
 
     const router = useRouter()
     const timerStore = useTimerStore()
+    const showTimerSuggestion = ref(false)
+    const isStartingSuggestedTimer = ref(false)
+    const timerSuggestionError = ref('')
+    const dismissTimerSuggestion = () => {
+        showTimerSuggestion.value = false
+        timerSuggestionError.value = ''
+    }
+    const discardTimerSuggestionForToday = () => {
+        try {
+            dismissTimerSuggestionForToday(window.localStorage)
+            dismissTimerSuggestion()
+        } catch (error) {
+            timerSuggestionError.value = 'Could not save your choice. Please try again.'
+            console.warn('[TIMER] Could not save daily suggestion dismissal:', error)
+        }
+    }
+    const startSuggestedTimer = async () => {
+        if (isStartingSuggestedTimer.value) return
+        isStartingSuggestedTimer.value = true
+        timerSuggestionError.value = ''
+        try {
+            await timerStore.resyncFromDatabase(true)
+            if (!timerStore.isTimerActive) {
+                await timerStore.startTimer('general', timerStore.settings.workDuration, false)
+            }
+            dismissTimerSuggestion()
+        } catch (error) {
+            timerSuggestionError.value = 'Could not start the timer. Please try again.'
+            console.warn('[TIMER] Suggested timer start failed:', error)
+        } finally {
+            isStartingSuggestedTimer.value = false
+        }
+    }
     const taskStore = useTaskStore()
     const projectStore = useProjectStore()
     const laneStore = useLaneStore()
@@ -335,21 +368,31 @@ export function useAppInitialization() {
         const electronApi = getElectronAutoStartApi()
         if (electronApi) {
             const monitor = createElectronAutoStartMonitor({
-                absenceSeconds: timerStore.settings.autoStartAfterIdleMinutes * 60,
+                absenceSeconds: 15,
                 getSystemIdleSeconds: async () => Number(await electronApi.getSystemIdleTime()) || 0,
                 onReturn: () => {
+                    if (showTimerSuggestion.value) return
                     if (!shouldStartAutomaticPomodoro({
                         enabled: timerStore.settings.autoStartPomodoros,
                         isTimerActive: timerStore.isTimerActive,
                     })) return
+                    try {
+                        if (isTimerSuggestionDismissedToday(window.localStorage)) return
+                    } catch (error) {
+                        console.warn('[TIMER] Could not read daily suggestion dismissal:', error)
+                    }
                     void timerStore.resyncFromDatabase(true).then(() => {
                         if (!shouldStartAutomaticPomodoro({
                             enabled: timerStore.settings.autoStartPomodoros,
                             isTimerActive: timerStore.isTimerActive,
                         })) return
-                        void timerStore.startTimer('general', timerStore.settings.workDuration, false, { silent: true })
+                        showTimerSuggestion.value = true
                     }).catch((error) => {
-                        console.warn('[TIMER] Automatic return start resync failed:', error)
+                        console.warn('[TIMER] Timer suggestion resync failed:', error)
+                        if (shouldStartAutomaticPomodoro({
+                            enabled: timerStore.settings.autoStartPomodoros,
+                            isTimerActive: timerStore.isTimerActive,
+                        })) showTimerSuggestion.value = true
                     })
                 },
             })
@@ -1550,5 +1593,5 @@ export function useAppInitialization() {
     })
 
     // BUG-1339: Return isDataReady so App.vue can gate view rendering
-    return { isDataReady }
+    return { isDataReady, showTimerSuggestion, isStartingSuggestedTimer, timerSuggestionError, startSuggestedTimer, dismissTimerSuggestion, discardTimerSuggestionForToday }
 }

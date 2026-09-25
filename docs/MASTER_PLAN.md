@@ -1,5 +1,17 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2098: Finish intentional Supabase credential rotation across Doppler and releases (🚧 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-25)
+
+**Failure mode**: The backend was recreated with rotated credentials at 19:00 UTC after a reported GitHub exposure. Electron 1.4.560 retained the previous anonymous key and received gateway HTTP 401. Production Doppler matched the server, but other configs targeting the same production endpoint retained retired keys. The VPS release helper bypassed live credential validation.
+
+**Candidate and boundary**: Preserve the intentional server rotation, reconcile production-bound Doppler configs, store the current signing secret in production Doppler, and rebuild from the production config. Require the VPS release helper to validate a nonprivileged anonymous key against the live backend before packaging. This must reject a stale key or privileged key before release without logging values.
+
+**Acceptance**: Read back Doppler/server equality without exposing values; prove retired keys receive 401 and current anonymous key receives 200; regression-test stale/privileged build rejection; publish a newer Electron/PWA release preserving already shipped catalogue behavior; verify manifest, artifact, installed runtime, and authenticated task read-back. Existing user sessions may require sign-in after signing-secret rotation. No old secret restoration or local-data deletion.
+
+**Remaining proof**: Guard tests, release, installed authentication and task sync.
+
 ### BUG-2097: Catalogue drag remains active after release (🚧 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-24)

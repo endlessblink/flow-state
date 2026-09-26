@@ -26,6 +26,7 @@ import {
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { collectDayGroupAdoptions } from './useCanvasDayGroupAdoption'
 import { getUndoSystem } from '@/composables/undoSingleton'
+import { mergeVisibleTaskOrder } from '@/utils/taskOrdering'
 
 function cloneCanvasGeometrySnapshot(
   tasks: unknown[],
@@ -533,9 +534,21 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       return { groupMoves: [], taskMoves: [], commit: () => Promise.resolve(), release }
     }
 
+    const activeTasks = taskStore.rawTasks.filter((task) => !task._soft_deleted && !task.isCompletionRecord)
+    const originalOrderById = new Map(activeTasks.map((task) => [task.id, task.order]))
+    const movedIds = new Set(taskMoves.map((move) => move.taskId))
+    const mergedOrder = mergeVisibleTaskOrder(activeTasks, taskMoves.map((move) => move.taskId), movedIds)
+    const orderUpdates = new Map<string, number>()
+    for (const task of mergedOrder) {
+      if (typeof task.order === 'number' && task.order !== originalOrderById.get(task.id)) {
+        orderUpdates.set(task.id, task.order)
+      }
+    }
+
     const affectedIds = [...new Set([
       ...groupMoves.map((move) => move.groupId),
       ...taskMoves.map((move) => move.taskId),
+      ...orderUpdates.keys(),
     ])]
     const undoSystem = getUndoSystem()
     const snapshotBefore = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
@@ -566,15 +579,19 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       if (committed) return Promise.resolve()
       committed = true
       const pendingWrites: Promise<unknown>[] = []
-      for (const [index, tm] of taskMoves.entries()) {
+      for (const tm of taskMoves) {
         pendingWrites.push(taskStore.updateTask(
           tm.taskId,
-          { order: index, canvasPosition: tm.position, positionFormat: 'absolute' },
+          { order: orderUpdates.get(tm.taskId) ?? taskStore.getTask(tm.taskId)?.order, canvasPosition: tm.position, positionFormat: 'absolute' },
           'DRAG'
         ))
         // PositionManager updated here (after the drag handler's write) so the
         // reorder position is the authoritative one during subsequent syncs.
         positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
+      }
+      for (const [taskId, order] of orderUpdates) {
+        if (movedIds.has(taskId)) continue
+        pendingWrites.push(taskStore.updateTask(taskId, { order }, 'DRAG'))
       }
       return Promise.all(pendingWrites).then(() => {
         const snapshotAfter = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)

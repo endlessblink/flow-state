@@ -1,5 +1,15 @@
 # FlowState MASTER_PLAN.md
 
+### FEATURE-2098: One-time shared task shuffle from Board and Canvas (🚧 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-24)
+
+**User request**: Add a shuffle action to the focused task timeline and Canvas controls. Rank tasks once by priority or shortest duration, and show the resulting manual order in every view.
+
+**Acceptance**: Reorder all active tasks using the canonical shared order, including filtered tasks; keep completed task slots in place. Restack existing Canvas group members without changing group membership or position. Make the action available in both controls, preserve later manual moves, reset sort preferences only after success, and provide one undo for order and geometry. Verify focused regressions, typecheck, lint, Electron packaging, updater publication, and installed desktop behavior.
+
+**Current evidence**: Electron 1.4.555 was installed, and its Canvas shuffle menu remained translucent over task cards. Electron 1.4.556 replaced that menu with the existing FlowState dropdown and was published, but the running desktop still reported 1.4.555. Read-only live comparison found Timeline Today 18 tasks versus Canvas Today group 15; Timeline's first two tasks were absent from that group, and one was a floating Canvas card. The Canvas shuffle planner used stored parent membership while Canvas renders effective Today membership, so it skipped projected cards. The source fix aligns the planner and sync projection with the canonical Today list. Focused planner, cross-view transaction, Today projection, and undo tests pass. The 1.4.557 release passed task consistency (37), Electron sync (378), full unit suite (4,932 passed, 3 skipped), typecheck, and package validation, but updater publication refused a different artifact already published as 1.4.557. Electron 1.4.558 passed the same release gates and package validation and was published. A concurrent 1.4.559 mainline release then became public and installed without the shuffle branch, so the Canvas priority action was absent. The 1.4.560 package passed 4,932 tests and validation, but the VPS refused publication because another artifact already held that version. Mainline 1.4.561 then shipped without this feature. The combined branch now targets 1.4.562. Focused shuffle tests (15), Electron sync (378), and typecheck pass on the combined tree. The canonical Electron build prehook stops at its local-Supabase E2E gate because no local instance is running; the release script uses the locked package build after its own unit gates. Installed visual and authenticated task-order checks remain open.
+
 ### BUG-2098: Finish intentional Supabase credential rotation across Doppler and releases (🚧 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-25)
@@ -16,7 +26,7 @@
 
 **Recovery candidate**: Classify the exact gateway authentication message as retryable authentication before the broad invalid-input rule. Preserve durable payloads, ordering, ownership checks, and conflict handling; use existing retry only after authenticated live verification and inspection of the selected failed entries. No automatic migration, blanket conflict rebase, or queue deletion.
 
-**Remaining proof**: Classification and persisted-error UI regressions, release 1.4.562 preserving already shipped calendar behavior, installed retry eligibility, scoped queue recovery, and authenticated task sync.
+**Remaining proof**: Release 1.4.563 preserving already shipped calendar and Canvas behavior, installed retry eligibility, scoped queue recovery, and authenticated task sync. Classification/UI regressions (241 tests), sync regressions (379 tests), typecheck and source lint pass. Version 1.4.562 was concurrently published from another source; its Canvas changes are integrated before the next release.
 ### BUG-2096: Calendar Inbox Priority selection must actually reorder tasks (🚧 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-24)

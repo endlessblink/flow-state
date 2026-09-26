@@ -30,6 +30,17 @@
           compact
         />
 
+        <NDropdown :options="shuffleOptions" trigger="click" @select="handleShuffleSelect">
+          <button
+            class="filter-toggle icon-only"
+            :disabled="shuffleInFlight"
+            title="Shuffle all tasks by priority or duration"
+            aria-label="Shuffle all tasks"
+          >
+            <ListOrdered :size="20" :stroke-width="1.5" />
+          </button>
+        </NDropdown>
+
         <!-- Filter Toggle (collapsed by default) -->
         <button
           class="filter-toggle icon-only"
@@ -194,7 +205,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { usePersistentRef } from '@/composables/usePersistentRef'
-import { useMessage } from 'naive-ui'
+import { NDropdown, useMessage } from 'naive-ui'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
 import type { TaskAttachment, TaskPriority } from '@/types/tasks'
@@ -211,6 +222,7 @@ import { useBoardState, sortTasksForBoard, type BoardSortOption } from '@/compos
 import { useBoardPriorityFilter } from '@/composables/board/useBoardPriorityFilter'
 import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete'
 import { mergeVisibleTaskOrder } from '@/utils/taskOrdering'
+import { runTaskShuffle, type TaskShuffleMode } from '@/composables/tasks/useTaskShuffle'
 
 import './BoardView.css'
 
@@ -220,7 +232,7 @@ import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
-import { CheckCircle, Circle, SlidersHorizontal, Flag, Calendar, FolderOpen } from 'lucide-vue-next'
+import { CheckCircle, Circle, SlidersHorizontal, Flag, Calendar, FolderOpen, ListOrdered } from 'lucide-vue-next'
 
 import FilterControls from '@/components/base/FilterControls.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
@@ -241,6 +253,25 @@ const timerStore = useTimerStore()
 const uiStore = useUIStore()
 const settingsStore = useSettingsStore()
 const message = useMessage()
+const shuffleInFlight = ref(false)
+const shuffleOptions = [
+  { label: 'Shuffle by priority', key: 'priority' },
+  { label: 'Shuffle by duration', key: 'duration' },
+]
+
+const handleShuffleSelect = async (key: string | number) => {
+  if ((key !== 'priority' && key !== 'duration') || shuffleInFlight.value) return
+  shuffleInFlight.value = true
+  try {
+    await runTaskShuffle(key as TaskShuffleMode)
+    boardSortOption.value = 'manual'
+  } catch (error) {
+    console.error('Failed to shuffle tasks:', error)
+    message.error('Task shuffle could not be saved')
+  } finally {
+    shuffleInFlight.value = false
+  }
+}
 
 
 // Provide progressive disclosure state for TaskCard components

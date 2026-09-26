@@ -80,6 +80,22 @@
         >
           <LayoutGrid :size="14" />
         </button>
+        <NDropdown
+          trigger="click"
+          placement="left-start"
+          :z-index="1200"
+          :options="shuffleOptions"
+          @select="selectShuffle"
+        >
+          <button
+            class="toolbar-btn"
+            title="Shuffle task order"
+            aria-label="Shuffle task order"
+            aria-haspopup="menu"
+          >
+            <ListFilter :size="14" />
+          </button>
+        </NDropdown>
         <button
           v-if="showTidyDebug"
           class="toolbar-btn"
@@ -104,20 +120,30 @@
 </template>
 
 <script setup lang="ts">
-import { Plus, FolderPlus, Calendar, CalendarX, CheckCheck, CalendarClock, LayoutGrid, ClipboardList, ClipboardCheck } from 'lucide-vue-next'
+import { NDropdown } from 'naive-ui'
+import { Plus, FolderPlus, Calendar, CalendarX, CheckCheck, CalendarClock, LayoutGrid, ListFilter, ClipboardList, ClipboardCheck } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'addTask'): void
   (e: 'createGroup', event: MouseEvent): void
   (e: 'rotateDayGroups'): void
   (e: 'tidyLayout'): void
+  (e: 'shuffleTasks', mode: 'priority' | 'duration'): void
   (e: 'debugTidyPlan'): void
   (e: 'debugTidyApply'): void
 }>()
 
 const taskStore = useTaskStore()
 const showTidyDebug = import.meta.env.DEV
+const shuffleOptions = [
+  { label: 'Shuffle by priority', key: 'priority' },
+  { label: 'Shuffle by duration', key: 'duration' },
+]
+
+function selectShuffle(key: string | number) {
+  if (key === 'priority' || key === 'duration') emit('shuffleTasks', key)
+}
 </script>
 
 <style scoped>

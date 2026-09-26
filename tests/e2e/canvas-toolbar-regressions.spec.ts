@@ -51,6 +51,29 @@ const pinia = (page: import('@playwright/test').Page) =>
     return root.__vue_app__._context.config.globalProperties.$pinia
   })
 
+test('Canvas shuffle menu stays readable above the inbox rail', async ({ page }) => {
+  await page.goto('/#/canvas')
+  await page.getByRole('button', { name: 'Shuffle task order' }).click()
+
+  const menu = page.getByRole('menu')
+  await expect(menu.getByText('Shuffle by priority')).toBeVisible()
+  await expect(menu.getByText('Shuffle by duration')).toBeVisible()
+
+  const menuBounds = await menu.boundingBox()
+  const viewport = page.viewportSize()
+  expect(menuBounds).not.toBeNull()
+  expect(viewport).not.toBeNull()
+  expect(menuBounds!.x).toBeGreaterThanOrEqual(0)
+  expect(menuBounds!.x + menuBounds!.width).toBeLessThanOrEqual(viewport!.width)
+
+  const topmostMenu = await menu.evaluate(element => {
+    const bounds = element.getBoundingClientRect()
+    const topmost = document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2)
+    return !!topmost && element.contains(topmost)
+  })
+  expect(topmostMenu).toBe(true)
+})
+
 // Spec A — BUG-1781: hide-overdue toggle reactively re-filters --------------
 
 test.describe('BUG-1781 — Canvas hide-overdue toggle reactively re-filters', () => {

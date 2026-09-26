@@ -231,11 +231,11 @@ export function useCanvasSync() {
                 // turn a historical completion record back into a visible card.
                 .filter(task => !task.canvasDismissed && !task.isCompletionRecord && !task._soft_deleted)
                 .map(task => {
-                    if (task.canvasPosition || !todayGroup || !todayTaskIds.has(task.id)) return task
+                    if (!todayGroup || !todayTaskIds.has(task.id)) return task
                     return {
                         ...task,
                         parentId: todayGroup.id,
-                        canvasPosition: {
+                        canvasPosition: task.canvasPosition ?? {
                             x: todayGroup.position.x + CANVAS.GROUP_PADDING,
                             y: fallbackTodayY.get(task.id) ??
                                 todayGroup.position.y + CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING,

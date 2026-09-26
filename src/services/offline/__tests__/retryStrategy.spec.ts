@@ -358,6 +358,20 @@ describe('formatTimeUntilRetry', () => {
 // ---------------------------------------------------------------------------
 
 describe('classifyError', () => {
+  it.each([
+    'Invalid authentication credentials',
+    'INVALID AUTHENTICATION CREDENTIALS',
+    new Error('Invalid authentication credentials'),
+    { message: 'Invalid authentication credentials' },
+  ])('classifies the persisted gateway credential rejection as auth: %s', (error) => {
+    expect(classifyError(error)).toBe('auth')
+    expect(getRetryConfigForError(classifyError(error))).not.toBeNull()
+  })
+
+  it.each(['invalid input syntax for type uuid', 'invalid_canonical_preview', 'Invalid authentication credentials in task title'])('keeps unrelated invalid-data errors permanent: %s', (message) => {
+    expect(classifyError(message)).toBe('permanent')
+  })
+
   // --- transient ---
 
   describe("classifies as 'transient'", () => {

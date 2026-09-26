@@ -2145,6 +2145,29 @@ describe('Permanent failure pub/sub (onPermanentFailure)', () => {
 // 6. COMPOSABLE RETURN SHAPE
 // ===========================================================================
 describe('useSyncOrchestrator composable return shape', () => {
+  it('retries persisted gateway auth failures without changing durable intent or retrying invalid data', async () => {
+    const failures = [makeOp({
+      id: 311, status: 'failed', retryCount: 1,
+      nextRetryAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
+      lastError: 'Invalid authentication credentials',
+      userId: 'user-001', workspaceId: null,
+      payload: { title: 'Keep my edit' },
+    }), makeOp({
+      id: 312, status: 'failed', lastError: 'invalid input syntax for type uuid',
+    })]
+    const original = JSON.parse(JSON.stringify(failures))
+    writeQueueMocks.getFailedOperations.mockResolvedValue(failures)
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    writeQueueMocks.updateOperation.mockClear()
+    await sync.retryFailed()
+    expect(writeQueueMocks.updateOperation).toHaveBeenCalledTimes(1)
+    expect(writeQueueMocks.updateOperation).toHaveBeenCalledWith(311, {
+      status: 'pending', nextRetryAt: undefined,
+    })
+    expect(JSON.parse(JSON.stringify(failures))).toEqual(original)
+  })
+
   it('manual retry unlocks permanent failures even when their retry time is far in the future', async () => {
     const failed = makeOp({
       id: 301,

@@ -177,6 +177,9 @@ export function classifyError(error: unknown): ErrorClassification {
 
   if (
     httpStatus === 401 ||
+    // Gateway key rotation can persist only this message, without HTTP status.
+    // Keep it retryable after credentials recover; other invalid data stays permanent.
+    lowerMessage.trim() === 'invalid authentication credentials' ||
     lowerMessage.includes('jwt expired') ||
     lowerMessage.includes('invalid jwt') ||
     lowerMessage.includes('token is expired') ||

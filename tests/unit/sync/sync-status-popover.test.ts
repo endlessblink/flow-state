@@ -128,6 +128,41 @@ describe('sync status auth-error watchdog', () => {
     expect(document.body.textContent).not.toContain('Sync needs attention. The app will retry recoverable local changes.')
   })
 
+  it('offers Retry All for 80 persisted gateway auth failures while retaining invalid-data attention', async () => {
+    const { default: SyncErrorPopover } = await import('@/components/sync/SyncErrorPopover.vue')
+    const errors = Array.from({ length: 80 }, (_, index) => ({
+      id: index + 1,
+      entityType: index % 2 ? 'task' as const : 'group' as const,
+      entityId: `auth-failed-${index}`,
+      userId: 'current-user',
+      workspaceId: null,
+      operation: 'update' as const,
+      payload: { name: 'Preserved local change' },
+      status: 'failed' as const,
+      retryCount: 1,
+      createdAt: Date.now() - 12 * 60 * 60 * 1000,
+      nextRetryAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
+      lastError: 'Invalid authentication credentials',
+    }))
+    wrapper = mount(SyncErrorPopover, {
+      attachTo: document.body,
+      props: { errors },
+      global: { stubs: { Teleport: false } },
+    })
+    await nextTick()
+    expect(document.body.textContent).toContain('Retry All')
+    expect(document.body.textContent).not.toContain('Manual resolution required')
+    expect(document.body.textContent).not.toContain('need attention')
+    document.querySelector<HTMLButtonElement>('.retry-btn')!.click()
+    await nextTick()
+    expect(wrapper.emitted('retry')).toHaveLength(1)
+
+    await wrapper.setProps({ errors: [{ ...errors[0], id: 81, lastError: 'invalid input syntax for type uuid' }, ...errors] })
+    expect(document.body.textContent).toContain('Retry All')
+    expect(document.body.textContent).toContain('Manual resolution required')
+    expect(document.body.textContent).toContain('1 need attention')
+  })
+
   it('does not offer retry for a task missing from the authoritative projection', async () => {
     const { default: SyncErrorPopover } = await import('@/components/sync/SyncErrorPopover.vue')
 

@@ -10,7 +10,13 @@
 
 **Acceptance**: Read back Doppler/server equality without exposing values; prove retired keys receive 401 and current anonymous key receives 200; regression-test stale/privileged build rejection; publish a newer Electron/PWA release preserving already shipped catalogue behavior; verify manifest, artifact, installed runtime, and authenticated task read-back. Existing user sessions may require sign-in after signing-secret rotation. No old secret restoration or local-data deletion.
 
-**Remaining proof**: Guard tests, release, installed authentication and task sync.
+**Verified (2026-09-26)**: Production-bound Doppler configs match the rotated server credentials; production Doppler stores the signing secret. Retired anonymous/service-role keys receive 401; current anonymous key receives 200. Guard tests and Electron sync regressions pass. Published and installed 1.4.561 artifact hashes match, its embedded anonymous key matches the gateway, and its application code contains neither the current signing secret nor service-role key. The running local API reports authentication ready.
+
+**Additional failure mode**: 80 persisted task/group failures containing `Invalid authentication credentials` remain stuck because the broad `invalid` classifier incorrectly marks this gateway authentication error permanent, hiding Retry All even after credentials recover.
+
+**Recovery candidate**: Classify the exact gateway authentication message as retryable authentication before the broad invalid-input rule. Preserve durable payloads, ordering, ownership checks, and conflict handling; use existing retry only after authenticated live verification and inspection of the selected failed entries. No automatic migration, blanket conflict rebase, or queue deletion.
+
+**Remaining proof**: Classification and persisted-error UI regressions, release 1.4.562 preserving already shipped calendar behavior, installed retry eligibility, scoped queue recovery, and authenticated task sync.
 ### BUG-2096: Calendar Inbox Priority selection must actually reorder tasks (🚧 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-24)

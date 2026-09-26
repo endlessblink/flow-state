@@ -61,6 +61,24 @@ if (missing.length > 0) {
   process.exit(1)
 }
 
+// This self-hosted backend uses anon JWTs. Decoding is a least-privilege
+// packaging check; the backend request below still verifies acceptance.
+try {
+  const segments = String(env.VITE_SUPABASE_ANON_KEY).split('.')
+  if (segments.length !== 3 || segments.some((part) => !/^[A-Za-z0-9_-]+$/.test(part))) {
+    throw new Error('invalid JWT encoding')
+  }
+  const header = JSON.parse(Buffer.from(segments[0], 'base64url').toString('utf8'))
+  const payload = JSON.parse(Buffer.from(segments[1], 'base64url').toString('utf8'))
+  if (header?.alg !== 'HS256' || payload?.role !== 'anon') {
+    throw new Error('invalid client role or algorithm')
+  }
+} catch {
+  console.error('[electron-env] ERROR: VITE_SUPABASE_ANON_KEY must be an anon-role JWT for this self-hosted backend.')
+  console.error('[electron-env] Refusing to bundle a privileged or malformed credential.')
+  process.exit(1)
+}
+
 async function validateBackendCredential() {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 5_000)

@@ -10,6 +10,36 @@
 
 **Current evidence**: Electron 1.4.555 was installed, and its Canvas shuffle menu remained translucent over task cards. Electron 1.4.556 replaced that menu with the existing FlowState dropdown and was published, but the running desktop still reported 1.4.555. Read-only live comparison found Timeline Today 18 tasks versus Canvas Today group 15; Timeline's first two tasks were absent from that group, and one was a floating Canvas card. The Canvas shuffle planner used stored parent membership while Canvas renders effective Today membership, so it skipped projected cards. The source fix aligns the planner and sync projection with the canonical Today list. Focused planner, cross-view transaction, Today projection, and undo tests pass. The 1.4.557 release passed task consistency (37), Electron sync (378), full unit suite (4,932 passed, 3 skipped), typecheck, and package validation, but updater publication refused a different artifact already published as 1.4.557. Electron 1.4.558 passed the same release gates and package validation and was published. A concurrent 1.4.559 mainline release then became public and installed without the shuffle branch, so the Canvas priority action was absent. The 1.4.560 package passed 4,932 tests and validation, but the VPS refused publication because another artifact already held that version. Mainline 1.4.561 then shipped without this feature. The combined branch now targets 1.4.562. Focused shuffle tests (15), Electron sync (378), and typecheck pass on the combined tree. The canonical Electron build prehook stops at its local-Supabase E2E gate because no local instance is running; the release script uses the locked package build after its own unit gates. Installed visual and authenticated task-order checks remain open.
 
+### BUG-2100: Upload queue starved by repeated full reloads and duplicate group saves (🚧 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-26) — awaiting installed 1.4.565 proof
+
+**Failure mode**: After a burst of queued task writes (startup Tidy repair: 48 order updates), each realtime echo for a task that still had a pending write called `recoverSkippedTaskChange`, which scheduled an uncoalesced full `reloadCoreData()`. Those reloads hold the queue-processor barrier, so queue passes returned `contended` silently; gateway logs showed ~5s GET reload cycles and zero writes for minutes. Each canvas reload also re-saved unchanged day groups as new group upserts (earlier the same loop produced ~670 identical upserts per group while uploads were blocked).
+
+**Fix (scoped)**: Coalesce skipped-echo reloads into one running reload plus one follow-up, and give the upload queue a turn before each reload. Skip enqueueing a group upsert when an identical unsent one (ignoring `updated_at`) is already waiting.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Orange 9+ badge after updating to 1.4.564; pending grew 37→165 with no writes | Yes |
+| Data shape / persisted row shape | Yes | Offline copy of device queue: 48 task order updates + 117 identical group upserts | Yes |
+| Renderer store/state | Yes | recoverSkippedTaskChange → reloadCoreData under runWithQueueProcessorBarrier | Yes |
+| Electron main/preload bridge | N/A | Renderer-only scheduling | N/A |
+| Localhost sidecar endpoint | Checked | Readiness reports 1.4.564 authenticated | N/A |
+| KDE polling/control path | N/A | Widget does not use the renderer queue | N/A |
+| Supabase persistence/realtime | Yes | Gateway: PATCH tasks stop at 19:34:36 while GET reload cycles continue | Yes (echo-triggered reloads) |
+| Updater/runtime version | Pending | Ships in 1.4.565 | Pending install |
+| Stale live process/cache state | Yes | Existing duplicates still coalesce on upload | Existing path |
+
+**Exact failure mode fixed**: uncoalesced echo-driven full reloads starving the upload queue, and duplicate unchanged group upserts.
+
+**Explicitly not covered**: the canvas float/position drift that makes groups re-save at all; foreground/visibility reloads (already throttled to 3s) still take the barrier.
+
+**Regression added for reported repro**: 48-request burst collapses to one reload plus one follow-up with a queue turn before each; identical group upsert detection ignores updated_at/key order and never suppresses real changes or completed writes.
+
+**Live boundary proof**: pending installed 1.4.565 and gateway write resumption.
+
 ### BUG-2099: Stale "previous change may not have saved" warning could never clear (🚧 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-26) — awaiting installed 1.4.564 proof

@@ -543,6 +543,34 @@ export async function hasEarlierUnresolvedOperation(
   );
 }
 
+/**
+ * BUG-2100: True when an unsent operation for this entity already carries the
+ * same payload (ignoring volatile timestamps). Callers that re-save unchanged
+ * state can skip enqueueing a duplicate that would only grow the queue.
+ */
+export async function hasIdenticalUnsentOperation(
+  entityType: SyncEntityType,
+  entityId: string,
+  operation: WriteOperation["operation"],
+  payload: Record<string, unknown>,
+  ignoredKeys: readonly string[] = ["updated_at"],
+): Promise<boolean> {
+  const normalize = (value: Record<string, unknown>) => {
+    const copy: Record<string, unknown> = { ...value };
+    for (const key of ignoredKeys) delete copy[key];
+    return JSON.stringify(copy, Object.keys(copy).sort());
+  };
+  const target = normalize(JSON.parse(JSON.stringify(payload)));
+  const operations = await getOperationsForEntity(entityType, entityId);
+  return operations.some(
+    (candidate) =>
+      candidate.operation === operation &&
+      !candidate.canonicalTaskPatch &&
+      (candidate.status === "pending" || candidate.status === "failed" || candidate.status === "syncing") &&
+      normalize(candidate.payload ?? {}) === target,
+  );
+}
+
 /** Protect optimistic state while a later same-scope operation is still durable. */
 export async function hasLaterUnresolvedOperation(
   operation: WriteOperation,

@@ -20,6 +20,7 @@ import { fromSupabaseTask, fromSupabaseProject, fromSupabaseGroup, fromSupabaseL
 import type { RealtimePayload } from '@/composables/supabase/useRealtimeSubscription'
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 import { runWithQueueProcessorBarrier } from '@/services/offline/queueProcessorLock'
+import { createCoalescedReloader } from '@/composables/app/coalescedReload'
 import { useBeforeUnload } from '@/composables/useBeforeUnload'
 import { getInitialOnlineState } from '@/utils/platform'
 // BUG-1411: Cache stats for offline mode detection
@@ -325,11 +326,16 @@ export function useAppInitialization() {
         })()
     }
 
+    // BUG-2100: coalesce skipped-echo reloads and let the queue upload first,
+    // otherwise a burst of echoes serializes full reloads that starve it.
+    const skippedChangeReloader = createCoalescedReloader({
+        reload: reloadCoreData,
+        beforeReload: () => useSyncOrchestrator().forceSync(),
+        onError: error => console.warn('[REALTIME] Skipped-change reload deferred:', error instanceof Error ? error.message : error),
+    })
     const recoverSkippedTaskChange = () => {
         invalidateCache.all()
-        window.setTimeout(async () => {
-            await reloadCoreData()
-        }, 0)
+        void skippedChangeReloader.request()
     }
 
     let localApiReloadTimer: number | null = null

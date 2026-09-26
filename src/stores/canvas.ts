@@ -24,6 +24,7 @@ import {
   isReadCacheScopeTokenCurrent,
 } from '@/services/offline/readCacheDB'
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
+import { hasIdenticalUnsentOperation } from '@/services/offline/writeQueueDB'
 import { useAuthStore } from './auth'
 import { toSupabaseGroup } from '@/utils/supabaseMappers'
 export * from './canvas/types'
@@ -62,6 +63,9 @@ export const useCanvasStore = defineStore('canvas', () => {
     if (!payload) return
 
     try {
+      // BUG-2100: canvas reloads re-save unchanged groups; while an identical
+      // upsert is still waiting, adding another only grows the queue.
+      if (await hasIdenticalUnsentOperation('group', group.id, 'create', payload as unknown as Record<string, unknown>)) return
       await useSyncOrchestrator().enqueue({
         entityType: 'group',
         operation: 'create',

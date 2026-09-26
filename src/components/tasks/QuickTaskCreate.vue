@@ -214,6 +214,7 @@ interface Props {
   startTime: Date
   endTime: Date
   duration: number
+  timeSelected: boolean
 }
 
 const props = defineProps<Props>()
@@ -241,7 +242,7 @@ const aiAssistPosition = ref({ x: 0, y: 0 })
 const localDate = ref('')
 const localStartTime = ref('')
 const localEndTime = ref('')
-const hasTime = ref(true) // Time is enabled by default when coming from calendar
+const hasTime = ref(props.timeSelected)
 
 // Hebrew alignment
 const { getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
@@ -432,7 +433,8 @@ const handleCreate = async () => {
     status: 'todo',
     estimatedDuration: duration.value,
     projectId: projectId.value || undefined,
-    instances: [instanceData]
+    dueDate: schedDate,
+    instances: schedTime ? [instanceData] : []
   })
 
   emit('created', task)
@@ -447,7 +449,7 @@ const handleCreate = async () => {
   localDate.value = ''
   localStartTime.value = ''
   localEndTime.value = ''
-  hasTime.value = true
+  hasTime.value = false
 }
 
 // Focus input when modal opens and initialize from props
@@ -465,7 +467,7 @@ watch(() => props.isOpen, (isOpen) => {
     localDate.value = props.startTime.toISOString().split('T')[0]
     localStartTime.value = formatTimeForInput(props.startTime)
     localEndTime.value = formatTimeForInput(props.endTime)
-    hasTime.value = true
+    hasTime.value = props.timeSelected
 
     nextTick(() => {
       titleInput.value?.focus()

@@ -29,6 +29,16 @@ describe('representativeInstanceDate', () => {
   it('returns null with no instances', () => {
     expect(representativeInstanceDate(task({}), '2026-06-01')).toBeNull()
   })
+
+  it('does not let completed history override the living due date', () => {
+    const t = task({
+      dueDate: '2026-06-02',
+      recurrenceRule: { frequency: 'daily' } as unknown as Task['recurrenceRule'],
+      instances: [{ scheduledDate: '2026-05-29', scheduledTime: '14:00', status: 'completed' }] as Task['instances'],
+    })
+    expect(representativeInstanceDate(t, '2026-06-01')).toBeNull()
+    expect(computeDueStatus(t, NOW)).toEqual({ type: 'tomorrow', text: 'Tomorrow' })
+  })
 })
 
 describe('computeDueStatus', () => {

@@ -1,5 +1,63 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2096: Calendar Inbox Priority selection must actually reorder tasks (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-09-26)
+
+**User repro**: Selecting Priority in the Calendar Inbox sort control leaves the visible task order unchanged.
+
+**Failure mode**: The selected inbox sort is only a secondary tie-break after the global Main Sort, so a non-tied global order hides the user's choice.
+
+**Acceptance**: An explicit inbox sort and its direction control the visible order; Main order follows the global sort. Test conflicting global/local priority orders and deterministic ties in the desktop inbox, then ship and read back the Electron release.
+
+**Implementation evidence (2026-09-26)**: Explicit local sorting precedes Main order, with priority direction and tie regressions passing. Typecheck, focused tests, source lint, the full release test gate, and Electron 1.4.561 package validation passed. The public updater and installed app report 1.4.561 with matching sidecar provenance. The installed Calendar Inbox visibly reordered the seven Today tasks in both priority directions.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Installed Calendar Inbox reordered Today tasks in both Priority directions. | Yes |
+| Data shape / persisted row shape | Yes | Priority and due-date combinations covered by focused sort regressions. | Yes |
+| Renderer store/state | Yes | Explicit inbox sort now takes precedence over global Main order. | Yes |
+| Electron main/preload bridge | N/A | Sorting runs in the renderer without a bridge call. | N/A |
+| Localhost sidecar endpoint | N/A | Sorting runs on already-loaded task state. | N/A |
+| KDE polling/control path | N/A | No desktop polling or control involved. | N/A |
+| Supabase persistence/realtime | N/A | This change does not alter task writes or realtime transport. | N/A |
+| Updater/runtime version | Yes | Public and installed 1.4.561 matched with sidecar provenance at verification. | Yes |
+| Stale live process/cache state | Yes | Installed 1.4.561 interaction was exercised after update. | Yes |
+
+**Exact failure mode fixed**: The global Main sort no longer masks the selected Calendar Inbox Priority sort or its direction.
+
+**Explicitly not covered**: Sync errors and calendar occurrence timing are tracked separately.
+
+**Regression added for reported repro**: Conflicting global/local priorities and deterministic tie order in `useCalendarInboxState` tests.
+
+**Live boundary proof**: The installed authenticated 1.4.561 Calendar Inbox visibly changed seven Today tasks from ascending to descending Priority order.
+
+### BUG-2095: Calendar dates must not invent or retain clock times (🚧 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-24)
+
+**User repro**: Untimed tasks appear as hourly calendar blocks; Done for now and date-only moves carry an old event time onto a new date.
+
+**Product rule**: Date-only tasks remain in the Calendar Inbox. Only an explicit occurrence time or drop into a clock slot creates a timed calendar block. Done for now and date-only moves clear the affected occurrence's time; completed historical occurrences keep their original date and time.
+
+**Acceptance**: Remove default 09:00 projections and task-editor defaults; align day, week, month, recurrence preview, inbox eligibility, date moves, and local/authenticated Done-for-now paths. Preserve unrelated explicitly timed occurrences. Regression tests cover create, edit, move, completion, recurring RPC, and authenticated desktop read-back before Electron updater delivery.
+
+**Implementation evidence (2026-09-26)**: Calendar projections, creation, editing, date moves, and local Done for now require explicit times. The authenticated RPC migration applied to production and live function read-back confirmed empty next instances and cleared time fields. Focused tests, the full release test gate, and Electron 1.4.561 package validation passed. The public updater and installed app report 1.4.561 with matching sidecar provenance. The installed authenticated day grid showed no untimed task blocks. A live create/move/Done-for-now interaction and local Supabase E2E remain open.
+
+### BUG-2094: Trace and prevent historical completions moving onto today (🚧 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-24)
+
+**User repro**: A crossed-out “לשטוף כלים” block appeared at 2:00 PM on 2026-09-24 although the user did not mark it done that day.
+
+**Failure class under investigation**: Date-change helpers rebase past instances onto the picked date without excluding completed instances, retaining their completed status and time. The live task has a completed occurrence dated 2026-09-24 at 14:00 while the task itself is planned. Its creation audit is from 2026-09-13 and contains no earlier occurrence date, so the precise historical move and original completion date remain unproven.
+
+**Acceptance**: Identify the exact task ID and read its canonical instance/completion history before any record correction. Never redate completed history during due-date or Board moves; keep due badges correct without moving that history. Correct the affected record only if its original date is proven. Add a production-shaped regression and verify the installed authenticated calendar after release.
+
+**Implementation evidence (2026-09-26)**: Date-reconciliation and Board moves preserve completed/skipped occurrence dates and times; regression tests and the full release gate passed. Production task `0d9df0d6-f460-407e-a235-e7ef7211cdeb` has status `planned`, one `completed` instance on 2026-09-24 at 14:00, and a 2026-09-13 creation audit without prior instance values. The public updater and installed app report 1.4.561, and the installed authenticated calendar still visibly shows the crossed-out Sep 24 historical block. Any correction requires proof of the original date; the exact earlier user action remains unproven.
+
 ### BUG-2098: Finish intentional Supabase credential rotation across Doppler and releases (🚧 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-25)

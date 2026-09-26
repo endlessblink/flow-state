@@ -690,13 +690,16 @@ export function generateVirtualCalendarEvents(
           t.status !== 'done'
         )
 
-        if (!realTaskExists) {
+        const explicitlyTimedInstance = headTask.instances?.find(instance =>
+          instance.scheduledDate === currentDate && !!instance.scheduledTime
+        )
+        if (!realTaskExists && explicitlyTimedInstance) {
           virtualEvents.push({
             id: `virtual-${headTask.id}-${currentDate}`,
             taskId: headTask.id,
             title: headTask.title,
             scheduledDate: currentDate,
-            scheduledTime: headTask.dueTime,
+            scheduledTime: explicitlyTimedInstance.scheduledTime,
             duration: headTask.estimatedDuration,
             isVirtual: true,
             projectId: headTask.projectId,

@@ -19,27 +19,22 @@ const task = {
 } as unknown as Task
 
 describe('buildCalendarDoneForTodayUpdate', () => {
-  it('keeps today completed and creates a separate tomorrow occurrence', () => {
+  it('keeps today completed and returns tomorrow to the date-only inbox', () => {
     const update = buildCalendarDoneForTodayUpdate(task, 'instance-today', '2026-08-03', () => 'instance-tomorrow')
 
     expect(update).toMatchObject({
       dueDate: '2026-08-03',
-      scheduledDate: '2026-08-03',
       doneForNowUntil: '2026-08-03'
     })
+    expect(update.scheduledDate).toBeUndefined()
+    expect(update.scheduledTime).toBeUndefined()
+    expect(update.dueTime).toBeUndefined()
     expect(update.instances).toEqual([
       expect.objectContaining({
         id: 'instance-today',
         scheduledDate: '2026-08-02',
-        status: 'completed'
-      }),
-      expect.objectContaining({
-        id: 'instance-tomorrow',
-        taskId: 'task-1',
-        scheduledDate: '2026-08-03',
         scheduledTime: '09:00',
-        duration: 45,
-        status: 'scheduled'
+        status: 'completed'
       })
     ])
   })

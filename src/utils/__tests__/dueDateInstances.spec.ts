@@ -18,7 +18,8 @@ describe('BUG-1909: reconcileStaleInstancesForDueDate', () => {
   it('reschedules a stale past instance onto the picked due date', () => {
     const result = reconcileStaleInstancesForDueDate({ instances: [inst('a', '2026-05-30')] }, '2026-07-10', NOW)
     expect(result).toHaveLength(1)
-    expect(result![0]).toMatchObject({ id: 'a', scheduledDate: '2026-07-10', scheduledTime: '10:00', duration: 60 })
+    expect(result![0]).toMatchObject({ id: 'a', scheduledDate: '2026-07-10', duration: 60 })
+    expect(result![0].scheduledTime).toBeUndefined()
   })
 
   it('leaves future instances untouched (deliberate calendar placements)', () => {
@@ -41,6 +42,23 @@ describe('BUG-1909: reconcileStaleInstancesForDueDate', () => {
   it('accepts a full ISO due date and stores the date part', () => {
     const result = reconcileStaleInstancesForDueDate({ instances: [inst('a', '2026-05-30T10:00:00+00:00')] }, '2026-07-10T00:00:00+00:00', NOW)
     expect(result![0].scheduledDate).toBe('2026-07-10')
+  })
+
+  it('keeps a completed 2 PM occurrence on its original date', () => {
+    const completed = inst('dishes', '2026-07-02', { status: 'completed', scheduledTime: '14:00' })
+    const result = reconcileStaleInstancesForDueDate(
+      { instances: [completed, inst('next', '2026-07-02')] }, '2026-07-03', NOW
+    )
+    expect(result?.[0]).toEqual(completed)
+    expect(result?.[1]).toMatchObject({ scheduledDate: '2026-07-03' })
+    expect(result?.[1].scheduledTime).toBeUndefined()
+  })
+
+  it('moves an active occurrence from today to a new due date without its clock time', () => {
+    const result = reconcileStaleInstancesForDueDate(
+      { instances: [inst('today', '2026-07-03', { scheduledTime: '14:00' })] }, '2026-07-10', NOW
+    )
+    expect(result?.[0]).toMatchObject({ scheduledDate: '2026-07-10', scheduledTime: undefined })
   })
 
   it('USER REPRO end-to-end: recurring task badge moves off "Overdue May 30" after quick-set', () => {

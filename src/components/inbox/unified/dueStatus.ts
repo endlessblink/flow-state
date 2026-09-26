@@ -28,6 +28,7 @@ const formatHumanDate = (dateStr: string): string =>
  */
 export const representativeInstanceDate = (task: Task, today: string): string | null => {
   const dates = (task.instances ?? [])
+    .filter(inst => inst?.status !== 'completed' && inst?.status !== 'skipped')
     .map(inst => inst?.scheduledDate?.split('T')[0])
     .filter((d): d is string => !!d)
     .sort()

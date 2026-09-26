@@ -157,7 +157,7 @@
           :style="{ top: dropIndicator.y + 'px' }"
         />
         <HierarchicalTaskRow
-          v-for="task in group.parentTasks"
+          v-for="task in displayedGroupTasks(group)"
           :key="task.id"
           :task="task"
           :indent-level="0"
@@ -415,6 +415,20 @@ const handleContextMenu = (event: MouseEvent, task: Task) => {
 const dropIndicator = ref<{ groupKey: string | null; y: number; insertIndex: number }>({
   groupKey: null, y: 0, insertIndex: 0
 })
+const pendingDrop = ref<{ groupKey: string; taskIds: string[]; orderIds: string[] } | null>(null)
+
+const displayedGroupTasks = (group: TaskGroup): Task[] => {
+  const drop = pendingDrop.value
+  if (!drop) return group.parentTasks
+  if (group.key !== drop.groupKey) {
+    return group.parentTasks.filter(task => !drop.taskIds.includes(task.id))
+  }
+
+  const tasksById = new Map([...group.parentTasks, ...props.tasks].map(task => [task.id, task]))
+  const ordered = drop.orderIds.map(id => tasksById.get(id)).filter((task): task is Task => !!task)
+  const orderedIds = new Set(drop.orderIds)
+  return [...ordered, ...group.parentTasks.filter(task => !orderedIds.has(task.id))]
+}
 
 // --- Drag to Group Header ---
 const { isDragging, dragData, endDrag } = useDragAndDrop()
@@ -615,7 +629,7 @@ const onGroupDrop = async (event: DragEvent, group: TaskGroup) => {
   }
 
   // Persist order: place the dropped tasks at the insert position
-  const groupTasks = [...group.parentTasks.filter(t => !draggedSet.has(t.id))]
+  const groupTasks = [...displayedGroupTasks(group).filter(t => !draggedSet.has(t.id))]
   const draggedTasks = taskIds.map(id => ({ id } as Task))
   groupTasks.splice(insertIdx, 0, ...draggedTasks)
   const allTasks = props.tasks
@@ -628,7 +642,14 @@ const onGroupDrop = async (event: DragEvent, group: TaskGroup) => {
   endDrag()
 
   if (orderUpdates.length > 0) {
-    await taskStore.bulkUpdateTasksWithUndo(orderUpdates, 'Reorder task group')
+    const drop = { groupKey: group.key, taskIds, orderIds: groupTasks.map(task => task.id) }
+    pendingDrop.value = drop
+    try {
+      await taskStore.bulkUpdateTasksWithUndo(orderUpdates, 'Reorder task group')
+    } finally {
+      await nextTick()
+      if (pendingDrop.value === drop) pendingDrop.value = null
+    }
   }
 }
 

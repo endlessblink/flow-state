@@ -6,6 +6,9 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const scriptPath = resolve(__dirname, '../../../scripts/validate-electron-vite-env.cjs')
 const tempRoots: string[] = []
+const jwt = (payload: Record<string, unknown>) =>
+  `${Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url')}.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.c3ludGhldGljLXNpZ25hdHVyZQ`
+const anonKey = jwt({ role: 'anon' })
 
 function runValidator(root: string, extraEnv: Record<string, string> = {}) {
   return spawnSync(process.execPath, [scriptPath], {
@@ -72,7 +75,7 @@ describe('validate-electron-vite-env', () => {
     const preloadPath = mockSettingsResponse(root, 200)
     writeFileSync(
       join(root, '.env.local'),
-      'VITE_SUPABASE_URL=https://api.in-theflow.com\nVITE_SUPABASE_ANON_KEY=test-anon-key\n'
+      `VITE_SUPABASE_URL=https://api.in-theflow.com\nVITE_SUPABASE_ANON_KEY=${anonKey}\n`
     )
 
     const result = runValidator(root, { NODE_OPTIONS: `--require=${preloadPath}` })
@@ -83,7 +86,7 @@ describe('validate-electron-vite-env', () => {
 
   it('rejects a backend credential that receives 401 without leaking credentials or response bodies', () => {
     const root = makeRoot()
-    const secretKey = 'stale-public-key-that-must-stay-redacted'
+    const secretKey = anonKey
     const secretBody = 'backend-body-that-must-stay-redacted'
     const preloadPath = mockSettingsResponse(root, 401, secretBody)
     writeFileSync(
@@ -103,7 +106,7 @@ describe('validate-electron-vite-env', () => {
 
   it('accepts a backend credential that receives 200 without printing the credential or body', () => {
     const root = makeRoot()
-    const secretKey = 'current-public-key-that-must-stay-redacted'
+    const secretKey = anonKey
     const secretBody = 'settings-body-that-must-stay-redacted'
     const preloadPath = mockSettingsResponse(root, 200, secretBody)
     writeFileSync(
@@ -131,7 +134,7 @@ describe('validate-electron-vite-env', () => {
     const result = runValidator(root, {
       NODE_OPTIONS: `--require=${preloadPath}`,
       VITE_SUPABASE_URL: 'https://api.in-theflow.com',
-      VITE_SUPABASE_ANON_KEY: 'test-anon-key',
+      VITE_SUPABASE_ANON_KEY: anonKey,
     })
 
     expect(result.stderr).toBe('')
@@ -146,11 +149,35 @@ describe('validate-electron-vite-env', () => {
     const result = runValidator(root, {
       NODE_OPTIONS: `--require=${preloadPath}`,
       VITE_SUPABASE_URL: 'https://api.in-theflow.com',
-      VITE_SUPABASE_ANON_KEY: 'test-anon-key',
+      VITE_SUPABASE_ANON_KEY: anonKey,
     })
 
     expect(result.status).toBe(1)
     expect(result.stderr).toContain('HTTP 429')
+  })
+
+  it.each([
+    ['service role', jwt({ role: 'service_role' })],
+    ['authenticated role', jwt({ role: 'authenticated' })],
+    ['missing role', jwt({})],
+    ['malformed JWT', 'not-a-jwt'],
+    ['malformed payload', 'e30.bm90LWpzb24.c2ln'],
+    ['unsigned JWT', `${anonKey.split('.').slice(0, 2).join('.')}.`],
+    ['secret API key', 'sb_secret_synthetic'],
+    ['unsupported publishable key', 'sb_publishable_synthetic'],
+  ])('rejects %s before contacting the backend without printing it', (_label, key) => {
+    const root = makeRoot()
+    const preloadPath = join(root, 'forbid-fetch.cjs')
+    writeFileSync(preloadPath, "global.fetch = () => { console.error('UNEXPECTED_BACKEND_REQUEST'); process.exit(99) }")
+    const result = runValidator(root, {
+      NODE_OPTIONS: `--require=${preloadPath}`,
+      VITE_SUPABASE_URL: 'https://api.in-theflow.com',
+      VITE_SUPABASE_ANON_KEY: key,
+    })
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('must be an anon-role JWT')
+    expect(`${result.stdout}${result.stderr}`).not.toContain(key)
+    expect(`${result.stdout}${result.stderr}`).not.toContain('UNEXPECTED_BACKEND_REQUEST')
   })
 
   it('keeps credential validation wired before Electron release builds', () => {

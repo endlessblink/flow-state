@@ -11,7 +11,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import type { SyncStatus, WriteOperation } from '@/types/sync'
 import { syncState } from '@/composables/sync/useSyncOrchestrator'
-import { writesFailing, writeFailureMessage } from '@/composables/sync/writeHealth'
+import { writesFailing, writeFailureMessage, acknowledgeWriteFailures } from '@/composables/sync/writeHealth'
 import { classifyError } from '@/services/offline/retryStrategy'
 
 export const useSyncStatusStore = defineStore('syncStatus', () => {
@@ -200,6 +200,18 @@ export const useSyncStatusStore = defineStore('syncStatus', () => {
   }
 
   /**
+   * BUG-2099: A direct-write warning with no queued operation behind it can only
+   * be resolved by the user confirming the change landed. Never touches the queue.
+   */
+  const writeWarningOnly = computed(() =>
+    writesFailing.value && queueFailedCount.value === 0 && failedOperations.value.length === 0
+  )
+  const acknowledgeWriteWarning = () => {
+    if (!writeWarningOnly.value) return
+    acknowledgeWriteFailures()
+  }
+
+  /**
    * BUG-1411: Mark that data was loaded from IndexedDB cache (offline mode).
    * Called by useAppInitialization when Supabase fetch fails but cache has data.
    */
@@ -225,6 +237,7 @@ export const useSyncStatusStore = defineStore('syncStatus', () => {
     lastError,
     isOnline,
     failedOperations,
+    writeWarningOnly,
     loadedFromCache,
     cacheTimestamp,
 
@@ -243,6 +256,7 @@ export const useSyncStatusStore = defineStore('syncStatus', () => {
     retryFailed,
     forceSync,
     clearFailed,
+    acknowledgeWriteWarning,
     markLoadedFromCache,
     clearCacheMode,
   }

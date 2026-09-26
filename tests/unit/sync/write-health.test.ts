@@ -20,6 +20,7 @@ import {
   WRITE_TOAST_COOLDOWN_MS,
   restoreUnresolvedWriteHealth,
   setWriteHealthScope,
+  acknowledgeWriteFailures,
 } from '@/composables/sync/writeHealth'
 import { createDatabaseHelpers } from '@/composables/supabase/_infrastructure'
 import { ref } from 'vue'
@@ -327,6 +328,42 @@ describe('withRetry feeds writeHealth (BUG-1913 regression)', () => {
     for (let i = 0; i < 3; i++) {
       await expect(withRetry(() => Promise.reject(nonTransient), 'fetchTasks')).rejects.toThrow()
     }
+    expect(writesFailing.value).toBe(false)
+  })
+})
+
+describe('writeHealth acknowledgement and singleton identities (BUG-2099)', () => {
+  beforeEach(() => {
+    __resetWriteHealthForTests()
+    setWriteHealthScope('user-a')
+    setWriteHealthNotifier(() => {})
+  })
+
+  it('acknowledging clears only the active account and its durable copy', () => {
+    reportWriteFailure('saveProjects', 'boom', 1)
+    reportWriteFailure('saveProjects', 'boom', 2)
+    setWriteHealthScope('user-b')
+    reportWriteFailure('saveProjects', 'boom', 3)
+    reportWriteFailure('saveProjects', 'boom', 4)
+    setWriteHealthScope('user-a')
+    expect(writesFailing.value).toBe(true)
+
+    acknowledgeWriteFailures()
+
+    expect(writesFailing.value).toBe(false)
+    expect(localStorage.getItem(`${WRITE_HEALTH_STORAGE_KEY}:user-a`)).toBeNull()
+    setWriteHealthScope('user-b')
+    expect(writesFailing.value).toBe(true)
+  })
+
+  it('a later successful active timer save clears an earlier failed one', async () => {
+    const { withRetry } = createDatabaseHelpers(ref<string | null>(null), () => 'user-a')
+    const nonTransient = Object.assign(new Error('Invalid authentication credentials'), { status: 400 })
+    for (let i = 0; i < 2; i++) {
+      await expect(withRetry(() => Promise.reject(nonTransient), 'saveActiveTimerSession', 3, 'saveActiveTimerSession')).rejects.toThrow()
+    }
+    expect(writesFailing.value).toBe(true)
+    await withRetry(() => Promise.resolve('ok'), 'saveActiveTimerSession', 3, 'saveActiveTimerSession')
     expect(writesFailing.value).toBe(false)
   })
 })

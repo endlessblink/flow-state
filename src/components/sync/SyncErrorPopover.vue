@@ -37,7 +37,10 @@
             <div class="error-message">
               {{ effectiveLastError }}
             </div>
-            <div v-if="retryableCount === 0" class="resolution-hint">
+            <div v-if="writeWarningOnly" class="resolution-hint">
+              No local changes are waiting to sync. Check that your recent changes look right, then mark this as checked.
+            </div>
+            <div v-else-if="retryableCount === 0" class="resolution-hint">
               These local changes need review before they can sync. They are still saved on this device.
             </div>
           </div>
@@ -102,6 +105,10 @@
             <RefreshCw :size="16" />
             Retry All
           </button>
+          <button v-if="writeWarningOnly" class="retry-btn" @click="$emit('acknowledge')">
+            <CheckSquare :size="16" />
+            Mark as checked
+          </button>
           <button v-if="errors.length > 0" class="clear-btn" @click="$emit('clear')">
             <Trash2 :size="16" />
             Discard local changes
@@ -136,11 +143,13 @@ const props = defineProps<{
   errors: WriteOperation[]
   lastError?: string
   errorCount?: number
+  writeWarningOnly?: boolean
 }>()
 
 defineEmits<{
   retry: []
   clear: []
+  acknowledge: []
   close: []
 }>()
 

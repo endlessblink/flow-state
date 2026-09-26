@@ -131,6 +131,16 @@ export function restoreUnresolvedWriteHealth(): void {
   persistFailureIncidents()
 }
 
+/**
+ * BUG-2099: The user verified the affected change and explicitly marks the
+ * warning as checked. Only reachable from the sync popover when no queued
+ * operation is waiting — this never discards a durable local intent.
+ */
+export function acknowledgeWriteFailures(): void {
+  setScopeIncidents(activeScope, {})
+  lastToastAt = 0
+}
+
 export function setWriteHealthScope(scope: string | null): void {
   if (scope === activeScope) return
   activeScope = scope

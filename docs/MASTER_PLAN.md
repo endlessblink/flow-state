@@ -10,6 +10,38 @@
 
 **Current evidence**: Electron 1.4.555 was installed, and its Canvas shuffle menu remained translucent over task cards. Electron 1.4.556 replaced that menu with the existing FlowState dropdown and was published, but the running desktop still reported 1.4.555. Read-only live comparison found Timeline Today 18 tasks versus Canvas Today group 15; Timeline's first two tasks were absent from that group, and one was a floating Canvas card. The Canvas shuffle planner used stored parent membership while Canvas renders effective Today membership, so it skipped projected cards. The source fix aligns the planner and sync projection with the canonical Today list. Focused planner, cross-view transaction, Today projection, and undo tests pass. The 1.4.557 release passed task consistency (37), Electron sync (378), full unit suite (4,932 passed, 3 skipped), typecheck, and package validation, but updater publication refused a different artifact already published as 1.4.557. Electron 1.4.558 passed the same release gates and package validation and was published. A concurrent 1.4.559 mainline release then became public and installed without the shuffle branch, so the Canvas priority action was absent. The 1.4.560 package passed 4,932 tests and validation, but the VPS refused publication because another artifact already held that version. Mainline 1.4.561 then shipped without this feature. The combined branch now targets 1.4.562. Focused shuffle tests (15), Electron sync (378), and typecheck pass on the combined tree. The canonical Electron build prehook stops at its local-Supabase E2E gate because no local instance is running; the release script uses the locked package build after its own unit gates. Installed visual and authenticated task-order checks remain open.
 
+### BUG-2099: Stale "previous change may not have saved" warning could never clear (🚧 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-26) — awaiting installed 1.4.564 proof
+
+**Failure mode**: After the BUG-2098 credential window, the sync popover kept showing "A previous change may not have saved" with an empty write queue. Restored direct-write incidents (`saveProjects`, `saveActiveTimerSession`, two old `permanentlyDeleteTask:<id>`) only clear on a success with the same write identity; context-only successes never report one, and deletions that later landed another way never retry. The popover offered only Dismiss/Discard and wrongly called them "local changes".
+
+**Fix (scoped)**: When no queued operation is failing, the popover says no local changes are waiting and offers "Mark as checked", which clears only the active account's direct-write incidents (never the queue). The active timer save now uses a singleton write identity so a later successful save self-clears. Not covered: automatic reconciliation of record-level delete incidents (still needs user confirmation).
+
+**Verified**: Queue empty on the affected device; both flagged deleted tasks return not_found from the local API; 29 write-health/popover tests incl. 4 new regressions; vue-tsc + eslint clean.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Popover text with empty queue after credential window | Yes |
+| Data shape / persisted row shape | Yes | Offline copy of device localStorage: 4 incidents (saveProjects, saveActiveTimerSession, 2x permanentlyDeleteTask:<id>) | Yes |
+| Renderer store/state | Yes | syncStatus overlays writesFailing with zero queued failures | Yes |
+| Electron main/preload bridge | N/A | Incidents live in renderer localStorage only | N/A |
+| Localhost sidecar endpoint | Yes | Both deleted task ids return not_found | Evidence only |
+| KDE polling/control path | N/A | Widget does not read write-health | N/A |
+| Supabase persistence/realtime | Yes | Offline copy of device IndexedDB queue has 0 ops/0 conflicts; gateway logs show 200s | Evidence only |
+| Updater/runtime version | Pending | Ships in 1.4.564 | Pending install |
+| Stale live process/cache state | Yes | Warning is durable across restart by design; cleared only by explicit user acknowledgement | Yes |
+
+**Exact failure mode fixed**: restored direct-write incidents with no queued operation had no clearing path; timer-session incidents never self-cleared.
+
+**Explicitly not covered**: automatic reconciliation of record-level delete/project incidents against server truth (user confirms instead).
+
+**Regression added for reported repro**: popover test restores the exact incident shape and clears it via Mark as checked; guard test that queued failures never offer it; timer singleton identity test.
+
+**Live boundary proof**: pending installed 1.4.564.
+
 ### BUG-2098: Finish intentional Supabase credential rotation across Doppler and releases (🚧 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-25)

@@ -290,4 +290,72 @@ describe('sync status auth-error watchdog', () => {
     expect(confirm).toHaveBeenCalledOnce()
     expect(clearFailed).not.toHaveBeenCalled()
   })
+  // BUG-2099: restored direct-write warnings with an empty queue were stuck
+  // forever — the only buttons were Dismiss and Discard, neither clearing it.
+  it('lets the user mark a restored write warning as checked when nothing is queued', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const writeHealth = await import('@/composables/sync/writeHealth')
+    writeHealth.setWriteHealthScope('user-a')
+    localStorage.setItem(`${writeHealth.WRITE_HEALTH_STORAGE_KEY}:user-a`, JSON.stringify({
+      saveProjects: { context: 'saveProjects', count: 2, firstFailedAt: 1, lastFailedAt: 2 },
+      'permanentlyDeleteTask:task-a': { context: 'permanentlyDeleteTask', count: 2, firstFailedAt: 1, lastFailedAt: 2 },
+    }))
+    writeHealth.restoreUnresolvedWriteHealth()
+    expect(writeHealth.writesFailing.value).toBe(true)
+
+    const { default: SyncStatusIndicator } = await import('@/components/sync/SyncStatusIndicator.vue')
+    wrapper = mount(SyncStatusIndicator, {
+      attachTo: document.body,
+      global: { plugins: [pinia], stubs: { Teleport: false } },
+    })
+    await nextTick()
+    await wrapper.get('.sync-indicator').trigger('click')
+    await nextTick()
+
+    expect(document.body.textContent).toContain('No local changes are waiting to sync')
+    expect(document.body.textContent).not.toContain('These local changes need review')
+    expect(document.body.textContent).not.toContain('Discard local changes')
+    const button = [...document.querySelectorAll<HTMLButtonElement>('button')]
+      .find(candidate => candidate.textContent?.includes('Mark as checked'))
+    expect(button).toBeTruthy()
+    button!.click()
+    await nextTick()
+
+    expect(writeHealth.writesFailing.value).toBe(false)
+    expect(localStorage.getItem(`${writeHealth.WRITE_HEALTH_STORAGE_KEY}:user-a`)).toBeNull()
+  })
+
+  it('never offers Mark as checked while a queued local change is still failing', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const writeHealth = await import('@/composables/sync/writeHealth')
+    writeHealth.setWriteHealthScope('user-a')
+    writeHealth.reportWriteFailure('saveProjects', 'boom', 1)
+    writeHealth.reportWriteFailure('saveProjects', 'boom', 2)
+    const { syncState } = await import('@/composables/sync/useSyncOrchestrator')
+    const queued = {
+      id: 44, entityType: 'task' as const, entityId: 'task-still-local', operation: 'update' as const,
+      payload: { title: 'Still local' }, status: 'failed' as const, retryCount: 3, createdAt: Date.now(),
+      lastError: '403 Forbidden: injected permanent rejection',
+    }
+    syncState.value = {
+      status: 'error', pendingCount: 0, failedCount: 1, lastSyncAt: undefined,
+      lastError: queued.lastError, isOnline: true, failedOperations: [queued],
+    }
+    const { useSyncStatusStore } = await import('@/stores/syncStatus')
+    const store = useSyncStatusStore()
+    store.acknowledgeWriteWarning()
+    expect(writeHealth.writesFailing.value).toBe(true)
+
+    const { default: SyncStatusIndicator } = await import('@/components/sync/SyncStatusIndicator.vue')
+    wrapper = mount(SyncStatusIndicator, {
+      attachTo: document.body,
+      global: { plugins: [pinia], stubs: { Teleport: false } },
+    })
+    await nextTick()
+    await wrapper.get('.sync-indicator').trigger('click')
+    await nextTick()
+    expect(document.body.textContent).not.toContain('Mark as checked')
+  })
 })

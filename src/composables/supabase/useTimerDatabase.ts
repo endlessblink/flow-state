@@ -89,7 +89,9 @@ export function useTimerDatabase(ctx: DatabaseContext) {
                     console.error('🍅 [DB] saveActiveTimerSession error:', error)
                     throw error
                 }
-            }, 'saveActiveTimerSession')
+            // BUG-2099: one active session per user — a later successful save
+            // supersedes any earlier failed one, so share a singleton identity.
+            }, 'saveActiveTimerSession', 3, 'saveActiveTimerSession')
             if (import.meta.env.DEV) console.log('🍅 [DB] saveActiveTimerSession success')
         } catch (e: unknown) {
             handleError(e, 'saveActiveTimerSession')

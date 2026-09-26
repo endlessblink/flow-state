@@ -23,7 +23,9 @@
       :errors="failedOperations"
       :last-error="lastError"
       :error-count="failedCount"
+      :write-warning-only="writeWarningOnly"
       @retry="handleRetry"
+      @acknowledge="handleAcknowledge"
       @clear="handleClear"
       @close="showPopover = false"
     />
@@ -52,6 +54,7 @@ const {
   failedCount,
   lastError,
   failedOperations,
+  writeWarningOnly,
   statusText,
   lastSyncText
 } = storeToRefs(syncStore)
@@ -140,6 +143,12 @@ const handleClick = async () => {
 const handleRetry = async () => {
   showPopover.value = false
   await syncStore.retryFailed()
+}
+
+// BUG-2099: user confirmed the earlier direct write landed
+const handleAcknowledge = () => {
+  showPopover.value = false
+  syncStore.acknowledgeWriteWarning()
 }
 
 // Handle clear from popover

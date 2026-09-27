@@ -1201,7 +1201,7 @@ PlasmoidItem {
             console.log("[POPUP] nudgePopup visible=" + visible + " ts=" + Date.now())
         }
         width: 420
-        height: 220
+        height: 280
 
         property string nudgeMessage: ""
 
@@ -1241,9 +1241,11 @@ PlasmoidItem {
                     z: -1
                 }
 
+                // Swallow clicks on the card itself: only the buttons or the
+                // close control dismiss it (a stray click used to hide it).
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: nudgePopup.visible = false
+                    onClicked: {}
                 }
 
                 ColumnLayout {
@@ -1297,6 +1299,33 @@ PlasmoidItem {
                         Layout.fillWidth: true
                         height: 1
                         color: Qt.rgba(1, 1, 1, 0.08)
+                    }
+
+                    // Primary action: pick a task and start the timer
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 44
+                        radius: 12
+                        color: root.workColor
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "\u25B6  Start timer"
+                            font.pixelSize: 15
+                            font.bold: true
+                            color: root.bgColor
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                nudgePopup.visible = false
+                                root.nannyLastNotifyTime = Date.now()
+                                console.log("[NUDGE] Start timer — opening task picker")
+                                root.showNannyPopup()
+                            }
+                        }
                     }
 
                     // Action buttons — centered row like nanny popup
@@ -4078,7 +4107,7 @@ PlasmoidItem {
             if (currentHour < startHour || currentHour >= endHour) { console.log("[NANNY] Blocked: outside work hours (hour=" + currentHour + ", range=" + startHour + "-" + endHour + ")"); return }
 
             // Check enough idle time has passed
-            var intervalMs = (plasmoid.configuration.nannyIntervalMinutes || 60) * 60 * 1000
+            var intervalMs = (plasmoid.configuration.nannyIntervalMinutes || 5) * 60 * 1000
             var idleMs = root.nannyLastSessionEndTime > 0 ? (now - root.nannyLastSessionEndTime) : intervalMs + 1
             console.log("[NANNY] Idle check: " + Math.round(idleMs / 1000) + "s idle, need " + Math.round(intervalMs / 1000) + "s")
             if (root.nannyLastSessionEndTime > 0 && idleMs < intervalMs) return

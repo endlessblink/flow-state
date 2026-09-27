@@ -77,7 +77,7 @@
         </entry>
         <entry name="nannyIntervalMinutes" type="Int">
             <label>Minutes idle before reminding</label>
-            <default>60</default>
+            <default>5</default>
         </entry>
         <entry name="nannyTone" type="String">
             <label>Reminder tone: gentle or direct</label>

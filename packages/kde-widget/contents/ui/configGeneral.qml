@@ -21,7 +21,7 @@ KCM.SimpleKCM {
     property string cfg_nannyWorkDays: "0,1,2,3,4,5"
     property alias cfg_nannyStartHour: nannyStartHourSpinBox.value
     property alias cfg_nannyEndHour: nannyEndHourSpinBox.value
-    property int cfg_nannyIntervalMinutes: 60
+    property int cfg_nannyIntervalMinutes: 5
     property string cfg_nannyTone: "gentle"
     property alias cfg_storageEmail: emailField.text
     property alias cfg_loginTrigger: loginTriggerField.text

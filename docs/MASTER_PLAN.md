@@ -10,6 +10,18 @@
 
 **Current evidence**: Electron 1.4.555 was installed, and its Canvas shuffle menu remained translucent over task cards. Electron 1.4.556 replaced that menu with the existing FlowState dropdown and was published, but the running desktop still reported 1.4.555. Read-only live comparison found Timeline Today 18 tasks versus Canvas Today group 15; Timeline's first two tasks were absent from that group, and one was a floating Canvas card. The Canvas shuffle planner used stored parent membership while Canvas renders effective Today membership, so it skipped projected cards. The source fix aligns the planner and sync projection with the canonical Today list. Focused planner, cross-view transaction, Today projection, and undo tests pass. The 1.4.557 release passed task consistency (37), Electron sync (378), full unit suite (4,932 passed, 3 skipped), typecheck, and package validation, but updater publication refused a different artifact already published as 1.4.557. Electron 1.4.558 passed the same release gates and package validation and was published. A concurrent 1.4.559 mainline release then became public and installed without the shuffle branch, so the Canvas priority action was absent. The 1.4.560 package passed 4,932 tests and validation, but the VPS refused publication because another artifact already held that version. Mainline 1.4.561 then shipped without this feature. The combined branch now targets 1.4.562. Focused shuffle tests (15), Electron sync (378), and typecheck pass on the combined tree. The canonical Electron build prehook stops at its local-Supabase E2E gate because no local instance is running; the release script uses the locked package build after its own unit gates. Installed visual and authenticated task-order checks remain open.
 
+### TASK-2101: Desktop focus reminder offers Start timer after 5 idle minutes (🚧 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-27)
+
+**User request**: During work hours, after 5 minutes without a running timer, a desktop popup (outside the app) should offer: start a timer, postpone, or stop for today.
+
+**Change**: The KDE widget nudge popup gains a primary "Start timer" button that opens the existing task picker (which starts a session). Clicking the card body no longer dismisses it (only buttons/close). Default reminder delay is 5 minutes (was 60); the user's config set to 5. Existing Snooze 30m / Snooze 1hr / Stop today remain.
+
+**Not covered**: "idle" is time since the last session ended or widget sign-in, not keyboard/mouse activity; the in-app reminder remains in-app only.
+
+**Verification**: qmllint clean; live widget reloaded, authenticated, idle gate counting toward 300s; visual check of the popup pending.
+
 ### BUG-2100: Upload queue starved by repeated full reloads and duplicate group saves (🚧 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-26) — awaiting installed 1.4.565 proof

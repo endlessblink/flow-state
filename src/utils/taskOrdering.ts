@@ -6,12 +6,40 @@ function taskPosition(task: Task, positions?: Map<string, Position>): Position |
   return positions?.get(task.id) ?? task.canvasPosition
 }
 
+/**
+ * Synced sequence section for a task: its Canvas day/group rank (reading
+ * order, Today first) and label. Registered by the Canvas store so every view
+ * that uses the shared order follows the Canvas sequence (BUG-2106).
+ */
+export interface SharedOrderSection {
+  rank: number
+  key: string
+  label: string
+}
+
+type SharedOrderSectionResolver = (task: Task) => SharedOrderSection | undefined
+let sharedOrderSectionResolver: SharedOrderSectionResolver | null = null
+
+export function setSharedOrderSectionResolver(resolver: SharedOrderSectionResolver | null): void {
+  sharedOrderSectionResolver = resolver
+}
+
+export function getSharedOrderSection(task: Task): SharedOrderSection | undefined {
+  return sharedOrderSectionResolver?.(task)
+}
+
 /** Compare tasks using the order shared by Board and Canvas. */
 export function compareTasksBySharedOrder(
   first: Task,
   second: Task,
   positions?: Map<string, Position>,
 ): number {
+  if (sharedOrderSectionResolver) {
+    const firstRank = sharedOrderSectionResolver(first)?.rank ?? Number.POSITIVE_INFINITY
+    const secondRank = sharedOrderSectionResolver(second)?.rank ?? Number.POSITIVE_INFINITY
+    if (firstRank !== secondRank) return firstRank < secondRank ? -1 : 1
+  }
+
   const firstOrder = typeof first.order === 'number' && Number.isFinite(first.order) ? first.order : null
   const secondOrder = typeof second.order === 'number' && Number.isFinite(second.order) ? second.order : null
 
@@ -63,9 +91,10 @@ export function mergeVisibleTaskOrder(
 
 /**
  * Order writes for a visible-list reorder, touching only tasks whose order
- * actually changes. The visible tasks keep their existing order values as
- * slots (so hidden tasks never move); only the moved range is rewritten.
- * Legacy rows with missing/duplicate orders fall back to a full renumber.
+ * actually changes. Within each synced section (Canvas day group), the
+ * visible tasks keep their existing order values as slots, so hidden tasks
+ * and other days never move. Legacy rows with missing/duplicate orders fall
+ * back to a full renumber.
  */
 export function visibleReorderUpdates(
   tasks: Task[],
@@ -73,17 +102,29 @@ export function visibleReorderUpdates(
   visibleIds: Set<string>,
 ): Array<{ id: string; order: number }> {
   const byId = new Map(tasks.map(task => [task.id, task]))
-  const visibleInOrder = sortTasksBySharedOrder(tasks.filter(task => visibleIds.has(task.id)))
-  const slots = visibleInOrder.map(task => task.order)
-  const slotsUsable = slots.every((value, index) =>
-    typeof value === 'number' && Number.isFinite(value) && (index === 0 || value > (slots[index - 1] as number)))
   const requested = orderedVisibleIds.filter(id => visibleIds.has(id) && byId.has(id))
+  const sectionKey = (task: Task) => getSharedOrderSection(task)?.key ?? '__all__'
 
-  if (slotsUsable && requested.length === visibleInOrder.length) {
-    return requested
-      .map((id, index) => ({ id, order: slots[index] as number }))
-      .filter(({ id, order }) => byId.get(id)!.order !== order)
+  const requestedBySection = new Map<string, string[]>()
+  for (const id of requested) {
+    const key = sectionKey(byId.get(id)!)
+    requestedBySection.set(key, [...(requestedBySection.get(key) ?? []), id])
   }
+
+  const updates: Array<{ id: string; order: number }> = []
+  let slotsUsable = requested.length === tasks.filter(task => visibleIds.has(task.id)).length
+  for (const [, ids] of requestedBySection) {
+    if (!slotsUsable) break
+    const slots = sortTasksBySharedOrder(ids.map(id => byId.get(id)!)).map(task => task.order)
+    const increasing = slots.every((value, index) =>
+      typeof value === 'number' && Number.isFinite(value) && (index === 0 || value > (slots[index - 1] as number)))
+    if (!increasing) { slotsUsable = false; break }
+    ids.forEach((id, index) => {
+      const order = slots[index] as number
+      if (byId.get(id)!.order !== order) updates.push({ id, order })
+    })
+  }
+  if (slotsUsable) return updates
 
   const original = new Map(tasks.map(task => [task.id, task.order]))
   return mergeVisibleTaskOrder(tasks, orderedVisibleIds, visibleIds)

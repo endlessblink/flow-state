@@ -339,6 +339,14 @@ const currentDensity = computed(() => settingsStore.boardDensity)
 // Keep the filter bar visible so the Board controls remain discoverable and usable on startup.
 const showFilters = usePersistentRef<boolean>('flowstate:board-show-filters', true, 'board-show-filters')
 const boardSortOption = usePersistentRef<BoardSortOption>('flowstate:board-sort-option', 'manual', 'board-sort-option')
+// BUG-2106: views follow the synced Canvas order unless the user re-sorts on
+// purpose. Reset a previously persisted sort once so every view starts synced.
+try {
+  if (localStorage.getItem('flowstate:synced-order-reset-v1') !== '1') {
+    boardSortOption.value = 'manual'
+    localStorage.setItem('flowstate:synced-order-reset-v1', '1')
+  }
+} catch { /* storage unavailable: keep the persisted choice */ }
 const priorityFilter = useBoardPriorityFilter()
 const recurringFilter = usePersistentRef<'all' | 'recurring' | 'non_recurring'>('flowstate:board-recurring-filter', 'all', 'board-recurring-filter')
 const setRecurringFilter = (value: string) => {
@@ -347,7 +355,7 @@ const setRecurringFilter = (value: string) => {
   }
 }
 const boardSortOptions = computed(() => [
-  { value: 'manual' as const, label: 'Manual order' },
+  { value: 'manual' as const, label: 'Synced order' },
   { value: 'priority_desc' as const, label: 'Priority: High to Low' }
 ])
 

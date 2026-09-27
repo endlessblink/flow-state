@@ -7,7 +7,7 @@ import { mount } from '@vue/test-utils'
 import { defineComponent, h, nextTick } from 'vue'
 import type { Task } from '@/types/tasks'
 import { moveIdAfter, moveIdBy } from '@/components/kanban/taskFocusReorder'
-import { visibleReorderUpdates } from '@/utils/taskOrdering'
+import { setSharedOrderSectionResolver, visibleReorderUpdates } from '@/utils/taskOrdering'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (key: string) => key, locale: { value: 'en' } }) }))
 vi.mock('vuedraggable', () => ({
@@ -105,5 +105,26 @@ describe('TaskFocusReorderPanel', () => {
     const wrapper = mount(Panel, { props: { tasks: [task('a', 1)], activeTaskId: 'a', sortIsManual: false } })
     expect(wrapper.text()).toContain('kanban.reorder_switches_manual')
     wrapper.unmount()
+  })
+
+  it('keeps moves inside a Canvas day and labels each day (BUG-2106)', async () => {
+    const sections: Record<string, { rank: number; key: string; label: string }> = {
+      a: { rank: 0, key: 'today', label: 'Today' },
+      b: { rank: 0, key: 'today', label: 'Today' },
+      c: { rank: 1, key: 'thu', label: 'Thursday' },
+    }
+    setSharedOrderSectionResolver(candidate => sections[candidate.id])
+    try {
+      const wrapper = await mountPanel([task('a', 1), task('b', 2), task('c', 3)])
+      const rows = wrapper.findAll('[data-reorder-task-id]')
+      expect(rows[0].attributes('data-section-label')).toBe('Today')
+      expect(rows[2].attributes('data-section-label')).toBe('Thursday')
+      expect(rows[2].find('button[aria-label="kanban.move_up_named"]').attributes('disabled')).toBeDefined()
+      expect(rows[2].find('button[aria-label="kanban.make_next_named"]').attributes('disabled')).toBeDefined()
+      expect(rows[1].find('button[aria-label="kanban.move_up_named"]').attributes('disabled')).toBeUndefined()
+      wrapper.unmount()
+    } finally {
+      setSharedOrderSectionResolver(null)
+    }
   })
 })

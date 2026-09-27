@@ -10,6 +10,38 @@
 
 **Current evidence**: Electron 1.4.555 was installed, and its Canvas shuffle menu remained translucent over task cards. Electron 1.4.556 replaced that menu with the existing FlowState dropdown and was published, but the running desktop still reported 1.4.555. Read-only live comparison found Timeline Today 18 tasks versus Canvas Today group 15; Timeline's first two tasks were absent from that group, and one was a floating Canvas card. The Canvas shuffle planner used stored parent membership while Canvas renders effective Today membership, so it skipped projected cards. The source fix aligns the planner and sync projection with the canonical Today list. Focused planner, cross-view transaction, Today projection, and undo tests pass. The 1.4.557 release passed task consistency (37), Electron sync (378), full unit suite (4,932 passed, 3 skipped), typecheck, and package validation, but updater publication refused a different artifact already published as 1.4.557. Electron 1.4.558 passed the same release gates and package validation and was published. A concurrent 1.4.559 mainline release then became public and installed without the shuffle branch, so the Canvas priority action was absent. The 1.4.560 package passed 4,932 tests and validation, but the VPS refused publication because another artifact already held that version. Mainline 1.4.561 then shipped without this feature. The combined branch now targets 1.4.562. Focused shuffle tests (15), Electron sync (378), and typecheck pass on the combined tree. The canonical Electron build prehook stops at its local-Supabase E2E gate because no local instance is running; the release script uses the locked package build after its own unit gates. Installed visual and authenticated task-order checks remain open.
 
+### BUG-2106: Views disagreed on the first task — sync every view to the Canvas order (🚧 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-27) — awaiting installed 1.4.568 proof
+
+**User report**: The focused timeline's first task ("לשטוף כלים") did not match the first task on Canvas ("לעבוד על ההרצאה ללייב"); all views should share one order unless the user manually re-sorts.
+
+**Failure mode**: (1) Board/timeline had a persisted "Priority: High to Low" sort, putting an Immediate task first. (2) Even "Manual order" sorted by the global `order` field alone, while Canvas presents tasks per day group (Today first, left-to-right) with `order` only inside a group — e.g. a Thursday task held the lowest global order (3) and would lead every list.
+
+**Fix (scoped)**: The shared comparator now ranks tasks by Canvas section first (top-level groups in reading order, smart Today membership projected into Today, ungrouped last), then the shared order. The Canvas store registers this once, so Board, focused timeline, calendar inbox and inbox lists all follow the same sequence. "Manual order" is renamed "Synced order"; a previously persisted sort is reset once. The Up next panel labels each day and keeps moves inside a day (changing the day is done by changing the date); reorder writes reuse per-day order slots.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Offline copy of the user's read cache: Today order 13/24/31 matches Canvas y; global order led by a Thursday task; timeline on priority sort | Yes |
+| Data shape / persisted row shape | Yes | 69 active tasks, all with numeric order; orders are per-group, not a global sequence | Yes (no data rewrite needed) |
+| Renderer store/state | Yes | Board sort persisted as priority_desc; comparator ignored groups | Yes |
+| Electron main/preload bridge | N/A | Renderer-only ordering | N/A |
+| Localhost sidecar endpoint | Not checked | Local API task list does not expose order | Not covered |
+| KDE polling/control path | Not checked | Widget sorts its own list | Not covered |
+| Supabase persistence/realtime | Yes | Reorder writes only moved rows (unit + DB read-back in TASK-2104) | Yes |
+| Updater/runtime version | Pending | Ships in 1.4.568 | Pending install |
+| Stale live process/cache state | Yes | One-time sort reset via local flag | Yes |
+
+**Exact failure mode fixed**: synced views (Board, timeline, inbox lists) not following the Canvas day sequence; stale priority sort overriding it.
+
+**Explicitly not covered**: KDE widget and local API list ordering; the All Tasks catalogue keeps its own explicit sort options.
+
+**Regression added for reported repro**: unit test with the user's shape (Thursday task with lowest order, Immediate task third in Today) → synced order starts with the first Today task; authenticated Chromium E2E: timeline starts with the leftmost Canvas group's task despite a persisted priority sort and a lower-order high-priority task elsewhere (fails on the previous build); panel keeps moves within a day.
+
+**Live boundary proof**: pending installed 1.4.568.
+
 ### TASK-2104: Reliable "Up next" reorder panel for the focused timeline (🚧 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-27) — awaiting installed 1.4.567 proof

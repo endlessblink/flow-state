@@ -27,6 +27,10 @@ import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 import { hasIdenticalUnsentOperation } from '@/services/offline/writeQueueDB'
 import { useAuthStore } from './auth'
 import { toSupabaseGroup } from '@/utils/supabaseMappers'
+import { setSharedOrderSectionResolver } from '@/utils/taskOrdering'
+import { buildCanvasSequenceSections } from '@/utils/canvas/canvasSequence'
+import { getCanonicalTodayTaskIds } from '@/utils/todayTaskProjection'
+import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 export * from './canvas/types'
 
 export const useCanvasStore = defineStore('canvas', () => {
@@ -118,6 +122,28 @@ export const useCanvasStore = defineStore('canvas', () => {
     if (markLocalMutation) lastLocalSyncAt.value = Date.now()
     return groupsModule.setGroups(newGroups, forceEmpty)
   }
+
+  // BUG-2106: every view's shared order follows the Canvas sequence (day
+  // groups in reading order, Today first), so the first task matches across
+  // Canvas, Board, the focused timeline and the inbox lists.
+  // Computing Today membership sorts tasks through the shared order itself;
+  // the guard makes that inner sort ignore sections instead of recursing.
+  let computingSyncedSections = false
+  const syncedSequenceSections = computed(() => {
+    computingSyncedSections = true
+    try {
+      const groups = groupsModule._rawGroups.value
+      const tasks = sharedTasksRef.value
+      const todayGroup = groups.find(group => {
+        const keyword = detectPowerKeyword(group.name)
+        return group.isVisible !== false && keyword?.category === 'date' && keyword.keyword === 'today'
+      })
+      return buildCanvasSequenceSections(groups, tasks, getCanonicalTodayTaskIds(tasks), todayGroup?.id)
+    } finally {
+      computingSyncedSections = false
+    }
+  })
+  setSharedOrderSectionResolver(task => (computingSyncedSections ? undefined : syncedSequenceSections.value?.get(task.id)))
 
   // 5. Shared Canvas State
   const nodes = ref<Node[]>([])

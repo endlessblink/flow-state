@@ -307,6 +307,7 @@
 
 .task-focus-queue__list {
     display: flex;
+    padding-top: 0;
     flex-direction: column;
     gap: var(--space-1);
     max-height: min(52vh, 520px);
@@ -484,4 +485,26 @@
 @media (prefers-reduced-motion: reduce) {
     .task-focus-queue__row,
     .task-focus-queue__actions { transition: none; }
+}
+
+/* BUG-2106: day section label (Canvas group) above the first row of each day */
+.task-focus-queue__row.starts-section {
+    position: relative;
+    margin-top: var(--space-6);
+}
+
+.task-focus-queue__row.starts-section:first-child {
+    margin-top: var(--space-5);
+}
+
+.task-focus-queue__row.starts-section::before {
+    content: attr(data-section-label);
+    position: absolute;
+    inset-inline-start: var(--space-2);
+    bottom: calc(100% + var(--space-1));
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: var(--font-bold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }

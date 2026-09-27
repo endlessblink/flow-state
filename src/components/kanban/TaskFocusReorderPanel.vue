@@ -31,13 +31,15 @@
       ghost-class="task-focus-queue__row--ghost"
       chosen-class="task-focus-queue__row--chosen"
       drag-class="task-focus-queue__row--drag"
+      :move="allowDragMove"
       @start="isDragging = true"
       @end="finishDrag"
     >
       <template #item="{ element: task, index }">
         <li
           class="task-focus-queue__row"
-          :class="{ 'is-current': task.id === activeTaskId }"
+          :class="{ 'is-current': task.id === activeTaskId, 'starts-section': startsSection(index) }"
+          :data-section-label="startsSection(index) ? sectionOf(task).label : undefined"
           :data-reorder-task-id="task.id"
           tabindex="0"
           @keydown.alt.up.stop.prevent="move(task.id, -1)"
@@ -80,7 +82,7 @@
             </button>
             <button
               type="button"
-              :disabled="index === 0"
+              :disabled="!canMove(task.id, -1)"
               :aria-label="t('kanban.move_up_named', { title: task.title })"
               :title="t('kanban.move_up')"
               @click="move(task.id, -1)"
@@ -89,7 +91,7 @@
             </button>
             <button
               type="button"
-              :disabled="index === draftTasks.length - 1"
+              :disabled="!canMove(task.id, 1)"
               :aria-label="t('kanban.move_down_named', { title: task.title })"
               :title="t('kanban.move_down')"
               @click="move(task.id, 1)"
@@ -110,6 +112,7 @@ import { useI18n } from 'vue-i18n'
 import draggable from 'vuedraggable'
 import { ArrowDown, ArrowUp, CornerDownRight, GripVertical } from 'lucide-vue-next'
 import type { Task } from '@/stores/tasks'
+import { getSharedOrderSection } from '@/utils/taskOrdering'
 import { moveIdAfter, moveIdBy } from './taskFocusReorder'
 
 const props = defineProps<{
@@ -192,7 +195,35 @@ const focusRow = async (taskId: string) => {
   document.querySelector<HTMLElement>(`[data-reorder-task-id="${selectorId}"]`)?.focus()
 }
 
+// BUG-2106: the order is synced with Canvas day groups, so moves stay inside
+// a task's day; changing the day is done by changing the date.
+const OTHER_SECTION = { rank: Number.POSITIVE_INFINITY, key: '__other__', label: '' }
+const sectionOf = (task: Task) => getSharedOrderSection(task) ?? OTHER_SECTION
+const sectionKeyOfId = (taskId: string) => {
+  const task = tasksById.value.get(taskId)
+  return task ? sectionOf(task).key : OTHER_SECTION.key
+}
+const startsSection = (index: number) => {
+  const current = draftTasks.value[index]
+  if (!current) return false
+  const previous = draftTasks.value[index - 1]
+  const label = sectionOf(current).label
+  return !!label && (!previous || sectionOf(previous).key !== sectionOf(current).key)
+}
+const canMove = (taskId: string, offset: number) => {
+  const index = draftIds.value.indexOf(taskId)
+  const neighbour = draftIds.value[index + offset]
+  return index >= 0 && !!neighbour && sectionKeyOfId(neighbour) === sectionKeyOfId(taskId)
+}
+const allowDragMove = (event: { draggedContext?: { element?: Task }, relatedContext?: { element?: Task } }) => {
+  const dragged = event.draggedContext?.element
+  const related = event.relatedContext?.element
+  if (!dragged || !related) return true
+  return sectionOf(dragged).key === sectionOf(related).key
+}
+
 const move = (taskId: string, offset: number) => {
+  if (!canMove(taskId, offset)) return
   const nextIds = moveIdBy(draftIds.value, taskId, offset)
   if (nextIds === draftIds.value) return
   commit(nextIds)
@@ -201,12 +232,13 @@ const move = (taskId: string, offset: number) => {
 
 const canMakeNext = (taskId: string) => {
   if (!props.activeTaskId || taskId === props.activeTaskId) return false
+  if (sectionKeyOfId(taskId) !== sectionKeyOfId(props.activeTaskId)) return false
   const activeIndex = draftIds.value.indexOf(props.activeTaskId)
   return draftIds.value.indexOf(taskId) !== activeIndex + 1
 }
 
 const makeNext = (taskId: string) => {
-  if (!props.activeTaskId) return
+  if (!props.activeTaskId || !canMakeNext(taskId)) return
   const nextIds = moveIdAfter(draftIds.value, taskId, props.activeTaskId)
   if (nextIds === draftIds.value) return
   commit(nextIds)

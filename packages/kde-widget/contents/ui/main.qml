@@ -106,7 +106,9 @@ PlasmoidItem {
 
     // ===== TASK SORT/FILTER STATE =====
     // Sort options: "created_desc", "created_asc", "title_asc", "priority_desc", "canvas_order", "project"
-    property string taskSortBy: "created_desc"
+    // BUG-2107: default to the synced Canvas order (same first task as the app)
+    property string taskSortBy: "canvas_order"
+    property var canvasGroups: []        // [{id, name, position_json, is_visible, parent_group_id}]
     // Filter options: "all", "todo", "in_progress", "today", "on_canvas"
     property string taskFilter: "all"
     // BUG-1793: backed by plasmoid.configuration so the "Today" filter survives
@@ -2938,7 +2940,7 @@ PlasmoidItem {
                     QQC2.ComboBox {
                         id: sortCombo
                         Layout.preferredWidth: 85
-                        model: ["Newest", "Oldest", "A-Z", "Priority", "Canvas", "Project"]
+                        model: ["Newest", "Oldest", "A-Z", "Priority", "Synced", "Project"]
                         currentIndex: root.taskSortBy === "created_desc" ? 0 :
                                       root.taskSortBy === "created_asc" ? 1 :
                                       root.taskSortBy === "title_asc" ? 2 :
@@ -5396,8 +5398,8 @@ PlasmoidItem {
             // In Supabase, lower number = higher priority, so sort ascending
             url += "&order=priority.asc.nullslast"
         } else if (root.taskSortBy === "canvas_order") {
-            // TASK-1499: Server can't sort by JSONB nested fields properly, use client-side sort
-            url += "&order=created_at.desc"
+            // BUG-2107: synced order is computed client-side from groups + shared order
+            url += "&order=order.asc.nullslast,created_at.asc"
         } else if (root.taskSortBy === "project") {
             // TASK-1454: Group by project — server sorts by project_id, client injects headers
             url += "&order=project_id.asc.nullslast,created_at.desc"
@@ -5424,9 +5426,14 @@ PlasmoidItem {
                     if (root.taskSortBy === "project" && Object.keys(root.projects).length > 0) {
                         root.groupTasksByProject()
                     }
-                    // TASK-1499: Client-side canvas order sorting
+                    // BUG-2107: synced Canvas order (sort now with known groups, then
+                    // again once the latest groups arrive)
                     if (root.taskSortBy === "canvas_order" || root.taskFilter === "on_canvas") {
                         root.sortTasksByCanvasOrder()
+                        root.fetchCanvasGroups(function() {
+                            root.sortTasksByCanvasOrder()
+                            root.updateDisplayTasks()
+                        })
                     }
                     root.updateDisplayTasks()
                     root.writeActiveTaskFile()
@@ -5551,62 +5558,97 @@ PlasmoidItem {
         if (root.debugLogging) console.log("[PROJECTS] Grouped tasks into", projectIds.length + (ungrouped.length > 0 ? 1 : 0), "sections")
     }
 
-    // TASK-1499: Sort canvas tasks by group + Y position (mirrors Vue app canvas sort)
+    // BUG-2107: Synced task sequence — mirrors the app (src/utils/canvas/canvasSequence.ts):
+    // top-level Canvas groups in reading order (left-to-right, then top-to-bottom),
+    // smart Today membership projected into the Today group, ungrouped last;
+    // inside a section the shared `order` decides. Pure: extracted by tests.
+    function computeSyncedTaskOrder(tasks, groups, todayStr) {
+        var visible = []
+        var byId = {}
+        for (var gi = 0; gi < (groups || []).length; gi++) {
+            var grp = groups[gi]
+            if (!grp || grp.is_visible === false) continue
+            visible.push(grp)
+            byId[grp.id] = grp
+        }
+        var rootOf = function(group) {
+            var current = group
+            var guard = 0
+            while (current && current.parent_group_id && byId[current.parent_group_id] && guard < 50) {
+                current = byId[current.parent_group_id]
+                guard++
+            }
+            return current
+        }
+        var roots = []
+        var seenRoot = {}
+        for (var vi = 0; vi < visible.length; vi++) {
+            var r = rootOf(visible[vi])
+            if (r && !seenRoot[r.id]) { seenRoot[r.id] = true; roots.push(r) }
+        }
+        var posOf = function(group, axis) {
+            var pos = group && group.position_json
+            return pos && typeof pos[axis] === "number" ? pos[axis] : 0
+        }
+        roots.sort(function(a, b) { return (posOf(a, "x") - posOf(b, "x")) || (posOf(a, "y") - posOf(b, "y")) })
+        var rank = {}
+        for (var ri = 0; ri < roots.length; ri++) rank[roots[ri].id] = ri
+
+        var todayGroupId = null
+        for (var ti = 0; ti < visible.length; ti++) {
+            if (String(visible[ti].name || "").trim().toLowerCase() === "today") { todayGroupId = visible[ti].id; break }
+        }
+
+        var sectionRank = function(task) {
+            var groupId = (todayGroupId && taskMatchesToday(task, todayStr)) ? todayGroupId
+                : (task.position && task.position.parentId) ? task.position.parentId : null
+            var group = groupId ? byId[groupId] : null
+            if (!group) return Number.POSITIVE_INFINITY
+            var root = rootOf(group)
+            return rank[root.id] !== undefined ? rank[root.id] : Number.POSITIVE_INFINITY
+        }
+        var orderOf = function(task) {
+            return typeof task.order === "number" && isFinite(task.order) ? task.order : Number.POSITIVE_INFINITY
+        }
+        var decorated = []
+        for (var i = 0; i < tasks.length; i++) {
+            decorated.push({ task: tasks[i], rank: sectionRank(tasks[i]), order: orderOf(tasks[i]), index: i })
+        }
+        decorated.sort(function(a, b) {
+            if (a.rank !== b.rank) return a.rank < b.rank ? -1 : 1
+            if (a.order !== b.order) return a.order < b.order ? -1 : 1
+            return a.index - b.index
+        })
+        var result = []
+        for (var k = 0; k < decorated.length; k++) result.push(decorated[k].task)
+        return result
+    }
+
     function sortTasksByCanvasOrder() {
-        // Filter out any existing headers (not expected here, but defensive)
         var realTasks = []
         for (var i = 0; i < root.tasks.length; i++) {
             if (!root.tasks[i].isHeader) realTasks.push(root.tasks[i])
         }
+        root.tasks = computeSyncedTaskOrder(realTasks, root.canvasGroups, localDateString(new Date()))
+        if (root.debugLogging) console.log("[CANVAS] Synced order for", realTasks.length, "tasks across", root.canvasGroups.length, "groups")
+    }
 
-        // Build buckets by canvas group (position.parentId inside JSONB)
-        var buckets = {}  // parentId -> [tasks]
-        var ungrouped = []
-        for (var j = 0; j < realTasks.length; j++) {
-            var t = realTasks[j]
-            var groupId = t.position ? t.position.parentId : null
-            if (groupId) {
-                if (!buckets[groupId]) buckets[groupId] = []
-                buckets[groupId].push(t)
-            } else {
-                ungrouped.push(t)
+    // BUG-2107: groups drive the synced order; refresh them, then re-sort.
+    function fetchCanvasGroups(onDone) {
+        if (!root.isAuthenticated) { if (onDone) onDone(); return }
+        var xhr = new XMLHttpRequest()
+        var url = root.supabaseUrl + "/rest/v1/groups?select=id,name,position_json,is_visible,parent_group_id&user_id=eq." + root.userId + "&is_deleted=eq.false"
+        xhr.open("GET", url, true)
+        xhr.setRequestHeader("apikey", root.supabaseKey)
+        xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState !== XMLHttpRequest.DONE) return
+            if (xhr.status === 200) {
+                try { root.canvasGroups = JSON.parse(xhr.responseText) } catch (e) { /* keep previous groups */ }
             }
+            if (onDone) onDone()
         }
-
-        // Sort tasks within each bucket by Y position (top to bottom)
-        var sortByY = function(a, b) {
-            var ay = (a.position && a.position.y !== undefined) ? a.position.y : 99999
-            var by = (b.position && b.position.y !== undefined) ? b.position.y : 99999
-            return ay - by
-        }
-
-        var groupIds = Object.keys(buckets)
-        for (var g = 0; g < groupIds.length; g++) {
-            buckets[groupIds[g]].sort(sortByY)
-        }
-        ungrouped.sort(sortByY)
-
-        // Sort group IDs by first task's X position descending (rightmost group first)
-        groupIds.sort(function(a, b) {
-            var ax = buckets[a][0] && buckets[a][0].position ? buckets[a][0].position.x : 0
-            var bx = buckets[b][0] && buckets[b][0].position ? buckets[b][0].position.x : 0
-            return bx - ax
-        })
-
-        // Build final list: grouped tasks first, then ungrouped
-        var result = []
-        for (var k = 0; k < groupIds.length; k++) {
-            var tasks = buckets[groupIds[k]]
-            for (var l = 0; l < tasks.length; l++) {
-                result.push(tasks[l])
-            }
-        }
-        for (var m = 0; m < ungrouped.length; m++) {
-            result.push(ungrouped[m])
-        }
-
-        root.tasks = result
-        if (root.debugLogging) console.log("[CANVAS] Sorted", realTasks.length, "tasks by canvas order:", groupIds.length, "groups +", ungrouped.length, "ungrouped")
+        xhr.send()
     }
 
     // ===== QUICK TASK CREATION =====

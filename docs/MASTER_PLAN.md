@@ -10,6 +10,18 @@
 
 **Current evidence**: Electron 1.4.555 was installed, and its Canvas shuffle menu remained translucent over task cards. Electron 1.4.556 replaced that menu with the existing FlowState dropdown and was published, but the running desktop still reported 1.4.555. Read-only live comparison found Timeline Today 18 tasks versus Canvas Today group 15; Timeline's first two tasks were absent from that group, and one was a floating Canvas card. The Canvas shuffle planner used stored parent membership while Canvas renders effective Today membership, so it skipped projected cards. The source fix aligns the planner and sync projection with the canonical Today list. Focused planner, cross-view transaction, Today projection, and undo tests pass. The 1.4.557 release passed task consistency (37), Electron sync (378), full unit suite (4,932 passed, 3 skipped), typecheck, and package validation, but updater publication refused a different artifact already published as 1.4.557. Electron 1.4.558 passed the same release gates and package validation and was published. A concurrent 1.4.559 mainline release then became public and installed without the shuffle branch, so the Canvas priority action was absent. The 1.4.560 package passed 4,932 tests and validation, but the VPS refused publication because another artifact already held that version. Mainline 1.4.561 then shipped without this feature. The combined branch now targets 1.4.562. Focused shuffle tests (15), Electron sync (378), and typecheck pass on the combined tree. The canonical Electron build prehook stops at its local-Supabase E2E gate because no local instance is running; the release script uses the locked package build after its own unit gates. Installed visual and authenticated task-order checks remain open.
 
+### BUG-2107: KDE widget list follows the synced Canvas order (🚧 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🚧 IN PROGRESS (2026-09-27) — live widget verified on real data; awaiting user glance
+
+**Failure mode**: The widget defaulted to "Newest" and its "Canvas" sort read legacy JSONB parent ids and put the rightmost group first, so its first task disagreed with the app after BUG-2106.
+
+**Fix**: New pure `computeSyncedTaskOrder` in the widget mirrors the app sequence (top-level groups in reading order, Today membership projected into Today, shared `order` inside a section, ungrouped last); groups are fetched alongside tasks; the default and relabelled "Synced" sort use it.
+
+**Verification**: parity test extracts the live QML function and matches the app comparator on the user's shape (3 tests; 187 KDE tests pass); replaying the widget's own queries against production data yields first task "לעבוד על ההרצאה ללייב" for both Today and all-tasks lists; widget reloaded without QML errors.
+
+**Also done this session (web)**: production web bundle rebuilt from main and deployed; its anon key authenticates (HTTP 200) — closes the BUG-2098 web gap. Electron updater files untouched (1.4.568).
+
 ### ~~BUG-2106~~: Views disagreed on the first task — sync every view to the Canvas order (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-09-27) — user confirmed in installed 1.4.568

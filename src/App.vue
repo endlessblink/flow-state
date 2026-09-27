@@ -98,15 +98,16 @@ const themeOverrides: GlobalThemeOverrides = {
     borderRadius: '12px',
   },
 }
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, defineAsyncComponent } from 'vue'
 import { useToast } from '@/composables/useToast'
 import { useAppInitialization } from '@/composables/app/useAppInitialization'
 import { useAppShortcuts } from '@/composables/app/useAppShortcuts'
 import MainLayout from '@/layouts/MainLayout.vue'
-import MobileLayout from '@/mobile/layouts/MobileLayout.vue'
+// Keep the desktop main chunk under budget: mobile shell and PWA prompt load on demand.
+const MobileLayout = defineAsyncComponent(() => import('@/mobile/layouts/MobileLayout.vue'))
 import ModalManager from '@/layouts/ModalManager.vue'
 import FaviconManager from '@/components/common/FaviconManager.vue'
-import ReloadPrompt from '@/components/common/ReloadPrompt.vue'
+const ReloadPrompt = defineAsyncComponent(() => import('@/components/common/ReloadPrompt.vue'))
 import TauriUpdateNotification from '@/components/common/TauriUpdateNotification.vue'
 import TauriStartupScreen from '@/components/startup/TauriStartupScreen.vue'
 import BraveBanner from '@/components/ui/BraveBanner.vue'

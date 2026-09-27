@@ -17,6 +17,7 @@
       <span class="task-focus-queue__count">{{ draftTasks.length }}</span>
     </header>
 
+    <!-- eslint-disable vue/prefer-true-attribute-shorthand -- WebKitGTK parity (BUG-1335) requires explicit booleans -->
     <draggable
       v-model="draftTasks"
       item-key="id"
@@ -24,8 +25,8 @@
       class="task-focus-queue__list"
       handle=".task-focus-queue__handle"
       :animation="150"
-      force-fallback
-      fallback-on-body
+      :force-fallback="true"
+      :fallback-on-body="true"
       :fallback-tolerance="4"
       ghost-class="task-focus-queue__row--ghost"
       chosen-class="task-focus-queue__row--chosen"
@@ -99,6 +100,7 @@
         </li>
       </template>
     </draggable>
+    <!-- eslint-enable vue/prefer-true-attribute-shorthand -->
   </section>
 </template>
 

@@ -10,6 +10,28 @@
 
 **Current evidence**: Electron 1.4.555 was installed, and its Canvas shuffle menu remained translucent over task cards. Electron 1.4.556 replaced that menu with the existing FlowState dropdown and was published, but the running desktop still reported 1.4.555. Read-only live comparison found Timeline Today 18 tasks versus Canvas Today group 15; Timeline's first two tasks were absent from that group, and one was a floating Canvas card. The Canvas shuffle planner used stored parent membership while Canvas renders effective Today membership, so it skipped projected cards. The source fix aligns the planner and sync projection with the canonical Today list. Focused planner, cross-view transaction, Today projection, and undo tests pass. The 1.4.557 release passed task consistency (37), Electron sync (378), full unit suite (4,932 passed, 3 skipped), typecheck, and package validation, but updater publication refused a different artifact already published as 1.4.557. Electron 1.4.558 passed the same release gates and package validation and was published. A concurrent 1.4.559 mainline release then became public and installed without the shuffle branch, so the Canvas priority action was absent. The 1.4.560 package passed 4,932 tests and validation, but the VPS refused publication because another artifact already held that version. Mainline 1.4.561 then shipped without this feature. The combined branch now targets 1.4.562. Focused shuffle tests (15), Electron sync (378), and typecheck pass on the combined tree. The canonical Electron build prehook stops at its local-Supabase E2E gate because no local instance is running; the release script uses the locked package build after its own unit gates. Installed visual and authenticated task-order checks remain open.
 
+### TASK-2104: Reliable "Up next" reorder panel for the focused timeline (🚧 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-27) — awaiting installed 1.4.567 proof
+
+**User request**: The focused timeline reorder strip needs a much better, reliable way to reorder, with better UX/UI.
+
+**Problems found**: horizontal strip of truncated titles needing sideways scroll; native HTML5 drag (flaky in Electron); the list reset from props mid-drag on any task update; every drop renumbered and wrote the order of all tasks (a burst of ~48 writes that contributed to the BUG-2100 queue flood).
+
+**Change**: Vertical "Up next" panel with full wrapping titles (RTL-aware), current task marked, priority dot, SortableJS drag via a dedicated handle (force-fallback, same as the rest of the app), explicit Make next / Move up / Move down buttons and Alt+↑/↓. The panel keeps a draft order that does not reshuffle while a save is pending, then follows the saved order (4s safety resync). Saves reuse the visible tasks' existing order slots and write only tasks whose position changed; legacy duplicate/missing orders fall back to the previous renumber. A hint states that reordering switches a non-manual sort to Manual.
+
+**Not covered**: reloading within ~1s of a move can briefly show the old order until the queued write lands (pending-write overlay on reload).
+
+**Verification**: 7 unit tests (moves, minimal writes, pending draft stability, sort hint); authenticated Chromium E2E moves a task and the order survives reload; DB read-back confirms only moved rows changed; 600 related unit tests pass.
+
+### BUG-2105: "Immediate" priority invisible on cards (🚧 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🚧 IN PROGRESS (2026-09-27) — awaiting installed 1.4.567 proof
+
+**Failure mode**: Priority sorts rank Immediate above High, but Canvas task nodes and Board priority dots only styled high/medium/low, so an Immediate task looked like "no priority" and a correctly sorted list looked wrong to the user. Timeline meta also rendered the raw `kanban.priority_immediate` key.
+
+**Fix**: Distinct stronger red styling for Immediate on Canvas nodes (outline + indicator) and Board dots, a Relaxed dot style, and kanban i18n labels for Immediate/Relaxed (en/he).
+
 ### BUG-2103: Sidebar filters ignored on Canvas and bounced to catalogue (🚧 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-27) — awaiting installed 1.4.566 proof

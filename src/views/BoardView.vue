@@ -84,6 +84,7 @@
         <TaskFocusTimeline
           v-if="isTimelineView"
           :tasks="allFilteredTasks"
+          :sort-is-manual="boardSortOption === 'manual'"
           @select-task="handleSelectTask"
           @start-timer="handleStartTimer"
           @edit-task="handleEditTask"
@@ -221,7 +222,7 @@ import { getDateFromColumnKey, useBoardActions } from '@/composables/board/useBo
 import { useBoardState, sortTasksForBoard, type BoardSortOption } from '@/composables/board/useBoardState'
 import { useBoardPriorityFilter } from '@/composables/board/useBoardPriorityFilter'
 import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete'
-import { mergeVisibleTaskOrder } from '@/utils/taskOrdering'
+import { visibleReorderUpdates } from '@/utils/taskOrdering'
 import { runTaskShuffle, type TaskShuffleMode } from '@/composables/tasks/useTaskShuffle'
 
 import './BoardView.css'
@@ -392,11 +393,10 @@ const handleAddTask = (payload: { columnKey: string, projectId: string, viewType
 const handleTimelineReorder = async (taskIds: string[]) => {
   const allTasks = taskStore.rawTasks || taskStore.tasks
   const visibleIds = new Set(allFilteredTasks.value.map(task => task.id))
-  const reorderedTasks = mergeVisibleTaskOrder(allTasks, taskIds, visibleIds)
-  const originalOrder = new Map(allTasks.map(task => [task.id, task.order]))
-  const updates = reorderedTasks
-    .filter(task => originalOrder.get(task.id) !== task.order)
-    .map(task => ({ id: task.id, updates: { order: task.order } }))
+  // Only tasks whose position actually changed are written (one move = a
+  // handful of writes, not a renumber of every task).
+  const updates = visibleReorderUpdates(allTasks, taskIds, visibleIds)
+    .map(({ id, order }) => ({ id, updates: { order } }))
 
   if (!updates.length) return
 

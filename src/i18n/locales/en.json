@@ -111,7 +111,6 @@
     "priority_medium": "Medium",
     "priority_high": "High",
     "priority_urgent": "Urgent",
-    "priority_relaxed": "Relaxed",
     "priority_med_abbr": "Med",
     "priority_high_full": "High Priority",
     "priority_medium_full": "Medium Priority",
@@ -216,7 +215,20 @@
     "uncategorized": "Uncategorized",
     "no_tasks_today": "No tasks scheduled for today",
     "no_tasks_week": "No tasks scheduled for this week",
-    "no_tasks_project": "No tasks in this project"
+    "no_tasks_project": "No tasks in this project",
+    "up_next": "Up next",
+    "reorder_hint": "Drag the handle, or use the arrows. Alt+↑/↓ also works.",
+    "reorder_switches_manual": "Reordering switches the sort to Manual.",
+    "drag_to_reorder": "Drag to reorder: {title}",
+    "now": "Now",
+    "make_next": "Make next",
+    "make_next_named": "Make next: {title}",
+    "move_up": "Move up",
+    "move_up_named": "Move up: {title}",
+    "move_down": "Move down",
+    "move_down_named": "Move down: {title}",
+    "priority_immediate": "Immediate",
+    "priority_relaxed": "Relaxed"
   },
   "filters": {
     "sort_label": "Sort:",
@@ -319,12 +331,30 @@
     "change_task_pools_confirm": "Change and restart",
     "sort_another_set": "Sort another set",
     "sources": {
-      "uncategorized": { "label": "Uncategorized", "description": "Tasks that still need a project" },
-      "overdue": { "label": "Overdue", "description": "Due before today" },
-      "today": { "label": "Today", "description": "Due today" },
-      "next-3-days": { "label": "Next 3 days", "description": "Due tomorrow through day three" },
-      "next-7-days": { "label": "Next 7 days", "description": "Due during the next seven days" },
-      "no-due-date": { "label": "No due date", "description": "Tasks without a deadline" }
+      "uncategorized": {
+        "label": "Uncategorized",
+        "description": "Tasks that still need a project"
+      },
+      "overdue": {
+        "label": "Overdue",
+        "description": "Due before today"
+      },
+      "today": {
+        "label": "Today",
+        "description": "Due today"
+      },
+      "next-3-days": {
+        "label": "Next 3 days",
+        "description": "Due tomorrow through day three"
+      },
+      "next-7-days": {
+        "label": "Next 7 days",
+        "description": "Due during the next seven days"
+      },
+      "no-due-date": {
+        "label": "No due date",
+        "description": "Tasks without a deadline"
+      }
     }
   },
   "ai_chat": {

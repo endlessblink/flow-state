@@ -75,11 +75,11 @@ describe('TASK-2068 focused task timeline', () => {
   })
 
   it('keeps the full ordering surface hidden until the user requests it', () => {
+    // TASK-2104: the horizontal native-drag strip was replaced by the vertical
+    // "Up next" panel (behaviour covered in task-focus-reorder-panel.test.ts).
     expect(timelineSource).toContain('v-if="showReorder"')
-    expect(timelineSource).toContain('class="task-focus-reorder-list"')
-    expect(timelineSource).toContain('@dragend="finishReorder"')
-    expect(timelineSource).toContain('@keydown.alt.left.stop.prevent="moveReorderTask(task.id, -1)"')
-    expect(timelineSource).toContain('@keydown.alt.right.stop.prevent="moveReorderTask(task.id, 1)"')
+    expect(timelineSource).toContain('<TaskFocusReorderPanel')
+    expect(timelineSource).not.toContain('draggable="true"')
     expect(timelineSource).toContain("reorderTasks: [taskIds: string[]]")
     expect(boardSource).toContain("bulkUpdateTasksWithUndo(updates, 'Reorder focused timeline')")
     expect(boardSource).toContain("boardSortOption.value = 'manual'")

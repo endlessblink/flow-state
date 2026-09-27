@@ -61,6 +61,36 @@ export function mergeVisibleTaskOrder(
   }))
 }
 
+/**
+ * Order writes for a visible-list reorder, touching only tasks whose order
+ * actually changes. The visible tasks keep their existing order values as
+ * slots (so hidden tasks never move); only the moved range is rewritten.
+ * Legacy rows with missing/duplicate orders fall back to a full renumber.
+ */
+export function visibleReorderUpdates(
+  tasks: Task[],
+  orderedVisibleIds: string[],
+  visibleIds: Set<string>,
+): Array<{ id: string; order: number }> {
+  const byId = new Map(tasks.map(task => [task.id, task]))
+  const visibleInOrder = sortTasksBySharedOrder(tasks.filter(task => visibleIds.has(task.id)))
+  const slots = visibleInOrder.map(task => task.order)
+  const slotsUsable = slots.every((value, index) =>
+    typeof value === 'number' && Number.isFinite(value) && (index === 0 || value > (slots[index - 1] as number)))
+  const requested = orderedVisibleIds.filter(id => visibleIds.has(id) && byId.has(id))
+
+  if (slotsUsable && requested.length === visibleInOrder.length) {
+    return requested
+      .map((id, index) => ({ id, order: slots[index] as number }))
+      .filter(({ id, order }) => byId.get(id)!.order !== order)
+  }
+
+  const original = new Map(tasks.map(task => [task.id, task.order]))
+  return mergeVisibleTaskOrder(tasks, orderedVisibleIds, visibleIds)
+    .filter(task => original.get(task.id) !== task.order)
+    .map(task => ({ id: task.id, order: task.order as number }))
+}
+
 export function orderTasksByCanvasPosition(tasks: Task[], positions?: Map<string, Position>): Task[] {
   return [...tasks].sort((first, second) => {
     const firstPosition = taskPosition(first, positions)

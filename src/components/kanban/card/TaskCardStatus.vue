@@ -30,9 +30,11 @@ const priorityClass = computed(() => {
 
 const priorityTooltip = computed(() => {
   const labels: Record<string, string> = {
+    'immediate': 'Immediate priority',
     'high': 'High priority',
     'medium': 'Medium priority',
     'low': 'Low priority',
+    'relaxed': 'Relaxed priority',
     'none': 'No priority'
   }
   return labels[props.priority || 'none'] || 'Click to change'
@@ -63,6 +65,11 @@ const priorityTooltip = computed(() => {
 }
 
 /* Priority colors */
+.priority-immediate {
+  background: var(--color-priority-high);
+  box-shadow: 0 0 0 2px var(--priority-high-border), var(--danger-glow-sm);
+}
+
 .priority-high {
   background: var(--color-priority-high);
   box-shadow: var(--danger-glow-sm);
@@ -76,6 +83,11 @@ const priorityTooltip = computed(() => {
 .priority-low {
   background: var(--color-priority-low);
   box-shadow: var(--blue-glow-sm);
+}
+
+.priority-relaxed {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--color-priority-low);
 }
 
 .priority-none,

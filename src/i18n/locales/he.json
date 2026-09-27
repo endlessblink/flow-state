@@ -111,7 +111,6 @@
     "priority_medium": "בינונית",
     "priority_high": "גבוהה",
     "priority_urgent": "דחוף",
-    "priority_relaxed": "רגועה",
     "priority_med_abbr": "בינ׳",
     "priority_high_full": "עדיפות גבוהה",
     "priority_medium_full": "עדיפות בינונית",
@@ -216,7 +215,20 @@
     "uncategorized": "לא מסווג",
     "no_tasks_today": "אין משימות מתוכננות להיום",
     "no_tasks_week": "אין משימות מתוכננות לשבוע זה",
-    "no_tasks_project": "אין משימות בפרויקט זה"
+    "no_tasks_project": "אין משימות בפרויקט זה",
+    "up_next": "הבא בתור",
+    "reorder_hint": "גררו בידית או השתמשו בחיצים. גם Alt+↑/↓ עובד.",
+    "reorder_switches_manual": "שינוי הסדר יעביר את המיון לידני.",
+    "drag_to_reorder": "גררו לשינוי סדר: {title}",
+    "now": "עכשיו",
+    "make_next": "הבא בתור",
+    "make_next_named": "קבע כבא בתור: {title}",
+    "move_up": "הזז למעלה",
+    "move_up_named": "הזז למעלה: {title}",
+    "move_down": "הזז למטה",
+    "move_down_named": "הזז למטה: {title}",
+    "priority_immediate": "מיידי",
+    "priority_relaxed": "רגוע"
   },
   "filters": {
     "sort_label": "מיון:",
@@ -319,12 +331,30 @@
     "change_task_pools_confirm": "שינוי והתחלה מחדש",
     "sort_another_set": "מיון קבוצה נוספת",
     "sources": {
-      "uncategorized": { "label": "ללא פרויקט", "description": "משימות שעדיין צריך לשייך לפרויקט" },
-      "overdue": { "label": "באיחור", "description": "תאריך היעד כבר עבר" },
-      "today": { "label": "היום", "description": "תאריך היעד הוא היום" },
-      "next-3-days": { "label": "3 הימים הבאים", "description": "ממחר ועד היום השלישי" },
-      "next-7-days": { "label": "7 הימים הבאים", "description": "תאריך יעד בשבעת הימים הבאים" },
-      "no-due-date": { "label": "ללא תאריך יעד", "description": "משימות ללא דדליין" }
+      "uncategorized": {
+        "label": "ללא פרויקט",
+        "description": "משימות שעדיין צריך לשייך לפרויקט"
+      },
+      "overdue": {
+        "label": "באיחור",
+        "description": "תאריך היעד כבר עבר"
+      },
+      "today": {
+        "label": "היום",
+        "description": "תאריך היעד הוא היום"
+      },
+      "next-3-days": {
+        "label": "3 הימים הבאים",
+        "description": "ממחר ועד היום השלישי"
+      },
+      "next-7-days": {
+        "label": "7 הימים הבאים",
+        "description": "תאריך יעד בשבעת הימים הבאים"
+      },
+      "no-due-date": {
+        "label": "ללא תאריך יעד",
+        "description": "משימות ללא דדליין"
+      }
     }
   },
   "ai_chat": {

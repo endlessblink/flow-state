@@ -3,6 +3,7 @@
     class="task-node"
     :data-task-id="task?.id"
     :class="{
+      'priority-immediate': task?.priority === 'immediate',
       'priority-high': task?.priority === 'high',
       'priority-medium': task?.priority === 'medium',
       'priority-low': task?.priority === 'low',
@@ -439,6 +440,17 @@ onUnmounted(() => {
 }
 
 /* Priority-based glow effects on card outline */
+/* Immediate outranks High: stronger, unmistakable red outline */
+.priority-immediate {
+  border-color: var(--color-priority-high) !important;
+  border-width: 2px !important;
+  box-shadow:
+    0 var(--space-3) var(--space-6) var(--shadow-color-sm),
+    0 var(--space-1_5) var(--space-3) var(--shadow-color-sm),
+    0 0 var(--space-6) rgba(239, 68, 68, 0.3),
+    inset 0 0 0 var(--space-0_5) rgba(239, 68, 68, 0.1);
+}
+
 .priority-high {
   border-color: var(--priority-high-border) !important;
   box-shadow:

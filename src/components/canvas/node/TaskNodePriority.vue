@@ -14,6 +14,13 @@
   transition: all var(--duration-fast) var(--spring-smooth);
 }
 
+:global(.priority-immediate) .priority-indicator {
+  background: var(--color-priority-high);
+  box-shadow:
+    0 var(--space-0_5) var(--space-3) var(--color-danger-soft),
+    0 0 var(--space-5) var(--color-danger-soft);
+}
+
 :global(.priority-high) .priority-indicator {
   background: linear-gradient(180deg, var(--color-priority-high) 0%, var(--color-danger-soft) 100%);
   box-shadow:

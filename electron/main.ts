@@ -17,6 +17,7 @@ import {
   shutdownLocalApi,
 } from './ipc/localApi'
 import { registerDiagnosticsHandlers } from './ipc/diagnostics'
+import { registerTimerSuggestionWindow } from './timerSuggestionWindow'
 import { attachWindowRuntimeDiagnostics, recordRuntimeDiagnostic, registerRuntimeDiagnostics, stopRuntimeDiagnostics } from './runtimeDiagnostics'
 import {
   createBackgroundWindowLifecycle,
@@ -330,6 +331,7 @@ registerOAuthHandlers()
 registerLocalApiHandlers()
 registerDiagnosticsHandlers()
 registerRuntimeDiagnostics(() => mainWindow)
+registerTimerSuggestionWindow(() => mainWindow)
   ipcMain.handle('app:getVersion', () => app.getVersion())
   ipcMain.handle('app:getSystemIdleTime', () => powerMonitor.getSystemIdleTime())
 // BUG-1932: null unless a launcher's HOME was overridden. Renderer surfaces it so a deliberate

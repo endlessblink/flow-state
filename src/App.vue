@@ -27,7 +27,7 @@
         </ErrorBoundary>
         <ModalManager ref="modalManager" />
         <TimerSuggestionModal
-          :is-open="showTimerSuggestion"
+          :is-open="showInAppTimerSuggestion"
           :loading="isStartingSuggestedTimer"
           :error="timerSuggestionError"
           @start="startSuggestedTimer"
@@ -171,7 +171,7 @@ const onStartupReady = () => {
 
 // Initialize App Logic
 // BUG-1339: Capture isDataReady to gate view rendering until tasks are loaded
-const { isDataReady, showTimerSuggestion, isStartingSuggestedTimer, timerSuggestionError, startSuggestedTimer, dismissTimerSuggestion, discardTimerSuggestionForToday } = useAppInitialization()
+const { isDataReady, showInAppTimerSuggestion, isStartingSuggestedTimer, timerSuggestionError, startSuggestedTimer, dismissTimerSuggestion, discardTimerSuggestionForToday } = useAppInitialization()
 useDeviceSyncDiagnostics()
 
 // Intercept external link clicks so they open in the system browser (Electron)

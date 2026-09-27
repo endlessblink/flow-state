@@ -1,4 +1,4 @@
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTimerStore } from '@/stores/timer'
 import { useTaskStore } from '@/stores/tasks'
@@ -42,7 +42,7 @@ import { createCanonicalChangeSupabaseReader } from '@/services/sync/canonicalCh
 import { realtimeRowMatchesScope } from '@/services/sync/realtimeScopeGuard'
 import { startServiceWorkerUpdateRecovery } from '@/services/pwa/serviceWorkerUpdateRecovery'
 import { useDeviceSyncDiagnostics } from '@/composables/sync/useDeviceSyncDiagnostics'
-import { createElectronAutoStartMonitor, dismissTimerSuggestionForToday, getElectronAutoStartApi, isTimerSuggestionDismissedToday, shouldStartAutomaticPomodoro } from '@/composables/timer/useElectronAutoStart'
+import { createElectronAutoStartMonitor, dismissTimerSuggestionForToday, getElectronAutoStartApi, getTimerSuggestionDesktopApi, isTimerSuggestionDismissedToday, shouldStartAutomaticPomodoro, TIMER_SUGGESTION_MESSAGE } from '@/composables/timer/useElectronAutoStart'
 
 export function useAppInitialization() {
     const STARTUP_READ_TIMEOUT_MS = 5000
@@ -75,9 +75,17 @@ export function useAppInitialization() {
     const showTimerSuggestion = ref(false)
     const isStartingSuggestedTimer = ref(false)
     const timerSuggestionError = ref('')
+    // TASK-2102: in Electron the suggestion is shown as a desktop popup outside
+    // the main window; the in-app modal is only the fallback (or error surface).
+    const timerSuggestionOnDesktop = ref(false)
+    const showInAppTimerSuggestion = computed(() => showTimerSuggestion.value && !timerSuggestionOnDesktop.value)
     const dismissTimerSuggestion = () => {
         showTimerSuggestion.value = false
         timerSuggestionError.value = ''
+        if (timerSuggestionOnDesktop.value) {
+            timerSuggestionOnDesktop.value = false
+            void getTimerSuggestionDesktopApi()?.hideTimerSuggestionWindow().catch(() => {})
+        }
     }
     const discardTimerSuggestionForToday = () => {
         try {
@@ -99,6 +107,8 @@ export function useAppInitialization() {
             }
             dismissTimerSuggestion()
         } catch (error) {
+            // Surface the failure in-app; the desktop popup has already closed.
+            timerSuggestionOnDesktop.value = false
             timerSuggestionError.value = 'Could not start the timer. Please try again.'
             console.warn('[TIMER] Suggested timer start failed:', error)
         } finally {
@@ -116,6 +126,8 @@ export function useAppInitialization() {
     const itpProtection = useSafariITPProtection()
     let stopServiceWorkerUpdateRecovery = () => {}
     let stopElectronAutoStart = () => {}
+    let stopTimerSuggestionActions = () => {}
+    let stopTimerSuggestionWatch = () => {}
     // BUG-1725: Must be called synchronously during setup(), not inside async onMounted
     useBeforeUnload()
     // TASK-2002: Keep the VPS convergence watchdog supplied with live runtime,
@@ -404,6 +416,23 @@ export function useAppInitialization() {
             })
             monitor.start()
             stopElectronAutoStart = monitor.stop
+            const desktopApi = getTimerSuggestionDesktopApi()
+            if (desktopApi) {
+                stopTimerSuggestionActions = desktopApi.onTimerSuggestionAction((action) => {
+                    if (action === 'start') void startSuggestedTimer()
+                    else if (action === 'discardToday') discardTimerSuggestionForToday()
+                    else dismissTimerSuggestion()
+                })
+                stopTimerSuggestionWatch = watch(showTimerSuggestion, async (visible, wasVisible) => {
+                    if (!visible || wasVisible) return
+                    try {
+                        timerSuggestionOnDesktop.value = await desktopApi.showTimerSuggestionWindow(TIMER_SUGGESTION_MESSAGE) === true
+                    } catch (error) {
+                        timerSuggestionOnDesktop.value = false
+                        console.warn('[TIMER] Desktop suggestion popup unavailable, using in-app modal:', error)
+                    }
+                })
+            }
         }
         startupReadyWatchdog = setTimeout(() => {
             if (isDataReady.value) return
@@ -1582,6 +1611,8 @@ export function useAppInitialization() {
     onUnmounted(() => {
         stopServiceWorkerUpdateRecovery()
         stopElectronAutoStart()
+        stopTimerSuggestionActions()
+        stopTimerSuggestionWatch()
         canonicalChangePoller.stop()
         stopLocalApiMutationSubscription()
         stopLocalApiWorkspaceContextSync()
@@ -1599,5 +1630,5 @@ export function useAppInitialization() {
     })
 
     // BUG-1339: Return isDataReady so App.vue can gate view rendering
-    return { isDataReady, showTimerSuggestion, isStartingSuggestedTimer, timerSuggestionError, startSuggestedTimer, dismissTimerSuggestion, discardTimerSuggestionForToday }
+    return { isDataReady, showTimerSuggestion, showInAppTimerSuggestion, isStartingSuggestedTimer, timerSuggestionError, startSuggestedTimer, dismissTimerSuggestion, discardTimerSuggestionForToday }
 }

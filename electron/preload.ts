@@ -17,6 +17,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // App info
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
   getSystemIdleTime: () => ipcRenderer.invoke('app:getSystemIdleTime'),
+  // TASK-2102: desktop "Ready to focus?" popup outside the main window
+  showTimerSuggestionWindow: (message: string) => ipcRenderer.invoke('timerSuggestion:show', message),
+  hideTimerSuggestionWindow: () => ipcRenderer.invoke('timerSuggestion:hide'),
+  onTimerSuggestionAction: (callback: (action: string) => void) => {
+    const listener = (_event: unknown, action: string) => callback(action)
+    ipcRenderer.on('timerSuggestion:action', listener)
+    return () => ipcRenderer.removeListener('timerSuggestion:action', listener)
+  },
 
   // BUG-1932: `{ home, pinnedTo }` when a launcher rewrote HOME and userData was pinned back to the
   // real home; null otherwise.
@@ -111,6 +119,9 @@ declare global {
       isElectron: boolean
       getVersion: () => Promise<string>
       getSystemIdleTime: () => Promise<number>
+      showTimerSuggestionWindow: (message: string) => Promise<boolean>
+      hideTimerSuggestionWindow: () => Promise<boolean>
+      onTimerSuggestionAction: (callback: (action: string) => void) => () => void
       openExternal: (url: string) => Promise<void>
       showSaveDialog: (options: unknown) => Promise<unknown>
       showOpenDialog: (options: unknown) => Promise<unknown>

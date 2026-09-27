@@ -8,7 +8,7 @@
     @close="emit('close')"
   >
     <p class="timer-suggestion-copy">
-      You were inactive for at least 15 seconds. Start a focus timer?
+      {{ TIMER_SUGGESTION_MESSAGE }}
     </p>
     <p v-if="error" class="timer-suggestion-error" role="alert">
       {{ error }}
@@ -33,6 +33,7 @@
 <script setup lang="ts">
 import BaseModal from '@/components/base/BaseModal.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
+import { TIMER_SUGGESTION_MESSAGE } from '@/composables/timer/useElectronAutoStart'
 
 defineProps<{
   isOpen: boolean

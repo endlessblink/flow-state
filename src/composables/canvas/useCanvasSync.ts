@@ -17,6 +17,7 @@ import { traceCanvasDone, traceCanvasDoneNodes, traceCanvasDoneTasks } from '@/u
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { getCanonicalTodayTaskIds, getCanonicalTodayTasks, getStaleTodayTaskIds } from '@/utils/todayTaskProjection'
 import { computeCanonicalLayout, computeVisibleTaskCompaction } from './useCanonicalDayGroupLayout'
+import { getCanvasViewFilterVisibleIds } from '@/utils/canvas/viewFilterVisibility'
 
 // =============================================================================
 // MODULE-LEVEL HELPERS (defined before composable to ensure availability)
@@ -213,6 +214,16 @@ export function useCanvasSync() {
                 todayGroup?.id,
                 shouldHideDone,
             )
+            // BUG-2103: sidebar filters hide (never remove) tasks outside the view.
+            const viewFilterVisibleIds = getCanvasViewFilterVisibleIds({
+                activeSmartView: taskStore.activeSmartView,
+                activeProjectId: taskStore.activeProjectId,
+                activeDurationFilter: taskStore.activeDurationFilter,
+                activeStatusFilter: taskStore.activeStatusFilter,
+                filteredTasks: taskStore.filteredTasks,
+            })
+            const isHiddenByViewFilter = (taskId: string) =>
+                viewFilterVisibleIds !== null && !viewFilterVisibleIds.has(taskId)
             const fallbackTodayY = new Map<string, number>()
             let previousTodayY = canonicalTodayTasks.find(task => task.canvasPosition)?.canvasPosition?.y
             for (const task of canonicalTodayTasks) {
@@ -301,12 +312,13 @@ export function useCanvasSync() {
             // the surviving siblings in the render projection so completing a
             // task does not leave a blank card-sized hole in its group.
             const compactedTaskPositions = new Map<string, { x: number; y: number }>()
-            if (shouldHideDone || taskStore.hideCanvasOverdueTasks || staleTodayTaskIds.size > 0) {
+            if (shouldHideDone || taskStore.hideCanvasOverdueTasks || staleTodayTaskIds.size > 0 || viewFilterVisibleIds !== null) {
                 const currentNodeById = new Map(currentNodes.map((node: any) => [node.id, node]))
                 for (const group of groups) {
                     const groupTasks = tasksToSync.filter((task) => task.parentId === group.id && task.canvasPosition)
                     const visibleGroupTasks = groupTasks.filter((task) => {
                         const hiddenByFilter = staleTodayTaskIds.has(task.id) ||
+                            isHiddenByViewFilter(task.id) ||
                             (shouldHideDone && task.status === 'done') ||
                             (taskStore.hideCanvasOverdueTasks && isOverdue(task.dueDate))
                         return !hiddenByFilter
@@ -682,6 +694,7 @@ export function useCanvasSync() {
                     draggable: true,
                     selectable: true,
                     hidden: staleTodayTaskIds.has(task.id) ||
+                        isHiddenByViewFilter(task.id) ||
                         (shouldHideDone && task.status === 'done') ||
                         isUnderCollapsedAncestor(task.parentId) ||
                         isInsideCollapsedGroupBounds(absolutePos),

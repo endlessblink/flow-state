@@ -121,8 +121,10 @@ const selectSmartView = (view: string) => {
   }
 
   // BUG-1430: Only navigate to /tasks if current view doesn't support smart view filters
-  const filterableViews = ['/', '/board', '/calendar', '/tasks', '/catalog']
-  if (!filterableViews.includes(route.path)) {
+  // BUG-2103: match by route name — Canvas is also reachable at its '/canvas'
+  // alias, which a path list missed and bounced the user to the catalogue.
+  const filterableViews = ['canvas', 'board', 'calendar', 'all-tasks', 'catalog']
+  if (!filterableViews.includes(String(route.name ?? ''))) {
     router.push('/tasks')
   }
 }

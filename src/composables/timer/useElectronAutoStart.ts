@@ -78,3 +78,23 @@ export function getElectronAutoStartApi(): ElectronAutoStartApi | null {
   const api = (window as unknown as { electronAPI?: ElectronAutoStartApi }).electronAPI
   return api?.isElectron === true ? api : null
 }
+
+/** Shared copy for the in-app modal and the desktop popup (TASK-2102). */
+export const TIMER_SUGGESTION_MESSAGE = 'You were inactive for at least 15 seconds. Start a focus timer?'
+
+export interface TimerSuggestionDesktopApi {
+  showTimerSuggestionWindow: (message: string) => Promise<boolean>
+  hideTimerSuggestionWindow: () => Promise<boolean>
+  onTimerSuggestionAction: (callback: (action: string) => void) => () => void
+}
+
+/** TASK-2102: the Electron bridge for the desktop "Ready to focus?" popup, if present. */
+export function getTimerSuggestionDesktopApi(): TimerSuggestionDesktopApi | null {
+  if (typeof window === 'undefined') return null
+  const api = (window as unknown as { electronAPI?: Partial<TimerSuggestionDesktopApi> & { isElectron?: boolean } }).electronAPI
+  if (api?.isElectron !== true) return null
+  if (typeof api.showTimerSuggestionWindow !== 'function'
+    || typeof api.hideTimerSuggestionWindow !== 'function'
+    || typeof api.onTimerSuggestionAction !== 'function') return null
+  return api as TimerSuggestionDesktopApi
+}

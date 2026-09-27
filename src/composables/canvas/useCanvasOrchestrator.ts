@@ -805,7 +805,8 @@ export function useCanvasOrchestrator() {
     })
     // BUG-1210 FIX: Watch smart view changes to re-sync canvas nodes
     // Without this, switching to "This Week" doesn't refresh canvas when task count stays the same
-    watch(() => taskStore.activeSmartView, () => {
+    // BUG-2103: every sidebar filter narrows Canvas, not only smart views.
+    watch(() => [taskStore.activeSmartView, taskStore.activeProjectId, taskStore.activeDurationFilter, taskStore.activeStatusFilter], () => {
         if (!isInitialized.value) return
         if (import.meta.env.DEV && zoomPerfActive) logZoomPerf('watcher:activeSmartView', viewport.value?.zoom ?? 1)
         batchedSyncNodes()

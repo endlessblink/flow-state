@@ -10,9 +10,9 @@
 
 **Current evidence**: Electron 1.4.555 was installed, and its Canvas shuffle menu remained translucent over task cards. Electron 1.4.556 replaced that menu with the existing FlowState dropdown and was published, but the running desktop still reported 1.4.555. Read-only live comparison found Timeline Today 18 tasks versus Canvas Today group 15; Timeline's first two tasks were absent from that group, and one was a floating Canvas card. The Canvas shuffle planner used stored parent membership while Canvas renders effective Today membership, so it skipped projected cards. The source fix aligns the planner and sync projection with the canonical Today list. Focused planner, cross-view transaction, Today projection, and undo tests pass. The 1.4.557 release passed task consistency (37), Electron sync (378), full unit suite (4,932 passed, 3 skipped), typecheck, and package validation, but updater publication refused a different artifact already published as 1.4.557. Electron 1.4.558 passed the same release gates and package validation and was published. A concurrent 1.4.559 mainline release then became public and installed without the shuffle branch, so the Canvas priority action was absent. The 1.4.560 package passed 4,932 tests and validation, but the VPS refused publication because another artifact already held that version. Mainline 1.4.561 then shipped without this feature. The combined branch now targets 1.4.562. Focused shuffle tests (15), Electron sync (378), and typecheck pass on the combined tree. The canonical Electron build prehook stops at its local-Supabase E2E gate because no local instance is running; the release script uses the locked package build after its own unit gates. Installed visual and authenticated task-order checks remain open.
 
-### BUG-2106: Views disagreed on the first task — sync every view to the Canvas order (🚧 IN PROGRESS)
+### ~~BUG-2106~~: Views disagreed on the first task — sync every view to the Canvas order (✅ DONE)
 
-**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-27) — awaiting installed 1.4.568 proof
+**Priority**: P1 | **Status**: ✅ DONE (2026-09-27) — user confirmed in installed 1.4.568
 
 **User report**: The focused timeline's first task ("לשטוף כלים") did not match the first task on Canvas ("לעבוד על ההרצאה ללייב"); all views should share one order unless the user manually re-sorts.
 
@@ -31,7 +31,7 @@
 | Localhost sidecar endpoint | Not checked | Local API task list does not expose order | Not covered |
 | KDE polling/control path | Not checked | Widget sorts its own list | Not covered |
 | Supabase persistence/realtime | Yes | Reorder writes only moved rows (unit + DB read-back in TASK-2104) | Yes |
-| Updater/runtime version | Pending | Ships in 1.4.568 | Pending install |
+| Updater/runtime version | Yes | 1.4.568 published and running locally | Yes |
 | Stale live process/cache state | Yes | One-time sort reset via local flag | Yes |
 
 **Exact failure mode fixed**: synced views (Board, timeline, inbox lists) not following the Canvas day sequence; stale priority sort overriding it.
@@ -40,11 +40,11 @@
 
 **Regression added for reported repro**: unit test with the user's shape (Thursday task with lowest order, Immediate task third in Today) → synced order starts with the first Today task; authenticated Chromium E2E: timeline starts with the leftmost Canvas group's task despite a persisted priority sort and a lower-order high-priority task elsewhere (fails on the previous build); panel keeps moves within a day.
 
-**Live boundary proof**: pending installed 1.4.568.
+**Live boundary proof**: 1.4.568 published (manifest + AppImage reachable) and running locally; user confirmed synced first task across views.
 
-### TASK-2104: Reliable "Up next" reorder panel for the focused timeline (🚧 IN PROGRESS)
+### ~~TASK-2104~~: Reliable "Up next" reorder panel for the focused timeline (✅ DONE)
 
-**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-27) — awaiting installed 1.4.567 proof
+**Priority**: P1 | **Status**: ✅ DONE (2026-09-27) — user confirmed in installed 1.4.568
 
 **User request**: The focused timeline reorder strip needs a much better, reliable way to reorder, with better UX/UI.
 
@@ -56,17 +56,17 @@
 
 **Verification**: 7 unit tests (moves, minimal writes, pending draft stability, sort hint); authenticated Chromium E2E moves a task and the order survives reload; DB read-back confirms only moved rows changed; 600 related unit tests pass.
 
-### BUG-2105: "Immediate" priority invisible on cards (🚧 IN PROGRESS)
+### ~~BUG-2105~~: "Immediate" priority invisible on cards (✅ DONE)
 
-**Priority**: P2 | **Status**: 🚧 IN PROGRESS (2026-09-27) — awaiting installed 1.4.567 proof
+**Priority**: P2 | **Status**: ✅ DONE (2026-09-27) — user confirmed in installed 1.4.568
 
 **Failure mode**: Priority sorts rank Immediate above High, but Canvas task nodes and Board priority dots only styled high/medium/low, so an Immediate task looked like "no priority" and a correctly sorted list looked wrong to the user. Timeline meta also rendered the raw `kanban.priority_immediate` key.
 
 **Fix**: Distinct stronger red styling for Immediate on Canvas nodes (outline + indicator) and Board dots, a Relaxed dot style, and kanban i18n labels for Immediate/Relaxed (en/he).
 
-### BUG-2103: Sidebar filters ignored on Canvas and bounced to catalogue (🚧 IN PROGRESS)
+### ~~BUG-2103~~: Sidebar filters ignored on Canvas and bounced to catalogue (✅ DONE)
 
-**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-27) — awaiting installed 1.4.566 proof
+**Priority**: P1 | **Status**: ✅ DONE (2026-09-27) — user confirmed in installed 1.4.568
 
 **Failure mode**: (1) Canvas reads the raw task projection (since 0d0dc9df), so Today / This Week / duration / project / status filters never narrowed Canvas. (2) SidebarSmartViews matched filterable views by path; Canvas at its `/canvas` alias was not in the list, so choosing a filter pushed `/tasks` (catalogue).
 
@@ -83,7 +83,7 @@
 | Localhost sidecar endpoint | N/A | Not involved | N/A |
 | KDE polling/control path | N/A | Not involved | N/A |
 | Supabase persistence/realtime | N/A | No persistence change; geometry invariants preserved | N/A |
-| Updater/runtime version | Pending | Ships in 1.4.566 | Pending install |
+| Updater/runtime version | Yes | Shipped in 1.4.566, running 1.4.568 | Yes |
 | Stale live process/cache state | N/A | Filters are session state | N/A |
 
 **Exact failure mode fixed**: sidebar filters not applied to Canvas nodes; alias route misdetected as non-filterable.
@@ -92,11 +92,11 @@
 
 **Regression added for reported repro**: authenticated Chromium E2E (Today filter on `/#/canvas` stays on Canvas and hides a later task; fails on old code), sidebar routing unit test for `/` and `/canvas` (fails on old code), visibility helper tests.
 
-**Live boundary proof**: pending installed 1.4.566.
+**Live boundary proof**: installed 1.4.566+; user confirmed filters narrow Canvas and stay on Canvas.
 
-### TASK-2102: "Ready to focus?" popup appears on the desktop outside the app (🚧 IN PROGRESS)
+### ~~TASK-2102~~: "Ready to focus?" popup appears on the desktop outside the app (✅ DONE)
 
-**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-27) — awaiting installed 1.4.566 proof
+**Priority**: P1 | **Status**: ✅ DONE (2026-09-27) — user confirmed in installed 1.4.568
 
 **User request**: The return-from-absence timer suggestion must pop up on the desktop, not only inside the (often hidden) FlowState window.
 
@@ -106,7 +106,7 @@
 
 **Verification**: 5 unit tests (actions, navigation allow-list, HTML escaping, placement, bridge detection) + existing auto-start tests; vue-tsc and electron tsc clean. Visual desktop check pending installed 1.4.566.
 
-### TASK-2101: Desktop focus reminder offers Start timer after 5 idle minutes (🚧 IN PROGRESS)
+### ~~TASK-2101~~: Desktop focus reminder offers Start timer after 5 idle minutes (✅ DONE)
 
 **Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-27)
 
@@ -118,9 +118,9 @@
 
 **Verification**: qmllint clean; live widget reloaded, authenticated, idle gate counting toward 300s; visual check of the popup pending.
 
-### BUG-2100: Upload queue starved by repeated full reloads and duplicate group saves (🚧 IN PROGRESS)
+### ~~BUG-2100~~: Upload queue starved by repeated full reloads and duplicate group saves (✅ DONE)
 
-**Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-26) — awaiting installed 1.4.565 proof
+**Priority**: P0 | **Status**: ✅ DONE (2026-09-27) — user confirmed in installed 1.4.568
 
 **Failure mode**: After a burst of queued task writes (startup Tidy repair: 48 order updates), each realtime echo for a task that still had a pending write called `recoverSkippedTaskChange`, which scheduled an uncoalesced full `reloadCoreData()`. Those reloads hold the queue-processor barrier, so queue passes returned `contended` silently; gateway logs showed ~5s GET reload cycles and zero writes for minutes. Each canvas reload also re-saved unchanged day groups as new group upserts (earlier the same loop produced ~670 identical upserts per group while uploads were blocked).
 
@@ -137,7 +137,7 @@
 | Localhost sidecar endpoint | Checked | Readiness reports 1.4.564 authenticated | N/A |
 | KDE polling/control path | N/A | Widget does not use the renderer queue | N/A |
 | Supabase persistence/realtime | Yes | Gateway: PATCH tasks stop at 19:34:36 while GET reload cycles continue | Yes (echo-triggered reloads) |
-| Updater/runtime version | Pending | Ships in 1.4.565 | Pending install |
+| Updater/runtime version | Yes | Shipped in 1.4.565, running 1.4.568 | Yes |
 | Stale live process/cache state | Yes | Existing duplicates still coalesce on upload | Existing path |
 
 **Exact failure mode fixed**: uncoalesced echo-driven full reloads starving the upload queue, and duplicate unchanged group upserts.
@@ -146,11 +146,11 @@
 
 **Regression added for reported repro**: 48-request burst collapses to one reload plus one follow-up with a queue turn before each; identical group upsert detection ignores updated_at/key order and never suppresses real changes or completed writes.
 
-**Live boundary proof**: pending installed 1.4.565 and gateway write resumption.
+**Live boundary proof**: gateway logs showed writes resuming and the device queue drained to empty; user confirmed in installed build.
 
-### BUG-2099: Stale "previous change may not have saved" warning could never clear (🚧 IN PROGRESS)
+### ~~BUG-2099~~: Stale "previous change may not have saved" warning could never clear (✅ DONE)
 
-**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-26) — awaiting installed 1.4.564 proof
+**Priority**: P1 | **Status**: ✅ DONE (2026-09-27) — user confirmed in installed 1.4.568
 
 **Failure mode**: After the BUG-2098 credential window, the sync popover kept showing "A previous change may not have saved" with an empty write queue. Restored direct-write incidents (`saveProjects`, `saveActiveTimerSession`, two old `permanentlyDeleteTask:<id>`) only clear on a success with the same write identity; context-only successes never report one, and deletions that later landed another way never retry. The popover offered only Dismiss/Discard and wrongly called them "local changes".
 
@@ -169,7 +169,7 @@
 | Localhost sidecar endpoint | Yes | Both deleted task ids return not_found | Evidence only |
 | KDE polling/control path | N/A | Widget does not read write-health | N/A |
 | Supabase persistence/realtime | Yes | Offline copy of device IndexedDB queue has 0 ops/0 conflicts; gateway logs show 200s | Evidence only |
-| Updater/runtime version | Pending | Ships in 1.4.564 | Pending install |
+| Updater/runtime version | Yes | Shipped in 1.4.564, running 1.4.568 | Yes |
 | Stale live process/cache state | Yes | Warning is durable across restart by design; cleared only by explicit user acknowledgement | Yes |
 
 **Exact failure mode fixed**: restored direct-write incidents with no queued operation had no clearing path; timer-session incidents never self-cleared.
@@ -178,7 +178,7 @@
 
 **Regression added for reported repro**: popover test restores the exact incident shape and clears it via Mark as checked; guard test that queued failures never offer it; timer singleton identity test.
 
-**Live boundary proof**: pending installed 1.4.564.
+**Live boundary proof**: installed 1.4.564+; user confirmed the warning clears via Mark as checked.
 
 ### BUG-2098: Finish intentional Supabase credential rotation across Doppler and releases (🚧 IN PROGRESS)
 

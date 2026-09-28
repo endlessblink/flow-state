@@ -1280,7 +1280,7 @@ PlasmoidItem {
                             spacing: 2
 
                             Text {
-                                text: "Time to pick a task!"
+                                text: "Ready to focus?"
                                 font.pixelSize: 16
                                 font.bold: true
                                 color: root.textColor
@@ -1303,7 +1303,7 @@ PlasmoidItem {
                         color: Qt.rgba(1, 1, 1, 0.08)
                     }
 
-                    // Primary action: pick a task and start the timer
+                    // Primary action: start a plain timer (no task required)
                     Rectangle {
                         Layout.fillWidth: true
                         height: 44
@@ -1324,8 +1324,10 @@ PlasmoidItem {
                             onClicked: {
                                 nudgePopup.visible = false
                                 root.nannyLastNotifyTime = Date.now()
-                                console.log("[NUDGE] Start timer — opening task picker")
-                                root.showNannyPopup()
+                                // BUG-2108: start a plain timer right away. A task list here
+                                // is stressful; tasks can still be picked in the widget.
+                                console.log("[NUDGE] Start timer — plain session, no task")
+                                root.startNewSessionWithTask(null)
                             }
                         }
                     }

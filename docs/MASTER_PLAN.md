@@ -10,6 +10,16 @@
 
 **Current evidence**: Electron 1.4.555 was installed, and its Canvas shuffle menu remained translucent over task cards. Electron 1.4.556 replaced that menu with the existing FlowState dropdown and was published, but the running desktop still reported 1.4.555. Read-only live comparison found Timeline Today 18 tasks versus Canvas Today group 15; Timeline's first two tasks were absent from that group, and one was a floating Canvas card. The Canvas shuffle planner used stored parent membership while Canvas renders effective Today membership, so it skipped projected cards. The source fix aligns the planner and sync projection with the canonical Today list. Focused planner, cross-view transaction, Today projection, and undo tests pass. The 1.4.557 release passed task consistency (37), Electron sync (378), full unit suite (4,932 passed, 3 skipped), typecheck, and package validation, but updater publication refused a different artifact already published as 1.4.557. Electron 1.4.558 passed the same release gates and package validation and was published. A concurrent 1.4.559 mainline release then became public and installed without the shuffle branch, so the Canvas priority action was absent. The 1.4.560 package passed 4,932 tests and validation, but the VPS refused publication because another artifact already held that version. Mainline 1.4.561 then shipped without this feature. The combined branch now targets 1.4.562. Focused shuffle tests (15), Electron sync (378), and typecheck pass on the combined tree. The canonical Electron build prehook stops at its local-Supabase E2E gate because no local instance is running; the release script uses the locked package build after its own unit gates. Installed visual and authenticated task-order checks remain open.
 
+### BUG-2108: Focus nudge Start timer starts a plain timer, no task list (🚧 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-28) — deployed to the live widget; awaiting user confirmation
+
+**User report**: The desktop focus nudge's "Start timer" opened a task list; seeing the tasks is stressful. The user wants to just start a blank timer.
+
+**Fix**: "Start timer" now starts a plain (general, task-less) session immediately; the nudge never opens the task list (tasks remain available inside the widget). Heading softened from "Time to pick a task!" to "Ready to focus?". The app's own "Ready to focus?" desktop popup already starts a plain timer.
+
+**Verification**: 3 regression tests read the live nudge block (fail on the previous widget); 190 KDE tests pass; widget reloaded without QML errors.
+
 ### ~~BUG-2107~~: KDE widget list follows the synced Canvas order (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-09-28) — user confirmed the widget starts with the Canvas first task

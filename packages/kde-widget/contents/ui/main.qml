@@ -71,6 +71,7 @@ PlasmoidItem {
     // ===== SESSION COMPLETE STATE =====
     property bool sessionJustCompleted: false      // True when session ends, waiting for user action
     property bool lastCompletedWasWork: true       // Track what type of session just completed
+    property bool nudgeSuggestBreak: false          // BUG-2109: last real work session had no break after it
     property string lastCompletedSessionId: ""         // Track completed session ID for +5min extension
     property int lastCompletedDuration: 0              // Track original duration for extension
     property string lastCompletedTaskId: "general"     // Track task ID for extension
@@ -337,9 +338,48 @@ PlasmoidItem {
         console.log("[NOTIFY] Running notify script:", cmd)
     }
 
+    // BUG-2109: a break is owed when the most recent finished session was a real
+    // work session (ran to the end, or at least 10 minutes) that ended within the
+    // last 90 minutes. Any later break session — or a longer gap — clears it.
+    // Pure: extracted by tests.
+    function isBreakOwed(lastSession, nowMs) {
+        if (!lastSession || lastSession.is_break) return false
+        var endedAt = Date.parse(lastSession.completed_at || "")
+        if (isNaN(endedAt)) return false
+        var sinceEnd = nowMs - endedAt
+        if (sinceEnd < 0 || sinceEnd > 90 * 60 * 1000) return false
+        var planned = Number(lastSession.duration) || 0
+        var remaining = Math.max(0, Number(lastSession.remaining_time) || 0)
+        var worked = planned - remaining
+        return remaining <= 0 || worked >= 10 * 60
+    }
+
+    function fetchBreakOwed(onDone) {
+        var url = root.supabaseUrl + "/rest/v1/timer_sessions?user_id=eq." + root.userId
+            + "&is_active=eq.false&completed_at=not.is.null"
+            + "&select=is_break,completed_at,duration,remaining_time&order=completed_at.desc&limit=1"
+        var xhr = new XMLHttpRequest()
+        xhr.open("GET", url, true)
+        xhr.setRequestHeader("apikey", root.supabaseKey)
+        xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState !== XMLHttpRequest.DONE) return
+            var owed = false
+            if (xhr.status === 200) {
+                try {
+                    var rows = JSON.parse(xhr.responseText)
+                    owed = root.isBreakOwed(rows && rows[0], Date.now())
+                } catch (e) { owed = false }
+            }
+            root.nudgeSuggestBreak = owed
+            if (onDone) onDone(owed)
+        }
+        xhr.send()
+    }
+
     // ===== NUDGE: Simple reminder popup (separate from nanny task picker) =====
     function sendNannyNotification() {
-        if (!root.hasActionableNannyTasks()) {
+        if (!root.nudgeSuggestBreak && !root.hasActionableNannyTasks()) {
             console.log("[NUDGE] Suppressed: no actionable reminder tasks")
             return
         }
@@ -354,6 +394,9 @@ PlasmoidItem {
         nudgePopup.x = sg.x + sg.width - nudgePopup.width - 24
         nudgePopup.y = sg.y + 24
 
+        if (root.nudgeSuggestBreak) {
+            msg = "You skipped your break. A few minutes away will help you focus."
+        }
         nudgePopup.nudgeMessage = msg
         nudgePopup.visible = true
         nudgePopup.raise()
@@ -1203,7 +1246,7 @@ PlasmoidItem {
             console.log("[POPUP] nudgePopup visible=" + visible + " ts=" + Date.now())
         }
         width: 420
-        height: 280
+        height: root.nudgeSuggestBreak ? 318 : 280
 
         property string nudgeMessage: ""
 
@@ -1270,7 +1313,7 @@ PlasmoidItem {
 
                             Text {
                                 anchors.centerIn: parent
-                                text: "\uD83C\uDF45"  // tomato — matches nanny
+                                text: root.nudgeSuggestBreak ? "\u2615" : "\uD83C\uDF45"  // coffee for a break, tomato for work
                                 font.pixelSize: 18
                             }
                         }
@@ -1280,7 +1323,7 @@ PlasmoidItem {
                             spacing: 2
 
                             Text {
-                                text: "Ready to focus?"
+                                text: root.nudgeSuggestBreak ? "Time for a break" : "Ready to focus?"
                                 font.pixelSize: 16
                                 font.bold: true
                                 color: root.textColor
@@ -1303,16 +1346,17 @@ PlasmoidItem {
                         color: Qt.rgba(1, 1, 1, 0.08)
                     }
 
-                    // Primary action: start a plain timer (no task required)
+                    // Primary action: a break when one is owed (BUG-2109), otherwise a
+                    // plain work timer (no task required, BUG-2108)
                     Rectangle {
                         Layout.fillWidth: true
                         height: 44
                         radius: 12
-                        color: root.workColor
+                        color: root.nudgeSuggestBreak ? root.breakColor : root.workColor
 
                         Text {
                             anchors.centerIn: parent
-                            text: "\u25B6  Start timer"
+                            text: root.nudgeSuggestBreak ? "\u2615  Start break" : "\u25B6  Start timer"
                             font.pixelSize: 15
                             font.bold: true
                             color: root.bgColor
@@ -1324,9 +1368,40 @@ PlasmoidItem {
                             onClicked: {
                                 nudgePopup.visible = false
                                 root.nannyLastNotifyTime = Date.now()
-                                // BUG-2108: start a plain timer right away. A task list here
-                                // is stressful; tasks can still be picked in the widget.
-                                console.log("[NUDGE] Start timer — plain session, no task")
+                                if (root.nudgeSuggestBreak) {
+                                    console.log("[NUDGE] Start break")
+                                    root.nudgeSuggestBreak = false
+                                    root.startNewSessionSupabase(true)
+                                } else {
+                                    // BUG-2108: start a plain timer right away. A task list here
+                                    // is stressful; tasks can still be picked in the widget.
+                                    console.log("[NUDGE] Start timer — plain session, no task")
+                                    root.startNewSessionWithTask(null)
+                                }
+                            }
+                        }
+                    }
+
+                    // BUG-2109: when a break is suggested, still allow carrying on working
+                    Text {
+                        visible: root.nudgeSuggestBreak
+                        Layout.alignment: Qt.AlignHCenter
+                        text: "Keep working instead"
+                        font.pixelSize: 13
+                        font.underline: keepWorkingMouse.containsMouse
+                        color: root.mutedColor
+
+                        MouseArea {
+                            id: keepWorkingMouse
+                            anchors.fill: parent
+                            anchors.margins: -6
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                nudgePopup.visible = false
+                                root.nannyLastNotifyTime = Date.now()
+                                root.nudgeSuggestBreak = false
+                                console.log("[NUDGE] Keep working — plain session, no task")
                                 root.startNewSessionWithTask(null)
                             }
                         }
@@ -4127,13 +4202,14 @@ PlasmoidItem {
             // final task, or a stale failed cache cannot produce a phantom nudge.
             root.fetchNannyTasks(function() {
                 root.buildNannyTaskList()
-                if (!root.hasActionableNannyTasks()) {
-                    console.log("[NUDGE] Blocked: no actionable reminder tasks")
-                    return
-                }
-
-                console.log("[NUDGE] All gates passed — showing nudge!")
-                root.sendNannyNotification()
+                root.fetchBreakOwed(function(breakOwed) {
+                    if (!breakOwed && !root.hasActionableNannyTasks()) {
+                        console.log("[NUDGE] Blocked: no actionable reminder tasks")
+                        return
+                    }
+                    console.log("[NUDGE] All gates passed — showing nudge!", breakOwed ? "(break owed)" : "")
+                    root.sendNannyNotification()
+                })
             })
         }
     }

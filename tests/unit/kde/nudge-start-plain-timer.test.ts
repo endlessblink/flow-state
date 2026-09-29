@@ -14,7 +14,12 @@ const nudgeBlock = qml.slice(nudgeStart, qml.indexOf('// Action buttons', nudgeS
 const startHandler = (() => {
   const label = nudgeBlock.indexOf('Start timer"')
   const click = nudgeBlock.indexOf('onClicked:', label)
-  return nudgeBlock.slice(click, nudgeBlock.indexOf('}', nudgeBlock.indexOf('{', click)) + 1)
+  let depth = 0
+  for (let i = nudgeBlock.indexOf('{', click); i < nudgeBlock.length; i++) {
+    if (nudgeBlock[i] === '{') depth++
+    else if (nudgeBlock[i] === '}' && --depth === 0) return nudgeBlock.slice(click, i + 1)
+  }
+  return ''
 })()
 
 describe('focus nudge Start timer (BUG-2108)', () => {

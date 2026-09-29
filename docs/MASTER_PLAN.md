@@ -10,15 +10,49 @@
 
 **Current evidence**: Electron 1.4.555 was installed, and its Canvas shuffle menu remained translucent over task cards. Electron 1.4.556 replaced that menu with the existing FlowState dropdown and was published, but the running desktop still reported 1.4.555. Read-only live comparison found Timeline Today 18 tasks versus Canvas Today group 15; Timeline's first two tasks were absent from that group, and one was a floating Canvas card. The Canvas shuffle planner used stored parent membership while Canvas renders effective Today membership, so it skipped projected cards. The source fix aligns the planner and sync projection with the canonical Today list. Focused planner, cross-view transaction, Today projection, and undo tests pass. The 1.4.557 release passed task consistency (37), Electron sync (378), full unit suite (4,932 passed, 3 skipped), typecheck, and package validation, but updater publication refused a different artifact already published as 1.4.557. Electron 1.4.558 passed the same release gates and package validation and was published. A concurrent 1.4.559 mainline release then became public and installed without the shuffle branch, so the Canvas priority action was absent. The 1.4.560 package passed 4,932 tests and validation, but the VPS refused publication because another artifact already held that version. Mainline 1.4.561 then shipped without this feature. The combined branch now targets 1.4.562. Focused shuffle tests (15), Electron sync (378), and typecheck pass on the combined tree. The canonical Electron build prehook stops at its local-Supabase E2E gate because no local instance is running; the release script uses the locked package build after its own unit gates. Installed visual and authenticated task-order checks remain open.
 
-### BUG-2108: Focus nudge Start timer starts a plain timer, no task list (🚧 IN PROGRESS)
+### BUG-2109: Focus nudge suggests a break after a skipped break (🚧 IN PROGRESS)
 
-**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-28) — deployed to the live widget; awaiting user confirmation
+**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-29) — deployed to the live widget; awaiting user confirmation
+
+**User report**: The desktop nudge only ever suggests working; after skipping a break it should suggest a break.
+
+**Failure mode**: The nudge had no notion of a pending break; the widget only tracked the last completed session type when it ran the session itself (not when the app led, or after dismissing the break overlay).
+
+**Fix**: Before showing, the nudge reads the latest finished timer session. `isBreakOwed` (pure): last session is work, ran to the end or ≥10 min, ended ≤90 min ago. Then the nudge shows "Time for a break" with an amber "Start break" (starts a break session) and a quiet "Keep working instead" (plain work timer); otherwise the plain "Ready to focus?" nudge. An owed break shows even when no tasks are listed.
+
+**Verification**: 6 regression tests (live-extracted `isBreakOwed`, nudge wiring; fail on the previous widget); 196 KDE tests pass; replay on production sessions → break owed after a full 25-min work session 11 min earlier; widget reloaded without QML errors.
+
+### ~~BUG-2108~~: Focus nudge Start timer starts a plain timer, no task list (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-09-29) — user confirmed "it works"
 
 **User report**: The desktop focus nudge's "Start timer" opened a task list; seeing the tasks is stressful. The user wants to just start a blank timer.
 
 **Fix**: "Start timer" now starts a plain (general, task-less) session immediately; the nudge never opens the task list (tasks remain available inside the widget). Heading softened from "Time to pick a task!" to "Ready to focus?". The app's own "Ready to focus?" desktop popup already starts a plain timer.
 
 **Verification**: 3 regression tests read the live nudge block (fail on the previous widget); 190 KDE tests pass; widget reloaded without QML errors.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Screenshot: nudge Start timer opened a task list | Yes |
+| Data shape / persisted row shape | Yes | Plain session stored with task_id "general" | Yes |
+| Renderer store/state | N/A | Widget-only | N/A |
+| Electron main/preload bridge | N/A | Widget-only | N/A |
+| Localhost sidecar endpoint | N/A | Widget writes Supabase directly | N/A |
+| KDE polling/control path | Yes | Live widget reloaded; user confirmed | Yes |
+| Supabase persistence/realtime | Yes | Session created like other widget sessions | Yes |
+| Updater/runtime version | N/A | Widget runs working-tree QML | N/A |
+| Stale live process/cache state | Yes | plasmashell restarted | Yes |
+
+**Exact failure mode fixed**: nudge forced a task choice before starting a timer.
+
+**Explicitly not covered**: the app's own desktop popup (already starts a plain timer).
+
+**Regression added for reported repro**: live-QML nudge handler tests.
+
+**Live boundary proof**: user confirmed on the desktop.
 
 ### ~~BUG-2107~~: KDE widget list follows the synced Canvas order (✅ DONE)
 

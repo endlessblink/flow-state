@@ -43,6 +43,7 @@ import { realtimeRowMatchesScope } from '@/services/sync/realtimeScopeGuard'
 import { startServiceWorkerUpdateRecovery } from '@/services/pwa/serviceWorkerUpdateRecovery'
 import { useDeviceSyncDiagnostics } from '@/composables/sync/useDeviceSyncDiagnostics'
 import { createElectronAutoStartMonitor, dismissTimerSuggestionForToday, getElectronAutoStartApi, getTimerSuggestionDesktopApi, isTimerSuggestionDismissedToday, shouldStartAutomaticPomodoro, TIMER_SUGGESTION_MESSAGE } from '@/composables/timer/useElectronAutoStart'
+import { widgetOwnsDesktopReminders } from '@/utils/desktopReminderOwner'
 
 export function useAppInitialization() {
     const STARTUP_READ_TIMEOUT_MS = 5000
@@ -383,7 +384,9 @@ export function useAppInitialization() {
     }
 
     onMounted(async () => {
-        const electronApi = getElectronAutoStartApi()
+        // BUG-2110: on the Linux desktop app the widget's corner card is the only
+        // idle focus/break reminder, so the app's "Ready to focus?" popup stays off.
+        const electronApi = widgetOwnsDesktopReminders() ? null : getElectronAutoStartApi()
         if (electronApi) {
             const monitor = createElectronAutoStartMonitor({
                 absenceSeconds: 15,

@@ -72,6 +72,7 @@ PlasmoidItem {
     property bool sessionJustCompleted: false      // True when session ends, waiting for user action
     property bool lastCompletedWasWork: true       // Track what type of session just completed
     property bool nudgeSuggestBreak: false          // BUG-2109: last real work session had no break after it
+    property string nudgeTitleOverride: ""          // BUG-2110: session-end card title ("" = idle nudge)
     property string lastCompletedSessionId: ""         // Track completed session ID for +5min extension
     property int lastCompletedDuration: 0              // Track original duration for extension
     property string lastCompletedTaskId: "general"     // Track task ID for extension
@@ -199,7 +200,8 @@ PlasmoidItem {
     // Max time (ms) a popup may stay open before the watchdog force-hides it.
     readonly property int overlayMaxMs: 5 * 60 * 1000   // fullscreen break overlay
     readonly property int nannyMaxMs: 90 * 1000         // nanny auto-close is 60s
-    readonly property int nudgeMaxMs: 60 * 1000         // nudge auto-close is 30s
+    // BUG-2110: the session-end card stays up to 5 min; idle nudges auto-close at 30s
+    readonly property int nudgeMaxMs: nudgeTitleOverride !== "" ? 6 * 60 * 1000 : 60 * 1000
     readonly property int preEndMaxMs: 45 * 1000        // pre-end auto-close is 15s
 
     // Force-hide any popup that has overstayed its max lifetime. Idempotent and
@@ -397,10 +399,11 @@ PlasmoidItem {
         if (root.nudgeSuggestBreak) {
             msg = "You skipped your break. A few minutes away will help you focus."
         }
+        root.nudgeTitleOverride = ""
         nudgePopup.nudgeMessage = msg
         nudgePopup.visible = true
+        // BUG-2110: show without taking keyboard focus — reminders must never block typing
         nudgePopup.raise()
-        nudgePopup.requestActivate()
 
         console.log("[NUDGE] Showing nudge popup:", msg)
         root.nannyLastNotifyTime = Date.now()
@@ -1238,22 +1241,23 @@ PlasmoidItem {
     // ===== NUDGE POPUP (simple reminder with snooze/stop) =====
     Window {
         id: nudgePopup
-        flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+        flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus
         color: "transparent"
         visible: false
         onVisibleChanged: {
             root.nudgeShownAt = visible ? Date.now() : 0
             console.log("[POPUP] nudgePopup visible=" + visible + " ts=" + Date.now())
+            if (!visible) root.nudgeTitleOverride = ""
         }
         width: 420
         height: root.nudgeSuggestBreak ? 318 : 280
 
         property string nudgeMessage: ""
 
-        // Auto-dismiss after 30 seconds
+        // Auto-dismiss: 30s for idle nudges, 5 min for the session-end card (BUG-2110)
         Timer {
             id: nudgeAutoDismiss
-            interval: 30000
+            interval: root.nudgeTitleOverride !== "" ? 5 * 60 * 1000 : 30000
             running: nudgePopup.visible
             onTriggered: nudgePopup.visible = false
         }
@@ -1323,7 +1327,7 @@ PlasmoidItem {
                             spacing: 2
 
                             Text {
-                                text: root.nudgeSuggestBreak ? "Time for a break" : "Ready to focus?"
+                                text: root.nudgeTitleOverride !== "" ? root.nudgeTitleOverride : (root.nudgeSuggestBreak ? "Time for a break" : "Ready to focus?")
                                 font.pixelSize: 16
                                 font.bold: true
                                 color: root.textColor
@@ -1534,7 +1538,7 @@ PlasmoidItem {
     // ===== PRE-END WARNING POPUP =====
     Window {
         id: preEndWarningPopup
-        flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+        flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus
         color: "transparent"
         visible: false
         onVisibleChanged: {
@@ -1638,8 +1642,29 @@ PlasmoidItem {
         preEndWarningPopup.x = sg.x + sg.width - preEndWarningPopup.width - 24
         preEndWarningPopup.y = sg.y + sg.height - preEndWarningPopup.height - 24
         preEndWarningPopup.visible = true
+        // BUG-2110: heads-up only — keep typing
         preEndWarningPopup.raise()
-        preEndWarningPopup.requestActivate()
+    }
+
+    // BUG-2110: the one session-end reminder — a small corner card with a soft
+    // sound. Replaces the full-screen overlay + system notification, and never
+    // takes keyboard focus.
+    function showSessionEndCard(wasWorkSession) {
+        root.nudgeSuggestBreak = wasWorkSession
+        root.nudgeTitleOverride = wasWorkSession ? "Work session done" : "Break's over"
+        nudgePopup.nudgeMessage = wasWorkSession
+            ? "Nice work. Time for a short break?"
+            : "Ready for the next focus session?"
+        var sg = root.getWidgetScreenGeometry()
+        if (sg.screen) nudgePopup.screen = sg.screen
+        nudgePopup.x = sg.x + sg.width - nudgePopup.width - 24
+        nudgePopup.y = sg.y + 24
+        nudgePopup.visible = true
+        nudgePopup.raise()
+        root.nannyLastNotifyTime = Date.now()
+        // BUG-LEAK: trailing "; echo ok" lets onNewData disconnect the source
+        executableDataSource.connectSource("paplay /usr/share/sounds/freedesktop/stereo/bell.oga >/dev/null 2>&1; echo ok")
+        console.log("[SESSION-END] Card shown:", root.nudgeTitleOverride)
     }
 
     // Function to show the full-screen overlay
@@ -4523,6 +4548,11 @@ PlasmoidItem {
             root.dismissSystemNotification()
             console.log("[SYNC] Auto-dismissed overlay — new session detected")
         }
+        // BUG-2110: a session started anywhere (app, widget, KDE) closes the reminder card
+        if (nudgePopup.visible) {
+            nudgePopup.visible = false
+            console.log("[SYNC] Auto-dismissed reminder card — new session detected")
+        }
 
         // BUG-1122: Check for stale leadership and take over if needed
         var widgetIsLeader = s.device_leader_id === "kde-widget"
@@ -4968,11 +4998,10 @@ PlasmoidItem {
         root.isInTransition = true
         transitionTimer.restart()
 
-        // Show system notification (sound + action buttons via notify-send)
-        showTimerNotification(root.isWorkSession)
-        // Show full-screen overlay on widget's screen (rich QML with Start Break/Work + Postpone)
-        showFullScreenOverlay()
-        console.log("[TIMER] Session complete, notification + overlay triggered")
+        // BUG-2110: one small corner card + soft sound (no full-screen overlay,
+        // no extra system notification, no keyboard grab)
+        showSessionEndCard(root.isWorkSession)
+        console.log("[TIMER] Session complete, session-end card shown")
 
         // TASK-1424: Update nanny timestamp so idle timer resets
         root.nannyLastSessionEndTime = Date.now()

@@ -3,6 +3,7 @@
  * Extracted from src/stores/timer.ts (TASK-1406)
  */
 import { isTauri } from '@/composables/useTauriStartup'
+import { widgetOwnsDesktopReminders } from '@/utils/desktopReminderOwner'
 
 export interface TimerNotificationsDeps {
   startTimer: (taskId: string, duration: number, isBreak: boolean) => Promise<void>
@@ -60,7 +61,9 @@ export function useTimerNotifications(deps: TimerNotificationsDeps) {
       : (taskName ? `Great work on "${taskName}"! Time for a break.` : 'Great work! Time for a break.')
 
     // BUG-1112: Only show notification when KDE widget is NOT active
-    if (isTauri() && kdeActive) {
+    // BUG-2110: the Tauri-era check never matched in Electron, so the widget card
+    // and this notification both fired. On the Linux desktop app the widget owns it.
+    if ((isTauri() && kdeActive) || widgetOwnsDesktopReminders()) {
       if (import.meta.env.DEV) {
         console.log('🍅 [TIMER] KDE widget is active, skipping notification (widget handles it)')
       }

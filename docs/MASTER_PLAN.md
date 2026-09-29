@@ -10,6 +10,38 @@
 
 **Current evidence**: Electron 1.4.555 was installed, and its Canvas shuffle menu remained translucent over task cards. Electron 1.4.556 replaced that menu with the existing FlowState dropdown and was published, but the running desktop still reported 1.4.555. Read-only live comparison found Timeline Today 18 tasks versus Canvas Today group 15; Timeline's first two tasks were absent from that group, and one was a floating Canvas card. The Canvas shuffle planner used stored parent membership while Canvas renders effective Today membership, so it skipped projected cards. The source fix aligns the planner and sync projection with the canonical Today list. Focused planner, cross-view transaction, Today projection, and undo tests pass. The 1.4.557 release passed task consistency (37), Electron sync (378), full unit suite (4,932 passed, 3 skipped), typecheck, and package validation, but updater publication refused a different artifact already published as 1.4.557. Electron 1.4.558 passed the same release gates and package validation and was published. A concurrent 1.4.559 mainline release then became public and installed without the shuffle branch, so the Canvas priority action was absent. The 1.4.560 package passed 4,932 tests and validation, but the VPS refused publication because another artifact already held that version. Mainline 1.4.561 then shipped without this feature. The combined branch now targets 1.4.562. Focused shuffle tests (15), Electron sync (378), and typecheck pass on the combined tree. The canonical Electron build prehook stops at its local-Supabase E2E gate because no local instance is running; the release script uses the locked package build after its own unit gates. Installed visual and authenticated task-order checks remain open.
 
+### BUG-2110: One reminder at a time — no popup may block typing (🚧 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-29) — awaiting installed 1.4.569 + live widget proof
+
+**User report**: Too many reminder popups of different kinds; some block typing. Decided together: session end → one small corner card with a soft sound; idle focus/break → widget card only; 1-minute warning → kept but never grabs the keyboard; morning "Plan your top 3" banner → kept.
+
+**Inventory before**: session end fired up to four reminders (widget full-screen overlay that grabbed the keyboard, notify-send system notification with sound, the app's "Session Complete" notification — its KDE skip only matched the retired Tauri runtime — and the app end sound); idle had three (widget nudge that grabbed the keyboard, the app's "Ready to focus?" desktop popup, the in-app nanny toast); the 1-minute warning grabbed the keyboard.
+
+**Fix**: Widget nudge and 1-minute warning use `Qt.WindowDoesNotAcceptFocus` and no `requestActivate`. Session end shows `showSessionEndCard` (reusing the nudge card: "Work session done" → Start break / Keep working instead; "Break's over" → Start timer) with one `paplay` bell, up to 5 min, closed as soon as a session starts anywhere; no full-screen overlay or notify-send. On the Linux desktop app (`widgetOwnsDesktopReminders`) the app skips its session-complete notification, end sound, "Ready to focus?" popup and in-app nanny toast. Web/PWA and other platforms keep the app's own notifications.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Reminder inventory from both codebases; 4 keyboard-grabbing windows | Yes |
+| Data shape / persisted row shape | N/A | No data change | N/A |
+| Renderer store/state | Yes | Timer store end sound/notification, app suggestion monitor, MainLayout toast gated | Yes |
+| Electron main/preload bridge | Yes | Platform read from the existing bridge (isElectron + platform) | Yes |
+| Localhost sidecar endpoint | N/A | Not involved | N/A |
+| KDE polling/control path | Yes | Widget detects completion for app-led sessions too (onSessionComplete on completedNaturally), so the card still appears | Yes |
+| Supabase persistence/realtime | N/A | No persistence change | N/A |
+| Updater/runtime version | Pending | App part ships in 1.4.569; widget runs working-tree QML | Pending install |
+| Stale live process/cache state | Pending | plasmashell restart + app restart needed | Pending |
+
+**Exact failure mode fixed**: duplicate reminders per event and focus-stealing reminder windows.
+
+**Explicitly not covered**: the widget task picker (opened on demand) still takes focus by design; macOS/Windows keep app notifications; the full-screen overlay code remains but is no longer triggered.
+
+**Regression added for reported repro**: live-QML tests (no focus grab on nudge/warning/session-end card; session end uses the card, not overlay/notify-send; card closes on new session), platform tests (Linux desktop app shows no session-complete notification; web still does).
+
+**Live boundary proof**: pending installed 1.4.569 and reloaded widget.
+
 ### BUG-2109: Focus nudge suggests a break after a skipped break (🚧 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-29) — deployed to the live widget; awaiting user confirmation

@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { widgetOwnsDesktopReminders } from '@/utils/desktopReminderOwner';
 import {
   ref,
   computed,
@@ -673,7 +674,8 @@ export const useTimerStore = defineStore("timer", () => {
       if (!wasBreak) {
         offerBreak(session.id, lastTaskId);
       }
-      audio.playEndSound();
+      // BUG-2110: the widget's session-end card plays the one sound on Linux desktop
+      if (!widgetOwnsDesktopReminders()) audio.playEndSound();
       releaseWakeLock(); // Allow sleep - ROAD-004
 
       // BUG-1185: Save completed state to DB - prevents sync from picking up stale active session

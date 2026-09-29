@@ -40,8 +40,9 @@
     <AIChatPanel />
 
     <!-- Nanny reminder toast (web app) -->
+    <!-- BUG-2110: the widget owns idle reminders on the Linux desktop app -->
     <NannyReminder
-      v-if="showNannyReminder"
+      v-if="showNannyReminder && !widgetOwnsReminders"
       :minutes="unchosenMinutes"
       @snooze="handleNannySnooze"
       @stop-today="handleNannyStopToday"
@@ -55,6 +56,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { useDirection } from '@/i18n/useDirection'
 import { useTaskbarNanny } from '@/composables/useTaskbarNanny'
+import { widgetOwnsDesktopReminders } from '@/utils/desktopReminderOwner'
 import { PanelLeft } from 'lucide-vue-next'
 import AppSidebar from '@/layouts/AppSidebar.vue'
 import AppHeader from '@/layouts/AppHeader.vue'
@@ -94,6 +96,7 @@ onUnmounted(() => {
 
 // Gently remind user to pick a task after 5 min without a Pomodoro
 const { unchosenMinutes, shouldNudge, resetNanny } = useTaskbarNanny()
+const widgetOwnsReminders = widgetOwnsDesktopReminders()
 
 // Nanny reminder state
 const nannyDismissed = ref(false)

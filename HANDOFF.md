@@ -1,31 +1,60 @@
-# Dropoff — 2026-09-06 09:09 Sunday
+# Required continuation handoff — Freelance Desk FlowState preflight
 
-```text
-You are continuing work in flow-state on branch main.
+Status: IN_PROGRESS. User explicitly required handoff at context threshold and ONE successor through TermFleet Claude. Original task is not complete. No contacts, spending, or task-data writes are authorized. Latest user “go” authorized implementing and shipping the read-only app endpoint. A fresh active focus timer means do not deliberately restart/install until interruption is authorized or prove it already happened safely.
 
-## Current task & next step
-Make the scheduled regression audit current and actionable — next: after 09:30, read the latest regression report and confirm it records branch main and commit bb2ea366 (or a newer main commit).
+## First commands
 
-## Files touched / in flight
-- scripts/daily-regression-hunt.cjs — committed/pushed
-- scripts/install-daily-regression-hunt.sh — committed/pushed
-- scripts/run-daily-regression-hunt-clean.sh — committed/pushed
-- tests/unit/scripts/daily-regression-hunt.test.ts — committed/pushed
-- HANDOFF.md — this handoff, uncommitted
-- Unrelated dirty files: dist-electron/package.json, dist-electron/preload.cjs, dist-electron/preload.js.map, dist-electron/updater.js, dist-electron/updater.js.map, stats.html. Do not stage, reset, or modify them.
+Run `git status --short` in this checkout. Then inspect installed FlowState provenance through authenticated GET /api/capabilities, and inspect the current process/updater state. Do not click old coordinates. A read-only probe immediately before this handoff found `task-window-v1` in capabilities; top-level appVersion/sourceCommit were null (likely nested provenance). THIS MAY MEAN THE UPDATE ALREADY INSTALLED, but is not sufficient proof. Finish verification before another install action.
 
-## Key decisions & gotchas
-- Root cause: the systemd daily runner was pinned to origin/master, so it audited a stale detached checkout. The source fix now defaults to main, validates the target ref, and adds branch+commit provenance to each report.
-- The user service is enabled and passes FLOWSTATE_REGRESSION_REF=main. An earlier installer call copied the runner/service but daemon reload required XDG_RUNTIME_DIR/DBUS; reloading was later completed with the user bus.
-- A manual one-check proof was blocked by Lean-CTX’s bash allowlist. Do not weaken that persistent security control without explicit approval; use the scheduled timer/readback or a permitted command path.
-- The source commit bb2ea366 is already pushed to origin/main. The 09:30 scheduled run can now fetch it and issue the first useful report.
-- Tests before dropoff: focused runner suite 16 passed; type-check passed; diff check passed. Do not claim live proof until report is read.
-- Do not touch the existing unrelated dist-electron/stats changes.
+## Original user request and definition of done
 
-## Env / run state
-Branch: main | Last commit: bb2ea366 fix(regression): audit current main
-Running: flowstate-daily-regression-hunt.timer is enabled and active; its next trigger was 2026-09-06 09:30 IDT.
-Current checkout has only the unrelated dirty files listed above; no audit-fix code is uncommitted.
+Project freelance-desk: fix recurring `FLOWSTATE: NOT CHECKED (TimeoutError)` from `python3 scripts/plan_preflight.py --days 1`, also invoked before plan replies. Old flowstate_threads fetched authenticated /api/tasks/inventory?limit=100 with 15-second timeout. September30 unauthenticated API401 responded0.5ms while desktop running. User required diagnose authenticated call and smaller/date endpoints/source; do not merely increase timeout. Use lightest window endpoint, sensible timeout plus ONE retry, last-good .state cache with age. Say NOT CHECKED only without usable cache. Preserve Local Task API preview→apply writes, never FlowState CLI. Fake server fast/slow/500/bad-token tests, full `PYTHONPATH=src python3 -m unittest discover -s tests`, THREE consecutive real preflights showing live reads or cache age. Log root cause/fix/evidence in docs/planning-preflight.md and Lead System Log through scripts/domain_gate.py domain lead-os destination context; commit. No contact/spend/FlowState task changes. User later said go for app endpoint/full release.
 
-Start by: run `npm run regression:report` after the scheduled trigger and verify the newest report lists Branch: main and the current main commit.
-```
+## Repositories / ownership / safety
+
+Original FlowState /media/endlessblink/data/my-projects/ai-development/productivity/flow-state has extensive unrelated dirty work and stale main. DO NOT checkout/reset/stash/edit it. This isolated checkout /media/endlessblink/data/.dev-tmp/endlessblink/flowstate-planning-window-20261001 is branch fix/planning-window-20261001 from origin/main e2c86d38. App source commit f17f87e5f5162345f7270934ca48558ae73e34d5 was pushed, version1.4.570. It was CLEAN before adding this handoff. Generated tracked dist-electron outputs and stats.html were restored only after packaging. Ignored release artifacts remain here. Dependencies installed locally with npm ci; do not reuse original dirty checkout modules.
+
+Freelance Desk /media/endlessblink/data/my-projects/ai-development/bots+automation/freelance-desk branch checkpoint/2026-09-27. Other agents actively modify unrelated files. Our prior cache commit8da5aad503793297156047b22a65ec648cce3c4d; newest8aa12dc committed+pushed owns scripts/plan_preflight.py, tests/test_flowstate_preflight.py, tests/test_jobfinder.py, docs/planning-preflight.md, MASTER_PLAN.md. Many unrelated dirty files (.state/sqlite/config/hooks/src/other tests/evidence) must be preserved. Stage explicit own paths only.
+
+Native exec MUST be used for isolated/Freelance cwd: lean ctx_shell silently runs original repo because ROOTJAIL. This was diagnosed already; do not repeat. Read CLAUDE/AGENTS, continuation contract, LEAN-CTX, router and relevant TDD/verification skills already done. Follow source instructions including Lore Constraint/Rejected/Tested commit trailers and precise failure-class closeout. Parent must not view images; use disposable visual child returning text only. Never print credentials, .env, local-api.json contents, token or raw private plan/task content. Bearer read internally solely for authorized read-only requests. Read-only local HTTP may need native require_escalated; Freelance/vault writes need escalation (authorized task). No auto-review rejection occurred.
+
+## Root cause and changes
+
+Full inventory limit100 is PAGE SIZE, not bounded total work: all inventory pages plus canonical sequence consistency before/after may repeat. Smaller full inventory limits can worsen runtime. Historical15s timeout not reproduced, so do not invent exact DB bug. Baseline authenticated installed timing health0.014s; fullinventory1001.030s77tasks; limit5=2.271s77; modepage5=0.121s5; due25=0.498s1. /api/tasks?due=day is partial capped and omits authoritative persisted instances. Unknown /api/tasks/window on old build falls through generic ID handler500 invalidUUID: always capability discovery first.
+
+New server/local-api/task-window.cjs contract task-window-v1: valid1..31 ISOday labels, max500 tasks plus sentinel501; one scoped filtered SELECT using due_date.in and JSONB instances.cs scheduledDate predicates; existing user/workspace RLS scope; deleted/completed/done excluded; backend AbortSignal1500ms, bounded response1MiB. Overflow/malformeddata/instances/backend error return502 complete/freshfalse. Active matching persisted instances retain all scheduled blocks and durations; skipped/done/isLater excluded. Does not expand unbounded virtual recurrence. Route before generic IDs, existing bearer auth, capabilities advertises endpoint/contract. README contract and MASTER_PLAN TASK-2111 in3locations IN_PROGRESS with explicit failure classes.
+
+Python helper scripts/flowstate_preflight.py: two-second hard attempt including headers/body/capabilities enforced subprocess, one retry transient only, no retry401/403,2MiB cap. Advertised window with complete/freshtrue preferred; old due25 fallback explicitly PARTIAL. Atomic0600 .state/flowstate-planning-cache.json exactdays and hashed token/base identity, captured epoch; fail doesn't overwrite good cache. AgeNminutes shown. Corrupt/future/wrongwindow/identity cache unusable. --days1 TODAY;1..31. plan_gate demands partial/cache disclosure. task_threads now all active blocks/durations, semicolon text and scheduled_blocks JSON. Three jobfinder tests fixed expired September23 fixtures with test-only Sep30 clock; production filters untouched.
+
+## Tests and evidence already complete
+
+Freelance FULL suite674 tests OK35.589s /tmp/freelance-window-suite.log. FlowState canonical release tests442files5025passed3skipped; typecheck/lint pass; consistency37, electron sync379, focused window source/bundled runtime8 tests. /tmp/flowstate-window-release.log contains successful canonical full release. Independent review found no defect. Fake tests cover fast/slow/500/auth/malformed/cache scopes/bodytime. Earlier Sept30 three live/cache0/live reads were PARTIAL old endpoint; need fresh three Oct1 reads with installed complete endpoint. Real PostgREST filter syntax/runtime not yet proven until now. Do not broaden tests unnecessarily unless changes/failures.
+
+## PUBLIC RELEASE COMPLETE — installed proof pending
+
+Canonical deploy command from this checkout: VPS_HOST=84.46.253.137 VPS_USER=root bash scripts/deploy-electron-update.sh --notes "TASK-2111: bounded read-only planning window for Freelance Desk". Full tests/build/packaging/promotion succeeded exit0 (session81038 finished). Version1.4.570 published. Local release/latest-linux.yml and release/flowstate-release-receipt.json match public manifest and CANONICAL receipt, bound to clean source f17f87e5.
+
+AppImage180207587bytes SHA256883119526f107c84cfec4da16a4d816206f261db66d57b276ce95cd8f8e15467. Deb131363004bytes SHA2565e24e0a148d5fc1c9cb1d6eb0cd6e758d9f3fdeef8b830de8b775fa742f96d6c.
+Public manifest https://in-theflow.com/updates/electron/latest-linux.yml. CANONICAL receipt https://in-theflow.com/updates/release-receipt.json or /release-receipt.json. /updates/electron/flowstate-release-receipt.json is STALE1.4.548, do not use. Local downloaded evidence /tmp/flowstate-window-public-latest.yml and /tmp/flowstate-window-public-receipt.json. Use curl for public URLs (urllib gets403). Public keys fetched privately via Doppler only VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY; no secrets exposed. Build SITE_URL=https://in-theflow.com.
+
+## Latest desktop events — important uncertainty
+
+Visual agent /root/updater_surface finished; don't assume it persists across successor. Installed started1.4.569, capabilities windowfalse. App window vanished once during settings inspection; no OOM/segfault known, cause unproven. Parent reopened normal ~/.local/bin/FlowState-launch.sh, app Online and API responsive. No kill/raw AppImage swap used.
+Fresh visual update check offered1.4.570 current1.4.569 with active Focus Session timer23:07, later21:41. Parent told agent CHECK/DOWNLOAD ONLY, stop before Install/Restart; never alter timer/tasks. Source useElectronUpdater downloadAndInstall misleadingly named: only awaits downloadUpdate; separate restart calls installUpdate. Agent clicked download once through supported settings handler. Original117440516 window disappeared immediately; fresh windows85983233 and98566148 appeared. No Restart button clicked. Could be automatic restart/user action; cause unknown. Agent stopped all further UI. Last valid screenshot /tmp/flowstate-update-check-result.png SHA2564e3f88f4dc08376135dd0c2db9a8e91a8384260b5b23a3637e265abc97fde3c0. Failed subsequent captures invalid; don't cite. MOST RECENT parent GETcapabilities succeeded and contains task-window-v1, suggesting new runtime. Need inspect nested provenance/process/AppImage hash before asking user to install again.
+
+Host DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_Xycgun XDG_RUNTIME_DIR=/run/user/1000 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus. Host ps/window operations may require escalated native exec. Don't use old coords/PIDs. Previous launchpid1830562 actualmain1830565 may now stale. No build/upload running. CtrlShiftI SendEvent didn't open DevTools, no need retry blindly. Supported install flushes store first, aborts if flush fails, guarded installer+health/rollback. Never kill/restart manually, pause timer or task writes. If still old runtime, obtain explicit fresh active-timer interruption consent after download ready; elapsed time is not approval.
+
+## Required remaining work in order
+
+1. Prove actual installed version/source/AppImage hash/read-only capabilities, current timer and Online UI via disposable visual specialist. If already updated, do not restart again. If old, finish supported download and ask active-focus interruption approval for concrete ready install. User previously go authorized release, but focus interruption was new context.
+2. Authenticated GET /api/tasks/window?days=<today> and appropriate requested range; inspect complete/fresh/task-window-v1 and elapsed/count/block data without printing private titles. Verify real PostgREST query. If502 investigate sanitized error. New source fix requires new release1.4.571 rather than overwrite1.4.570.
+3. Run three consecutive `python3 scripts/plan_preflight.py --days 1` from Freelance, capture output to private temp, summarize FlowState receipt/count/timing only. Each must show live complete or usable cache with age. Today cache differs from yesterday; cannot claim yesterday cache covers today. If first live succeeds then induced fake failures already prove fallback; don't degrade live app deliberately.
+4. Update docs/planning-preflight.md section7 (currently stale release-pending), Freelance MASTER_PLAN, FlowState docs/MASTER_PLAN TASK-2111 all3locations to precise proven status. No broad DONE if runtime/backend unresolved. Include failure class boundaries backend-only/no unsynced renderer/unboundedrecurrence; no task mutations.
+5. Log root cause/fix/public+installed+three-runs evidence through domain gate in existing Lead System Log. Target /home/endlessblink/home-data/app-data/sync/Dropbox/OBSIDIAN_SYNCED/MAIN VULT/💼 Work/🎯 Lead OS/Job Search Command Center/14 Lead System Log.md. First read _System/DOMAIN_WRITE_GATE.md and domain-registry.json then run Freelance scripts/domain_gate.py --domain lead-os --destination context --operation update --target <exactpath> immediately before append; readback. Prior Oct1 gated log already records rootcause674/5025/source/publicpending. Don't create competing authority.
+6. Commit/push only own files. Update project note through cc-linux-enhancments/scripts/project-notes/notes.py append/state when appropriate, preserve other project context. No memory updates authorized. Final concise honest status, tests/public/installed/three receipts; exact check command under Next steps.
+
+## Handoff / final conventions
+
+This HANDOFF is own documentation only, commit with Lore trailers and push this branch before successor spawn. User requested EXACT ONE `termfleet-child spawn --provider claude --cwd <thischeckout> --dropoff <thischeckout>/HANDOFF.md`; no tmux. Parent must then stop. Installed tool /home/endlessblink/.local/bin/termfleet-child2.0.0, `spawn --help` doesn't work; `--help` top-level does. Relevant command usage supports --provider/--cwd/--dropoff/--title. Native escalation if runtime writes need it. Do not create duplicate successor on ambiguous timeout; inspect termfleet-child status first.
+
+Memory used earlier: MEMORY.md14087-14093 domain/FlowState write route, rollout01a0c9a3-91b0-77f3-b379-cbc3dcb9e4b7. Final memory block required if relying on it; never put memory citation into PR. Parent final should one-line in_progress successor started and stop. No automatic create_goal used.

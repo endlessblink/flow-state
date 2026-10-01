@@ -56,6 +56,7 @@ const {
   readTaskInventoryPage,
 } = require('./task-inventory.cjs')
 const { scopeTaskQuery } = require('./task-scope.cjs')
+const { parseTaskWindowParams, readTaskWindow } = require('./task-window.cjs')
 const {
   HERMES_ROUTE_CAPABILITIES,
   SCHEMA_VERSION: HERMES_CAPABILITIES_SCHEMA_VERSION,
@@ -599,6 +600,13 @@ async function handleGetTaskInventory(url, res) {
      result.error?.code === 'inventory_auth_required' ? 401 : (result.error ? 502 : 200),
      result,
    )
+}
+
+async function handleGetTaskWindow(url, res) {
+  const parsed = parseTaskWindowParams(url.searchParams)
+  if (!parsed.ok) return send(res, 400, { complete: false, error: parsed.error })
+  const result = await readTaskWindow(ctx, parsed)
+  return send(res, result.error ? 502 : 200, result)
 }
 
 async function handleGetDeviceSyncReceipts(res) {
@@ -1600,6 +1608,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET' && path === '/api/tasks/search') {
       return await handleSearchTasks(url, res)
+    }
+    if (req.method === 'GET' && path === '/api/tasks/window') {
+      return await handleGetTaskWindow(url, res)
     }
     if (req.method === 'GET' && path === '/api/tasks/inventory') {
       return await handleGetTaskInventory(url, res)

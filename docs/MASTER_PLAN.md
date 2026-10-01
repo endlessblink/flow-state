@@ -1,5 +1,24 @@
 # FlowState MASTER_PLAN.md
 
+### TASK-2111: Bounded read-only planning window for Freelance Desk (🚧 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-10-01)
+
+**Failure mode**: Planning used full authenticated inventory; limit=100 only controls pagination and still builds every open task with consistency passes. The lighter due-date sample omits scheduled instances and caps at25, so it cannot prove schedule coverage.
+
+**Fix**: Advertise task-window-v1; one scoped date-filtered select returns due tasks and every active persisted block, capped at500 with explicit overflow failure and a1500ms backend deadline. No writes, migrations, or sequence/pagination passes. Freelance Desk preserves all blocks and uses two bounded read attempts plus an identity/window-bound last-good cache with age disclosure.
+
+**Evidence**: Six focused unit tests and eight source/bundled runtime tests cover dates,scope,bearer auth,scheduled-only/multiple/recurring blocks,500 backend failure and overflow. Release1.4.570 and installed authenticated readback pending.
+
+**Failure classes**: Server query shape fixed; renderer data unchanged; Electron sidecar route covered source/bundle; Supabase filter tested through fake PostgREST; updater/runtime and real backend latency pending. Malformed rows/oversized windows fail closed. Offline local edits not yet synchronized are outside a server-backed read.
+
+
+## Planning integration summary
+
+| ID | Priority | Description | Status |
+| --- | --- | --- | --- |
+| TASK-2111 | P1 | Bounded read-only planning window | IN PROGRESS |
+
 ### FEATURE-2098: One-time shared task shuffle from Board and Canvas (🚧 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-24)
@@ -11680,6 +11699,8 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 ---
 
 ## Task Dependency Index (PWA Prerequisites) - ✅ ALL COMPLETE
+
+- TASK-2111: planning-window API → Electron1.4.570 → installed authenticated preflight proof (IN PROGRESS).
 
 All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for details.
 

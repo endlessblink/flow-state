@@ -140,6 +140,24 @@ the whole matching set.
 ] }
 ```
 
+### `GET /api/tasks/window?days=2026-10-01,2026-10-02`
+
+Read-only planning contract `task-window-v1`, advertised in `/api/capabilities`.
+Accepts 1–31 distinct valid ISO calendar dates. Returns every active task due on
+those dates or with an active persisted scheduled block on those dates. All
+matching blocks retain local dates, times, durations and recurrence overrides;
+completed, skipped and later blocks are excluded. Personal/workspace scope is
+identical to the inventory route. No task data is changed.
+
+One scoped database select filters dates before transfer, with a 1.5-second
+abort deadline and 501-row overflow sentinel. Successful responses contain
+`complete: true`, `fresh: true`, `capturedAt`, `days`, and `tasks`. More than 500
+candidate tasks, malformed data, or backend failure returns HTTP 502 with
+`complete: false`, `fresh: false`, and no tasks. Invalid dates return 400.
+Consumers must require both completeness flags and use their own bounded read
+and last-good cache. This endpoint does not build the full inventory or perform
+its change-sequence consistency passes.
+
 ### `GET /api/tasks/inventory?limit=100`
 
 Returns a complete, bearer-protected snapshot of every open task visible in the

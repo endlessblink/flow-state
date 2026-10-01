@@ -1,23 +1,45 @@
 # FlowState MASTER_PLAN.md
 
-### TASK-2111: Bounded read-only planning window for Freelance Desk (🚧 IN PROGRESS)
+### ~~TASK-2111~~: Bounded read-only planning window for Freelance Desk (✅ DONE)
 
-**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-10-01)
+**Priority**: P1 | **Status**: ✅ DONE (2026-10-01)
 
 **Failure mode**: Planning used full authenticated inventory; limit=100 only controls pagination and still builds every open task with consistency passes. The lighter due-date sample omits scheduled instances and caps at25, so it cannot prove schedule coverage.
 
 **Fix**: Advertise task-window-v1; one scoped date-filtered select returns due tasks and every active persisted block, capped at500 with explicit overflow failure and a1500ms backend deadline. No writes, migrations, or sequence/pagination passes. Freelance Desk preserves all blocks and uses two bounded read attempts plus an identity/window-bound last-good cache with age disclosure.
 
-**Evidence**: Six focused unit tests and eight source/bundled runtime tests cover dates,scope,bearer auth,scheduled-only/multiple/recurring blocks,500 backend failure and overflow. Release1.4.570 and installed authenticated readback pending.
+**Evidence**: Six focused unit tests and eight source/bundled runtime tests cover dates,scope,bearer auth,scheduled-only/multiple/recurring blocks,500 backend failure and overflow. Release 1.4.570 published and installed (AppImage SHA256 matches the published build). Authenticated readback: HTTP 200, complete+fresh, 5 tasks, 0.11s warm. Six consecutive Freelance Desk preflights exit 0: 5 live, 1 last-good-cache fallback after a single unexplained HTTP 502 in the first minutes after the restart (cause unproven, did not recur in 13 later reads).
 
-**Failure classes**: Server query shape fixed; renderer data unchanged; Electron sidecar route covered source/bundle; Supabase filter tested through fake PostgREST; updater/runtime and real backend latency pending. Malformed rows/oversized windows fail closed. Offline local edits not yet synchronized are outside a server-backed read.
+**Failure classes**: Server query shape fixed; renderer data unchanged; Electron sidecar route covered source/bundle; Supabase filter tested through fake PostgREST and now proven against the real backend; updater/runtime verified (installed hash = published). Not covered: the one post-restart 502 root cause. Malformed rows/oversized windows fail closed. Offline local edits not yet synchronized are outside a server-backed read.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Freelance Desk `plan_preflight.py --days 1` against installed app: 6 consecutive runs exit 0 (5 live, 1 last-good-cache with age) | Yes |
+| Data shape / persisted row shape | Yes | Six focused unit tests: scheduled-only, multiple, recurring-override blocks; malformed rows fail closed | Yes |
+| Renderer store/state | Yes | Unchanged by design; unsynced offline edits are invisible to a server-backed read | No (documented limit) |
+| Electron main/preload bridge | Yes | Not touched; installed app update path exercised | N/A |
+| Localhost sidecar endpoint | Yes | Authenticated GET window: 200, complete+fresh, 5 tasks, 0.11s warm / 0.42s first; 8 of 8 | Yes |
+| KDE polling/control path | No | Not involved in planning reads | N/A |
+| Supabase persistence/realtime | Yes | Fake PostgREST tests plus real backend read through the installed app | Yes (read path only) |
+| Updater/runtime version | Yes | Installed AppImage SHA256 equals published 1.4.570; capabilities advertise task-window-v1 | Yes |
+| Stale live process/cache state | Yes | Old process replaced at 12:29; cache fallback proven (run 1, 48 min old) | Yes |
+
+**Exact failure mode fixed**: fixed: planning preflight timing out on the full-inventory read; replaced by one bounded, scoped, read-only window query plus a last-good cache.
+
+**Explicitly not covered**: one unexplained HTTP 502 on the first two attempts in the first minutes after the app restart (helper records status only; did not recur in 13 later reads); unsynced offline renderer edits; unbounded virtual-recurrence expansion.
+
+**Regression added for reported repro**: fake-server fast/slow/500/bad-token/malformed tests and cache-scope tests in Freelance Desk; window handler tests in FlowState.
+
+**Live boundary proof**: installed app at 127.0.0.1:5577 with bearer auth, read-only GET only, 2026-10-01.
 
 
 ## Planning integration summary
 
 | ID | Priority | Description | Status |
 | --- | --- | --- | --- |
-| TASK-2111 | P1 | Bounded read-only planning window | IN PROGRESS |
+| ~~TASK-2111~~ | P1 | Bounded read-only planning window | ✅ **DONE** |
 
 ### FEATURE-2098: One-time shared task shuffle from Board and Canvas (🚧 IN PROGRESS)
 
@@ -11700,7 +11722,7 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 
 ## Task Dependency Index (PWA Prerequisites) - ✅ ALL COMPLETE
 
-- TASK-2111: planning-window API → Electron1.4.570 → installed authenticated preflight proof (IN PROGRESS).
+- ~~TASK-2111~~: planning-window API → Electron 1.4.570 → installed authenticated preflight proof ✅ DONE.
 
 All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for details.
 

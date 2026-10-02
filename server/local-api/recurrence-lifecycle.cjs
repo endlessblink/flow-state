@@ -41,12 +41,29 @@ function validateRule(rule) {
 
 function planRecurrenceLifecycle({ definition, occurrences, action, recurrenceRule, nextDueDate }) {
   if (!object(definition) || typeof definition.id !== 'string') throw new TypeError('recurrence definition is required')
-  if (!['set_cadence', 'pause', 'resume', 'end'].includes(action)) {
+  if (!['enable', 'set_cadence', 'pause', 'resume', 'end'].includes(action)) {
     throw new TypeError('unsupported lifecycle action')
+  }
+  validateDate(definition.due_date)
+  if (action === 'enable') {
+    if (definition.recurrence_rule != null || definition.is_completion_record === true || definition.recurrence_parent_id != null) {
+      throw new Error('task is already recurring or is a recurrence history row')
+    }
+    validateRule(recurrenceRule)
+    return {
+      ok: true,
+      result: 'preview',
+      contractVersion: CONTRACT_VERSION,
+      action,
+      taskId: definition.id,
+      baseRevision: definition.canonical_revision,
+      proposedDefinition: { recurrenceRule: clone(recurrenceRule), dueDate: definition.due_date },
+      historyDisposition: 'preserve',
+      occurrenceDisposition: 'enable-from-current',
+    }
   }
   const sourceRule = object(definition.recurrence_rule) ? clone(definition.recurrence_rule) : null
   validateRule(sourceRule)
-  validateDate(definition.due_date)
 
   const current = (Array.isArray(occurrences) ? occurrences : []).filter(value => object(value) && value.dueDate === definition.due_date)
   if (current.length !== 1) throw new Error('ambiguous current occurrence')
@@ -125,7 +142,7 @@ async function executeRecurrenceLifecycle(context, taskId, body, notifyTaskMutat
   })
   if (error || !object(data)) return { status: 500, body: { ok: false, error: { code: 'recurrence_transaction_failed', message: 'Recurrence lifecycle operation failed' } } }
   if (data.ok !== true) {
-    const status = { approval_receipt_required: 400, invalid_request: 400, not_authenticated: 401, not_found: 404, not_recurring: 409, state_conflict: 409, idempotency_conflict: 409 }[data.error?.code] || 500
+    const status = { approval_receipt_required: 400, invalid_request: 400, not_authenticated: 401, not_found: 404, not_recurring: 409, ambiguous_current_occurrence: 409, already_recurring: 409, invalid_recurrence_rule: 400, invalid_next_date: 400, state_conflict: 409, idempotency_conflict: 409 }[data.error?.code] || 500
     return { status, body: data }
   }
   if (preview && (data.result !== 'preview' || data.contractVersion !== CONTRACT_VERSION || data.operationId !== requestId)) {

@@ -19,6 +19,21 @@ const occurrences = [
 ]
 
 describe('recurrence lifecycle planning', () => {
+  it('previews enabling recurrence on a plain dated task', () => {
+    const plain = { id: 'task-2', due_date: '2026-10-29', recurrence_rule: null, canonical_revision: 3 }
+    const rule = { pattern: 'daily', interval: 28, endType: 'never' }
+    expect(planRecurrenceLifecycle({ definition: plain, occurrences: [], action: 'enable', recurrenceRule: rule })).toMatchObject({
+      ok: true, action: 'enable', baseRevision: 3,
+      proposedDefinition: { recurrenceRule: rule, dueDate: '2026-10-29' },
+    })
+  })
+
+  it('rejects enabling on an already-recurring task or a weekly rule without weekdays', () => {
+    expect(() => planRecurrenceLifecycle({ definition, occurrences, action: 'enable', recurrenceRule: { pattern: 'daily', interval: 2, endType: 'never' } })).toThrow(/already recurring/)
+    const plain = { id: 'task-2', due_date: '2026-10-08', recurrence_rule: null, canonical_revision: 1 }
+    expect(() => planRecurrenceLifecycle({ definition: plain, occurrences: [], action: 'enable', recurrenceRule: { pattern: 'weekly', interval: 1, endType: 'never' } })).toThrow(/weekdays/)
+  })
+
   it('previews a cadence change without rewriting history or creating occurrences', () => {
     expect(planRecurrenceLifecycle({
       definition,

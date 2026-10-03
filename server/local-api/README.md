@@ -212,8 +212,8 @@ history. Lifecycle edits use the same revision-guarded recurrence contract.
 
 ### `POST /api/tasks/:id/recurrence-lifecycle`
 
-Preview is the default. Supported actions are `set_cadence`, `pause`, `resume`,
-and `end`; each operation preserves completion history and only changes future
+Preview is the default. Supported actions are `enable`, `set_cadence`, `pause`,
+`resume`, and `end`; each operation preserves completion history and only changes future
 recurrence behavior. Apply requires the exact preview's `previewVersion` and
 `requestHash`, plus a stable `requestId`.
 
@@ -224,6 +224,13 @@ recurrence behavior. Apply requires the exact preview's `previewVersion` and
   "preview": true
 }
 ```
+
+`enable` turns a plain dated task (no rule, not a history row) into a living
+recurring definition from its current due date; it takes the same `recurrenceRule`
+and reads back as `recurrenceRule` on `GET /api/tasks/:id`. Example rule for
+"every 28 days": `{ "pattern": "daily", "interval": 28, "endType": "never" }`;
+weekly Thursdays: `{ "pattern": "weekly", "interval": 1, "weekdays": [4], "endType": "never" }`.
+An already-recurring task returns `409 already_recurring`.
 
 For `set_cadence`, include a validated `recurrenceRule` and an optional later
 `nextDueDate`. Apply uses `preview: false`; stale previews, conflicting request

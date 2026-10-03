@@ -336,11 +336,14 @@ onUnmounted(() => {
   gap: var(--space-1);
   justify-content: flex-end;
   opacity: 0;
+  pointer-events: none;
   transition: all var(--duration-normal) cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.task-row:hover .task-row__actions {
+.task-row:hover .task-row__actions,
+.task-row:focus-within .task-row__actions {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .task-row__action-btn {

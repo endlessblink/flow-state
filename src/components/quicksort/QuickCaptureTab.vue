@@ -176,6 +176,7 @@
               <template #trigger>
                 <button
                   class="date-btn date-picker-trigger"
+                  aria-label="Open date picker"
                   :class="{ active: newTask.dueDate && !isDueDateToday && !isDueDateTomorrow && !isDueDateWeekend }"
                 >
                   <Calendar :size="14" />
@@ -194,6 +195,7 @@
             <button
               v-if="newTask.dueDate"
               class="date-btn clear"
+              aria-label="Clear due date"
               @click="newTask.dueDate = undefined"
             >
               <X :size="14" />
@@ -224,6 +226,7 @@
           <button
             v-if="newTask.projectId"
             class="project-pill clear"
+            aria-label="Clear selected project"
             @click="newTask.projectId = undefined"
           >
             <X :size="14" />
@@ -307,7 +310,6 @@
         </button>
       </div>
     </div>
-
   </div>
 </template>
 

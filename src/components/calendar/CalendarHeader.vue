@@ -108,6 +108,7 @@ const toggleViewOptions = () => {
             class="view-option-item"
             :class="{ active: showFilters }"
             @click="showFilters = !showFilters"
+            :aria-expanded="showFilters"
           >
             <SlidersHorizontal :size="16" :stroke-width="1.5" class="option-icon" />
             <span class="option-label">{{ $t('calendar.toggle_filters') }}</span>
@@ -119,6 +120,7 @@ const toggleViewOptions = () => {
             class="view-option-item"
             :class="{ active: hideCalendarDoneTasks }"
             @click="$emit('toggleDoneTasks')"
+            :aria-pressed="hideCalendarDoneTasks"
           >
             <EyeOff
               v-if="hideCalendarDoneTasks"
@@ -141,6 +143,7 @@ const toggleViewOptions = () => {
             class="view-option-item"
             :class="{ active: showFutureRecurring }"
             @click="$emit('toggleFutureRecurring')"
+            :aria-pressed="showFutureRecurring"
           >
             <Repeat :size="16" :stroke-width="1.5" class="option-icon" />
             <span class="option-label">{{ showFutureRecurring ? 'Hide future recurring' : 'Show future recurring' }}</span>

@@ -148,7 +148,12 @@
     "group_this_week": "השבוע",
     "group_later": "מאוחר יותר",
     "group_no_date": "ללא תאריך",
-    "group_uncategorized": "לא מסווג"
+    "group_uncategorized": "לא מסווג",
+    "overdue": "באיחור",
+    "today": "היום",
+    "tomorrow": "מחר",
+    "later": "מאוחר יותר",
+    "no_date": "ללא תאריך"
   },
   "calendar": {
     "today": "היום",
@@ -272,7 +277,8 @@
     "group_priority": "עדיפות",
     "group_due_date": "תאריך יעד",
     "group_category": "קטגוריה",
-    "group_list": "רשימה"
+    "group_list": "רשימה",
+    "clear_all": "נקה הכל"
   },
   "catalog_controls": {
     "toolbar_label": "פקדי הקטלוג",

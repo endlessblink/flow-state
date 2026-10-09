@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeAll } from 'vitest'
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 // ---------------------------------------------------------------------------
@@ -319,7 +319,31 @@ describe('Placeholder parity', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Test 10: Total key count is reasonable
+// Test 10: Every literal key the source asks for exists in both locales
+// ---------------------------------------------------------------------------
+
+describe('Source key coverage', () => {
+  // The Catalog showed raw "task.overdue" headings because the view asked for
+  // keys neither locale defined; parity checks alone cannot catch that.
+  it('every literal t()/$t() key used in src exists in en and he', () => {
+    const srcDir = resolve(__dirname, '../../../src')
+    const enKeys = new Set(collectKeys(en))
+    const heKeys = new Set(collectKeys(he))
+    const files = (readdirSync(srcDir, { recursive: true }) as string[])
+      .filter(f => /\.(vue|ts)$/.test(f) && !/__tests__|\.(spec|test)\./.test(f))
+    const keyRe = /(?<![\w.])(?:t|\$t|i18n\.global\.t)\(\s*'([a-z_]+\.[a-zA-Z_.]+)'/g
+    const missing: string[] = []
+    for (const file of files) {
+      for (const [, key] of readFileSync(resolve(srcDir, file), 'utf-8').matchAll(keyRe)) {
+        if (!enKeys.has(key) || !heKeys.has(key)) missing.push(`${file}: ${key}`)
+      }
+    }
+    expect(missing).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Test 11: Total key count is reasonable
 // ---------------------------------------------------------------------------
 
 describe('Key count sanity', () => {

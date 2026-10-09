@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createHash } from 'node:crypto'
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 
@@ -43,6 +44,38 @@ describe('Electron release collision guard', () => {
     expect(guardIndex).toBeGreaterThan(-1)
     expect(manifestPublishIndex).toBeGreaterThan(guardIndex)
     expect(promoteSource).toContain('$(dirname "$(dirname "$TARGET_DIR")")/release-receipt.json')
+  })
+
+  it('promotion refreshes every published receipt copy, including the one beside the updater', () => {
+    // Manual Electron releases left updates/electron/flowstate-release-receipt.json
+    // at an old version (CI wrote it, the promote step did not).
+    const webRoot = mkdtempSync(resolve(tmpdir(), 'flowstate-promote-'))
+    const target = resolve(webRoot, 'updates', 'electron')
+    const stage = resolve(webRoot, 'stage')
+    mkdirSync(target, { recursive: true })
+    mkdirSync(stage)
+    const app = Buffer.from('app-image')
+    const deb = Buffer.from('debian-package')
+    const sha = (contents: Buffer) => createHash('sha512').update(contents).digest('base64')
+    writeFileSync(resolve(stage, 'FlowState-1.4.244-x86_64.AppImage'), app)
+    writeFileSync(resolve(stage, 'FlowState_1.4.244_amd64.deb'), deb)
+    writeFileSync(resolve(stage, 'latest-linux.yml'), manifest('1.4.244', sha(app), sha(deb), app.length, deb.length))
+    copyFileSync(resolve(root, 'scripts/electron-release-collision-guard.cjs'), resolve(stage, 'electron-release-collision-guard.cjs'))
+    const receipt = JSON.stringify({ schemaVersion: 'flowstate-release-receipt-v1', version: '1.4.244', source: { commit: 'abc', dirty: false } })
+    writeFileSync(resolve(stage, 'flowstate-release-receipt.json'), receipt)
+    writeFileSync(resolve(target, 'latest-linux.yml'), manifest('1.4.243', 'old-app'))
+    writeFileSync(resolve(target, 'flowstate-release-receipt.json'), JSON.stringify({ version: '1.4.243' }))
+
+    execFileSync('bash', [resolve(root, 'scripts/promote-electron-release.sh'), target, stage])
+
+    for (const copy of [
+      resolve(webRoot, 'release-receipt.json'),
+      resolve(webRoot, 'updates', 'release-receipt.json'),
+      resolve(target, 'flowstate-release-receipt.json'),
+    ]) {
+      expect(readFileSync(copy, 'utf8'), copy).toBe(receipt)
+    }
+    expect(readFileSync(resolve(target, 'latest-linux.yml'), 'utf8')).toMatch(/^version: 1\.4\.244$/m)
   })
 
   it('requires a non-empty local manifest before staging any artifact', () => {

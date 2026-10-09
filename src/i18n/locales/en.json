@@ -148,7 +148,12 @@
     "group_this_week": "This Week",
     "group_later": "Later",
     "group_no_date": "No Date",
-    "group_uncategorized": "Uncategorized"
+    "group_uncategorized": "Uncategorized",
+    "overdue": "Overdue",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "later": "Later",
+    "no_date": "No Date"
   },
   "calendar": {
     "today": "Today",
@@ -272,7 +277,8 @@
     "group_priority": "Priority",
     "group_due_date": "Due Date",
     "group_category": "Category",
-    "group_list": "List"
+    "group_list": "List",
+    "clear_all": "Clear all"
   },
   "catalog_controls": {
     "toolbar_label": "Catalog controls",

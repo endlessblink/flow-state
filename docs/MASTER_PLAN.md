@@ -1,5 +1,65 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2112: Catalog date headings show raw keys like "task.overdue" (👀 REVIEW)
+
+**Priority**: P2 | **Status**: 👀 REVIEW (2026-10-09). Fixed in source; reaches the desktop app only with the next Electron release.
+
+**Symptom**: In the installed 1.4.572 app, Catalog grouped by Due Date showed the heading `task.overdue` (and the same for today/tomorrow/later/no date). The Calendar inbox "clear all" chip had the same problem with `filters.clear_all`.
+
+**Cause**: Since 01cb7575 (2026-09-13) the Catalog asks for `task.overdue`, `task.today`, `task.tomorrow`, `task.later` and `task.no_date`, but neither locale defines them. The locale tests only compared en to he, so a key missing from both passed.
+
+**Fix**: Added the six keys to en and he. A new locale test scans every literal `t()`/`$t()` key in `src` and fails if either locale lacks it. The test fails before the fix and passes after.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Installed 1.4.572, Catalog grouped by Due Date, screenshot shows `task.overdue` heading | Yes |
+| Data shape / persisted row shape | N/A | Label text only, no task data involved | N/A |
+| Renderer store/state | Yes | Missing locale keys; vue-i18n falls back to the key | Yes |
+| Electron main/preload bridge | N/A | Renderer-only strings | N/A |
+| Localhost sidecar endpoint | N/A | Not involved | N/A |
+| KDE polling/control path | N/A | Not involved | N/A |
+| Supabase persistence/realtime | N/A | Not involved | N/A |
+| Updater/runtime version | No | Needs the next Electron release | No |
+| Stale live process/cache state | N/A | Static bundle strings | N/A |
+
+**Exact failure mode fixed**: literal `t()`/`$t()` keys used in src but absent from both locales (6 keys).
+
+**Explicitly not covered**: dynamically built keys (template strings or variables) are not scanned.
+
+**Regression added for reported repro**: locale test "every literal t()/$t() key used in src exists in en and he" (fails before the fix, passes after).
+
+**Live boundary proof**: pending the next Electron release.
+
+### ~~BUG-2111~~: Local API timer start returns opaque 400 to agents (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-10-09), shipped in Electron 1.4.572
+
+The commits for this fix (199eb622, and 005e707f in the 1.4.572 release) say "BUG-2097". That ID already belongs to the Catalogue drag bug below, so this fix is filed here instead. **Cause**: the `timer-lifecycle-v1` contract was undocumented and a 400 response did not say which field was wrong. **Fix**: the 400 message now names the invalid field, and the README documents the exact start body plus the preview→apply procedure. The fix was proven live on 1.4.572.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | The agent's failing bodies are in the handler test | Yes |
+| Data shape / persisted row shape | N/A | Request validation only | N/A |
+| Renderer store/state | N/A | Not involved | N/A |
+| Electron main/preload bridge | N/A | Sidecar handler | N/A |
+| Localhost sidecar endpoint | Yes | Live preview→apply start on 127.0.0.1:5577 | Yes |
+| KDE polling/control path | N/A | Not involved | N/A |
+| Supabase persistence/realtime | Yes | Started timer visible in the app | Yes |
+| Updater/runtime version | Yes | Installed 1.4.572 reports the new 400 message | Yes |
+| Stale live process/cache state | Yes | Verified after reinstall/relaunch | Yes |
+
+**Exact failure mode fixed**: the opaque 400 response on a malformed `timer-lifecycle-v1` body, plus the undocumented contract.
+
+**Explicitly not covered**: there was no contract bug; callers must still generate their own sessionId UUID.
+
+**Regression added for reported repro**: "names the missing or invalid field in 400 responses".
+
+**Live boundary proof**: 1.4.572 is installed, and the 400 message from the local API names the field.
+
 ### FEATURE-2098: One-time shared task shuffle from Board and Canvas (🚧 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-24)

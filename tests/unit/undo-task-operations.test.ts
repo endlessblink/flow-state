@@ -322,9 +322,18 @@ describe('task operation undo/redo three-cycle invariants', () => {
       recurrenceCount: 1,
       isInInbox: true
     })
+    // BUG-2095: the next cycle is date-only even if an older RPC receipt carries a time.
     expect(advancedTask?.instances).toEqual([])
-    expect(advancedTask?.scheduledTime).toBeUndefined()
     expect(advancedTask?.dueTime).toBeUndefined()
+    expect(advancedTask?.scheduledDate).toBeUndefined()
+    expect(advancedTask?.scheduledTime).toBeUndefined()
+    const completion = taskStore._rawTasks.find(candidate => candidate.id === 'completion-record-1')
+    expect(completion?.instances).toEqual([expect.objectContaining({
+      id: 'instance-current',
+      scheduledDate: '2026-07-12',
+      scheduledTime: '20:00',
+      status: 'completed'
+    })])
     expect(advancedTask?.completedAt).toBeUndefined()
     expect(taskStore._rawTasks).toContainEqual(expect.objectContaining({
       id: 'completion-record-1',

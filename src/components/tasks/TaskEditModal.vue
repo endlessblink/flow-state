@@ -305,6 +305,7 @@ import TaskComments from './edit/TaskComments.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import type { TaskReminder } from '@/types/notifications'
 import type { TaskAttachment } from '@/types/tasks'
+import { isPriorityValue } from '@/utils/taskPriority'
 
 // Props & Emitters
 const props = defineProps<{
@@ -608,7 +609,7 @@ function handleAIAcceptSubtasks(subtasks: string[]) {
 }
 
 function handleAIAcceptPriority(priority: string, duration: number) {
-  const validPriority = ['low', 'medium', 'high'].includes(priority) ? priority as 'low' | 'medium' | 'high' : undefined
+  const validPriority = isPriorityValue(priority) ? priority : undefined
   if (validPriority) {
     editedTask.value.priority = validPriority
   }

@@ -7,6 +7,7 @@
       'priority-high': task?.priority === 'high',
       'priority-medium': task?.priority === 'medium',
       'priority-low': task?.priority === 'low',
+      'priority-relaxed': task?.priority === 'relaxed',
       'status-done': task?.status === 'done',
       'timer-active': isTimerActive,
       'selected': isSelected,
@@ -440,15 +441,22 @@ onUnmounted(() => {
 }
 
 /* Priority-based glow effects on card outline */
-/* Immediate outranks High: stronger, unmistakable red outline */
 .priority-immediate {
-  border-color: var(--color-priority-high) !important;
-  border-width: 2px !important;
+  border-color: var(--priority-immediate-border) !important;
   box-shadow:
     0 var(--space-3) var(--space-6) var(--shadow-color-sm),
     0 var(--space-1_5) var(--space-3) var(--shadow-color-sm),
-    0 0 var(--space-6) rgba(239, 68, 68, 0.3),
-    inset 0 0 0 var(--space-0_5) rgba(239, 68, 68, 0.1);
+    0 0 var(--space-5) rgba(217, 70, 239, 0.15),
+    inset 0 0 0 var(--space-0_5) rgba(217, 70, 239, 0.06);
+}
+
+.priority-relaxed {
+  border-color: var(--priority-relaxed-border) !important;
+  box-shadow:
+    0 var(--space-3) var(--space-6) var(--shadow-color-sm),
+    0 var(--space-1_5) var(--space-3) var(--shadow-color-sm),
+    0 0 var(--space-5) rgba(45, 212, 191, 0.15),
+    inset 0 0 0 var(--space-0_5) rgba(45, 212, 191, 0.06);
 }
 
 .priority-high {

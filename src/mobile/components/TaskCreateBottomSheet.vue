@@ -678,6 +678,18 @@ function autoResizeDesc(event: Event) {
 }
 
 /* Priority colors */
+.chip.priority-immediate.active {
+  background: var(--priority-immediate-bg);
+  border-color: var(--color-priority-immediate);
+  color: var(--color-priority-immediate);
+}
+
+.chip.priority-relaxed.active {
+  background: var(--priority-relaxed-bg);
+  border-color: var(--color-priority-relaxed);
+  color: var(--color-priority-relaxed);
+}
+
 .chip.priority-high.active {
   background: var(--danger-bg-subtle);
   border-color: var(--danger-border-strong);

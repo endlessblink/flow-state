@@ -48,11 +48,11 @@ const options = computed(() => [
 .sidebar-priority-option:hover { color: var(--text-primary); background: var(--glass-bg-soft); }
 .sidebar-priority-option.is-active { color: var(--brand-primary); background: var(--brand-primary-subtle); }
 .priority-dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: var(--text-tertiary); }
-.priority-dot.immediate { background: var(--danger); }
+.priority-dot.immediate { background: var(--color-priority-immediate); }
 .priority-dot.high { background: var(--warning); }
 .priority-dot.medium { background: var(--brand-primary); }
 .priority-dot.low { background: var(--success); }
-.priority-dot.relaxed { background: var(--text-muted); }
+.priority-dot.relaxed { background: var(--color-priority-relaxed); }
 .priority-dot.all { background: linear-gradient(135deg, var(--danger) 0 25%, var(--warning) 25% 50%, var(--brand-primary) 50% 75%, var(--success) 75%); }
 .priority-dot.none { border: 1px solid var(--text-tertiary); background: transparent; }
 </style>

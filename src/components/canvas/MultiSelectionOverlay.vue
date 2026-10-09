@@ -59,6 +59,9 @@
             
             <div class="bulk-menu-section">
               <span class="bulk-menu-title">Priority</span>
+              <button class="bulk-menu-item priority-immediate" @click="bulkUpdatePriority('immediate')">
+                Immediate
+              </button>
               <button class="bulk-menu-item priority-high" @click="bulkUpdatePriority('high')">
                 High
               </button>
@@ -67,6 +70,9 @@
               </button>
               <button class="bulk-menu-item priority-low" @click="bulkUpdatePriority('low')">
                 Low
+              </button>
+              <button class="bulk-menu-item priority-relaxed" @click="bulkUpdatePriority('relaxed')">
+                Relaxed
               </button>
             </div>
             
@@ -485,16 +491,24 @@ onUnmounted(() => {
   background: var(--glass-bg-medium);
 }
 
+.bulk-menu-item.priority-immediate {
+  color: var(--color-priority-immediate);
+}
+
 .bulk-menu-item.priority-high {
-  color: var(--color-danger);
+  color: var(--color-priority-high);
 }
 
 .bulk-menu-item.priority-medium {
-  color: var(--color-work);
+  color: var(--color-priority-medium);
 }
 
 .bulk-menu-item.priority-low {
-  color: var(--brand-primary);
+  color: var(--color-priority-low);
+}
+
+.bulk-menu-item.priority-relaxed {
+  color: var(--color-priority-relaxed);
 }
 
 .bulk-menu-item.danger {

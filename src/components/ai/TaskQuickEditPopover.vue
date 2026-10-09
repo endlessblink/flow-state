@@ -67,11 +67,11 @@ try {
 // ============================================================================
 
 const PRIORITY_OPTIONS = [
-  { value: 'immediate', label: 'Immediate', color: 'var(--color-danger)' },
+  { value: 'immediate', label: 'Immediate', color: 'var(--color-priority-immediate)' },
   { value: 'high', label: 'H', color: 'var(--color-priority-high)' },
   { value: 'medium', label: 'M', color: 'var(--color-priority-medium)' },
   { value: 'low', label: 'L', color: 'var(--color-priority-low)' },
-  { value: 'relaxed', label: 'Relaxed', color: 'var(--color-priority-low)' },
+  { value: 'relaxed', label: 'Relaxed', color: 'var(--color-priority-relaxed)' },
   { value: null, label: 'No Priority', color: 'var(--glass-handle)' },
 ] as const
 

@@ -61,6 +61,17 @@ describe('BUG-1909: reconcileStaleInstancesForDueDate', () => {
     expect(result?.[0]).toMatchObject({ scheduledDate: '2026-07-10', scheduledTime: undefined })
   })
 
+  it('clears a stale clock time when the same date is explicitly selected', () => {
+    const completed = inst('history', '2026-07-02', { status: 'completed', scheduledTime: '14:00' })
+    const future = inst('future', '2026-07-05', { scheduledTime: '16:00' })
+    const result = reconcileStaleInstancesForDueDate(
+      { instances: [completed, inst('today', '2026-07-03'), future] }, '2026-07-03', NOW
+    )
+    expect(result?.[0]).toEqual(completed)
+    expect(result?.[1]).toMatchObject({ scheduledDate: '2026-07-03', scheduledTime: undefined })
+    expect(result?.[2]).toEqual(future)
+  })
+
   it('USER REPRO end-to-end: recurring task badge moves off "Overdue May 30" after quick-set', () => {
     const task = {
       id: 't1',

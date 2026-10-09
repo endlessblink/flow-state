@@ -374,11 +374,11 @@ watch(isOpen, (newVal) => {
 }
 
 .select-option__priority-icon--all,
-.select-option__priority-icon--immediate { color: var(--color-danger); }
+.select-option__priority-icon--immediate { color: var(--color-priority-immediate); }
 .select-option__priority-icon--high { color: var(--color-priority-high); }
 .select-option__priority-icon--medium { color: var(--color-priority-medium); }
 .select-option__priority-icon--low,
-.select-option__priority-icon--relaxed { color: var(--color-priority-low); }
+.select-option__priority-icon--relaxed { color: var(--color-priority-relaxed); }
 .select-option__priority-icon--none { color: var(--text-muted); }
 
 .select-option__check {

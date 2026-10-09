@@ -411,6 +411,16 @@ const formatDueDate = (date: string | Date) => {
   margin-top: 2px;
 }
 
+.priority-badge-inline.immediate {
+  background: var(--priority-immediate-bg);
+  color: var(--color-priority-immediate);
+}
+
+.priority-badge-inline.relaxed {
+  background: var(--priority-relaxed-bg);
+  color: var(--color-priority-relaxed);
+}
+
 .priority-badge-inline.high, .priority-badge-inline.critical {
   background: var(--priority-high-bg);
   color: var(--color-priority-high);

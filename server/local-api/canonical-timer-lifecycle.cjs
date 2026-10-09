@@ -41,46 +41,63 @@ function errorResult(status, code, message) {
   return { status, body: { ok: false, error: { code, message } } }
 }
 
+// Returns { payload } or { problem } naming the offending field, so callers can fix the request.
 function normalizePayload(action, payload) {
-  if (!object(payload)) return null
-  if (action !== 'start') return Object.keys(payload).length === 0 ? {} : null
+  if (!object(payload)) return { problem: 'payload must be an object' }
+  if (action !== 'start') {
+    return Object.keys(payload).length === 0 ? { payload: {} } : { problem: `payload must be {} for action "${action}"` }
+  }
   const allowed = new Set(['taskId', 'duration', 'isBreak'])
-  if (Object.keys(payload).some(key => !allowed.has(key))) return null
+  const unknown = Object.keys(payload).filter(key => !allowed.has(key))
+  if (unknown.length) return { problem: `payload has unsupported field(s): ${unknown.join(', ')} (allowed: taskId, duration, isBreak)` }
   const taskId = typeof payload.taskId === 'string' ? payload.taskId.trim() : ''
   const duration = Number(payload.duration)
   const isBreak = payload.isBreak === true
-  if (!taskId
-    || taskId.length > 160
-    || !Number.isSafeInteger(duration)
-    || duration <= 0
-    || duration > 24 * 60 * 60
-    || typeof payload.isBreak !== 'boolean') return null
-  if (isBreak && taskId !== 'break') return null
-  if (!isBreak && taskId === 'break') return null
-  return { taskId, duration, isBreak }
+  if (!taskId || taskId.length > 160) return { problem: 'payload.taskId is required (task id, or "break" for a break)' }
+  if (!Number.isSafeInteger(duration) || duration <= 0 || duration > 24 * 60 * 60) {
+    return { problem: 'payload.duration is required as whole seconds between 1 and 86400' }
+  }
+  if (typeof payload.isBreak !== 'boolean') return { problem: 'payload.isBreak is required as a boolean' }
+  if (isBreak && taskId !== 'break') return { problem: 'payload.taskId must be "break" when payload.isBreak is true' }
+  if (!isBreak && taskId === 'break') return { problem: 'payload.isBreak must be true when payload.taskId is "break"' }
+  return { payload: { taskId, duration, isBreak } }
 }
 
-function validateRequest(body) {
+function requestProblem(body) {
   const allowed = new Set([
     'operationId', 'sessionId', 'baseRevision', 'action', 'payload', 'preview',
     'previewDigest', 'previewExpiresAt', 'requestHash',
   ])
-  if (!object(body)
-    || Object.keys(body).some(key => !allowed.has(key))
-    || !nonEmptyString(body.operationId)
-    || body.operationId.length > 160
-    || !UUID_RE.test(body.sessionId || '')
-    || !Number.isSafeInteger(body.baseRevision)
-    || body.baseRevision < 0
-    || !ACTIONS.has(body.action)
-    || (body.preview !== undefined && typeof body.preview !== 'boolean')) {
-    return { error: errorResult(400, 'invalid_request', 'The canonical timer request is invalid') }
+  if (!object(body)) return 'request body must be a JSON object'
+  const unknown = Object.keys(body).filter(key => !allowed.has(key))
+  if (unknown.length) return `unsupported field(s): ${unknown.join(', ')}`
+  if (!nonEmptyString(body.operationId) || body.operationId.length > 160) {
+    return 'operationId is required (non-empty string, max 160 chars, no surrounding spaces)'
+  }
+  if (!UUID_RE.test(body.sessionId || '')) {
+    return 'sessionId is required as a UUID (generate a new one for start; use the active session id otherwise)'
+  }
+  if (!Number.isSafeInteger(body.baseRevision) || body.baseRevision < 0) {
+    return 'baseRevision is required as a non-negative integer (0 for start)'
+  }
+  if (!ACTIONS.has(body.action)) return 'action must be one of: start, pause, resume, stop'
+  if (body.preview !== undefined && typeof body.preview !== 'boolean') return 'preview must be a boolean'
+  return null
+}
+
+function validateRequest(body) {
+  const problem = requestProblem(body)
+  if (problem) {
+    return { error: errorResult(400, 'invalid_request', `The canonical timer request is invalid: ${problem}`) }
   }
   if (body.action !== 'start' && body.baseRevision < 1) {
     return { error: errorResult(400, 'invalid_request', 'An active timer revision is required') }
   }
-  const payload = normalizePayload(body.action, body.payload)
-  if (!payload) return { error: errorResult(400, 'invalid_request', 'The timer action payload is invalid') }
+  const normalized = normalizePayload(body.action, body.payload)
+  if (normalized.problem) {
+    return { error: errorResult(400, 'invalid_request', `The timer action payload is invalid: ${normalized.problem}`) }
+  }
+  const payload = normalized.payload
   const preview = body.preview !== false
   if (!preview && (!digest(body.previewDigest) || !timestamp(body.previewExpiresAt) || !digest(body.requestHash))) {
     return { error: errorResult(400, 'approval_receipt_required', 'An issued timer preview is required for apply') }

@@ -498,9 +498,11 @@ export function useTaskOperations(
       // dueDate cleared — DON'T clear instances (user may have scheduled independently)
     }
 
-    // CASE 2: instances changed (calendar interaction) → always sync dueDate to earliest instance
+    // CASE 2: calendar edits derive the deadline from active placements, never history.
     if (updates.instances !== undefined && !Object.prototype.hasOwnProperty.call(updates, "dueDate")) {
-      const instances = updates.instances || [];
+      const instances = (updates.instances || []).filter(
+        (instance) => instance.scheduledDate && instance.status !== "completed" && instance.status !== "skipped",
+      );
       if (instances.length > 0) {
         const earliest = instances.reduce((a, b) =>
           (a.scheduledDate || "") < (b.scheduledDate || "") ? a : b,
@@ -2470,6 +2472,19 @@ export function useTaskOperations(
     await updateTask(taskId, { instances: updatedInstances, status: "todo" });
   };
 
+  // Date-only moves remove the current placement, not historical or deliberately future blocks.
+  function keepOtherDatePlacements<T extends { scheduledDate: string; status?: string }>(
+    instances: T[] | undefined,
+    today: Date,
+    preserveFuture = true,
+  ): T[] {
+    const todayKey = formatDateKey(today);
+    return (instances || []).filter((instance) =>
+      instance.status === "completed" || instance.status === "skipped" ||
+      (preserveFuture && instance.scheduledDate?.split("T")[0] > todayKey),
+    );
+  }
+
   const moveTaskToSmartGroup = async (taskId: string, type: string) => {
     const task = _rawTasks.value.find((candidate) => candidate.id === taskId);
     if (!task) return;
@@ -2515,8 +2530,8 @@ export function useTaskOperations(
       dueTime: undefined,
       scheduledDate: undefined,
       scheduledTime: undefined,
-      instances: task.instances?.filter((instance) => instance.status === "completed" || instance.status === "skipped") ?? [],
-      recurringInstances: task.recurringInstances?.filter((instance) => "status" in instance && (instance.status === "completed" || instance.status === "skipped")) ?? [],
+      instances: keepOtherDatePlacements(task.instances, today, !!dueDate),
+      recurringInstances: keepOtherDatePlacements(task.recurringInstances, today, !!dueDate),
     });
   };
 
@@ -2589,8 +2604,8 @@ export function useTaskOperations(
       updates.dueTime = undefined;
       updates.scheduledDate = undefined;
       updates.scheduledTime = undefined;
-      updates.instances = task.instances?.filter((instance) => instance.status === "completed" || instance.status === "skipped") ?? [];
-      updates.recurringInstances = task.recurringInstances?.filter((instance) => "status" in instance && (instance.status === "completed" || instance.status === "skipped")) ?? [];
+      updates.instances = keepOtherDatePlacements(task.instances, today);
+      updates.recurringInstances = keepOtherDatePlacements(task.recurringInstances, today);
     }
     await updateTask(taskId, updates);
   };

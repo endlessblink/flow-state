@@ -208,6 +208,14 @@ const dueStatus = computed(() => {
 }
 
 /* ADHD-friendly: Priority colors via left border - calm, not overwhelming */
+.task-card[data-priority="immediate"] {
+  border-inline-start-color: var(--color-priority-immediate);
+}
+
+.task-card[data-priority="relaxed"] {
+  border-inline-start-color: var(--color-priority-relaxed);
+}
+
 .task-card[data-priority="high"] {
   border-inline-start-color: var(--color-priority-high);
 }
@@ -423,6 +431,15 @@ const dueStatus = computed(() => {
 }
 .task-card.compact .priority-stripe.priority-low {
   background: var(--color-priority-low);
+  opacity: 0.7;
+}
+.task-card.compact .priority-stripe.priority-immediate {
+  background: var(--color-priority-immediate);
+  opacity: 1;
+  box-shadow: 0 0 4px color-mix(in srgb, var(--color-priority-immediate) 60%, transparent);
+}
+.task-card.compact .priority-stripe.priority-relaxed {
+  background: var(--color-priority-relaxed);
   opacity: 0.7;
 }
 

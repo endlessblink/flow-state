@@ -336,6 +336,16 @@
   --priority-low-border: rgba(106, 144, 180, 0.5);
   --priority-low-text: #8FB0CE;
 
+  /* Immediate priority (magenta) — TASK-2080 */
+  --priority-immediate-bg: rgba(217, 70, 239, 0.2);
+  --priority-immediate-border: rgba(217, 70, 239, 0.5);
+  --priority-immediate-text: #e879f9;
+
+  /* Relaxed priority (teal) — TASK-2080 */
+  --priority-relaxed-bg: rgba(45, 212, 191, 0.2);
+  --priority-relaxed-border: rgba(45, 212, 191, 0.5);
+  --priority-relaxed-text: #5eead4;
+
   /* ===== TASKCARD DUE DATE BADGE ===== */
   --due-date-bg: rgba(148, 163, 184, 0.15);
   --due-date-border: rgba(148, 163, 184, 0.3);
@@ -529,6 +539,10 @@
   /* Orange - Default priority */
   --color-priority-low: #6A90B4;
   /* Blue - Low urgency */
+  --color-priority-immediate: #d946ef;
+  /* Magenta - Do right now (above high) */
+  --color-priority-relaxed: #2dd4bf;
+  /* Teal - No rush (below low) */
 
   /* Priority backgrounds for calendar events */
   --priority-high-bg: rgba(239, 68, 68, 0.3);

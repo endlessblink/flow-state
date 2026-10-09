@@ -478,6 +478,14 @@ body.kanban-dragging * {
     color: rgba(96, 165, 250, 0.6) !important;
 }
 
+.task-card-badges .priority-badge.priority-immediate {
+    color: var(--color-priority-immediate) !important;
+}
+
+.task-card-badges .priority-badge.priority-relaxed {
+    color: var(--color-priority-relaxed) !important;
+}
+
 .task-card-badges .priority-dot {
     width: 5px !important;
     height: 5px !important;

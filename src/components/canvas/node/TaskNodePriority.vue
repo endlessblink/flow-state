@@ -15,10 +15,19 @@
 }
 
 :global(.priority-immediate) .priority-indicator {
-  background: var(--color-priority-high);
+  background: linear-gradient(180deg, var(--color-priority-immediate) 0%, var(--priority-immediate-bg) 100%);
   box-shadow:
-    0 var(--space-0_5) var(--space-3) var(--color-danger-soft),
-    0 0 var(--space-5) var(--color-danger-soft);
+    0 var(--space-0_5) var(--space-2) var(--priority-immediate-bg),
+    0 0 var(--space-4) var(--priority-immediate-bg),
+    inset 0 var(--space-0_5) 0 var(--glass-border-subtle);
+}
+
+:global(.priority-relaxed) .priority-indicator {
+  background: linear-gradient(180deg, var(--color-priority-relaxed) 0%, var(--priority-relaxed-bg) 100%);
+  box-shadow:
+    0 var(--space-0_5) var(--space-2) var(--priority-relaxed-bg),
+    0 0 var(--space-4) var(--priority-relaxed-bg),
+    inset 0 var(--space-0_5) 0 var(--glass-border-subtle);
 }
 
 :global(.priority-high) .priority-indicator {

@@ -88,6 +88,13 @@ describe('getDateColumnUpdates', () => {
     expect(updates?.instances?.[1]).toMatchObject({ scheduledDate: '2026-03-06', scheduledTime: undefined })
   })
 
+  it('clears the current clock time even when dropped onto the same date', () => {
+    mockToday()
+    const task = makeTask({ instances: [inst({ scheduledDate: '2026-03-06', scheduledTime: '14:00' })] })
+    const updates = getDateColumnUpdates(task, 'today')
+    expect(updates?.instances?.[0]).toMatchObject({ scheduledDate: '2026-03-06', scheduledTime: undefined })
+  })
+
   it('rebases recurringInstances too', () => {
     mockToday()
     const task = makeTask({ recurringInstances: [inst({ scheduledDate: '2026-03-02' })] })

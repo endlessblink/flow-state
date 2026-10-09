@@ -66,8 +66,8 @@ const priorityTooltip = computed(() => {
 
 /* Priority colors */
 .priority-immediate {
-  background: var(--color-priority-high);
-  box-shadow: 0 0 0 2px var(--priority-high-border), var(--danger-glow-sm);
+  background: var(--color-priority-immediate);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-priority-immediate) 45%, transparent);
 }
 
 .priority-high {
@@ -86,8 +86,8 @@ const priorityTooltip = computed(() => {
 }
 
 .priority-relaxed {
-  background: transparent;
-  box-shadow: inset 0 0 0 1.5px var(--color-priority-low);
+  background: var(--color-priority-relaxed);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-priority-relaxed) 45%, transparent);
 }
 
 .priority-none,

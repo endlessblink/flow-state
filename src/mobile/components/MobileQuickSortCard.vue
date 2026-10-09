@@ -352,6 +352,14 @@ function truncateDescription(desc: string): string {
   border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
 }
 
+.priority-strip.priority-immediate {
+  background: linear-gradient(90deg, var(--color-priority-immediate), var(--priority-immediate-text));
+}
+
+.priority-strip.priority-relaxed {
+  background: linear-gradient(90deg, var(--color-priority-relaxed), var(--priority-relaxed-text));
+}
+
 .priority-strip.priority-high {
   background: linear-gradient(90deg, var(--color-priority-high), var(--priority-high-text));
 }
@@ -413,6 +421,18 @@ function truncateDescription(desc: string): string {
   border-radius: var(--radius-md);
   font-size: var(--text-meta);
   color: var(--text-muted);
+}
+
+.meta-item.priority-immediate {
+  color: var(--color-priority-immediate);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--color-priority-immediate);
+}
+
+.meta-item.priority-relaxed {
+  color: var(--color-priority-relaxed);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--color-priority-relaxed);
 }
 
 .meta-item.priority-high {

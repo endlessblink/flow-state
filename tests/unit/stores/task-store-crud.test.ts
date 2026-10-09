@@ -1126,6 +1126,52 @@ describe('Task Store — Operations', () => {
     expect(updated?.dueDate ?? '').toBe('')
   })
 
+  it('derives a calendar date from active occurrences rather than completed or skipped history', async () => {
+    const store = useTaskStore()
+    const task = await store.createTask({ title: 'History stays historical', dueDate: '2026-09-24' })
+    const instances = [
+      { id: 'old-done', scheduledDate: '2026-09-22', scheduledTime: '14:00', status: 'completed' as const, duration: 30 },
+      { id: 'old-skipped', scheduledDate: '2026-09-21', status: 'skipped' as const, duration: 30 },
+      { id: 'active', scheduledDate: '2026-09-25', scheduledTime: '16:00', status: 'scheduled' as const, duration: 30 },
+    ]
+    await store.updateTask(task.id, { instances })
+    const updated = store._rawTasks.find(candidate => candidate.id === task.id)
+    expect(updated?.dueDate).toBe('2026-09-25')
+    expect(updated?.instances).toEqual(instances)
+    expect(mockEnqueue).toHaveBeenLastCalledWith(expect.objectContaining({
+      entityId: task.id, payload: expect.objectContaining({ due_date: '2026-09-25' }),
+    }))
+  })
+
+  it('keeps the current deadline when an instance update contains only historical occurrences', async () => {
+    const store = useTaskStore()
+    const task = await store.createTask({ title: 'History is not a deadline', dueDate: '2026-09-24' })
+    await store.updateTask(task.id, { instances: [
+      { id: 'old-done', scheduledDate: '2026-09-22', scheduledTime: '14:00', status: 'completed', duration: 30 },
+    ] })
+    expect(store._rawTasks.find(candidate => candidate.id === task.id)?.dueDate).toBe('2026-09-24')
+  })
+
+  it.each(['moveTaskToSmartGroup', 'moveTaskToDate'] as const)(
+    '%s preserves unrelated future placements when moving the current task by date', async (action) => {
+      const store = useTaskStore()
+      const dateKey = (offset: number) => {
+        const date = new Date()
+        date.setDate(date.getDate() + offset)
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+      }
+      const history = { id: 'history', scheduledDate: dateKey(-1), scheduledTime: '14:00', status: 'completed' as const, duration: 30 }
+      const current = { id: 'current', scheduledDate: dateKey(0), scheduledTime: '14:00', status: 'scheduled' as const, duration: 30 }
+      const future = { id: 'future', scheduledDate: dateKey(5), scheduledTime: '16:00', status: 'scheduled' as const, duration: 30 }
+      const task = await store.createTask({ title: 'Preserve future calendar block', dueDate: dateKey(0), instances: [history, current, future] })
+      await store[action](task.id, 'tomorrow')
+      const moved = store._rawTasks.find(candidate => candidate.id === task.id)
+      expect(moved?.dueDate).toBe(dateKey(1))
+      expect(moved?.instances).toEqual([history, future])
+      expect(moved?.scheduledTime).toBeUndefined()
+    }
+  )
+
   it('clearing a date does not restore it from a completed historical instance', async () => {
     const store = useTaskStore()
     const task = await store.createTask({

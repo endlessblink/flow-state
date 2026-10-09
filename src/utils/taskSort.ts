@@ -1,5 +1,6 @@
 import type { Task } from '@/types/tasks'
 import { compareTasksBySharedOrder } from '@/utils/taskOrdering'
+import { isPriorityValue, PRIORITY_RANK } from '@/utils/taskPriority'
 
 export type TaskSortKey =
   | 'dueDate'
@@ -16,14 +17,6 @@ export type TaskSortDirection = 'asc' | 'desc'
 export interface TaskSortSpec {
   key: TaskSortKey
   direction: TaskSortDirection
-}
-
-const priorityRank: Record<string, number> = {
-  immediate: 0,
-  high: 1,
-  medium: 2,
-  low: 3,
-  relaxed: 4,
 }
 
 const statusRank: Record<string, number> = {
@@ -62,8 +55,8 @@ export function compareTaskSortField(first: Task, second: Task, spec: TaskSortSp
       return compareOptionalNumbers(timestamp(first.dueDate), timestamp(second.dueDate), spec.direction)
     case 'priority':
       return compareOptionalNumbers(
-        first.priority ? (priorityRank[first.priority] ?? null) : null,
-        second.priority ? (priorityRank[second.priority] ?? null) : null,
+        isPriorityValue(first.priority) ? PRIORITY_RANK[first.priority] : null,
+        isPriorityValue(second.priority) ? PRIORITY_RANK[second.priority] : null,
         spec.direction,
       )
     case 'title':

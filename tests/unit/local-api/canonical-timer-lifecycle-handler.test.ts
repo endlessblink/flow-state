@@ -198,6 +198,26 @@ describe('canonical Local API timer lifecycle handler', () => {
     expect(rpc).not.toHaveBeenCalled()
   })
 
+  it('names the missing or invalid field in 400 responses', async () => {
+    const { executeCanonicalTimerLifecycle, rpc, notify } = harness(null)
+    const context = { supabase: { rpc }, signedUser: true }
+    const cases: Array<[Record<string, unknown>, RegExp]> = [
+      // The agent repro: no sessionId, taskId at top level.
+      [{ operationId, baseRevision: 0, action: 'start', preview: true, taskId }, /unsupported field\(s\): taskId/],
+      [{ operationId, baseRevision: 0, action: 'start', preview: true, payload: { taskId, duration: 1500, isBreak: false } }, /sessionId is required/],
+      [{ operationId, sessionId, baseRevision: 0, action: 'start_focus', payload: {} }, /action must be one of/],
+      [{ operationId, sessionId, baseRevision: 0, action: 'start', payload: { taskId } }, /payload\.duration is required/],
+      [{ operationId, sessionId, baseRevision: 0, action: 'start', payload: { taskId, duration: 1500 } }, /payload\.isBreak is required/],
+      [{ operationId, sessionId, baseRevision: 0, action: 'start', payload: { taskId, durationMinutes: 50 } }, /unsupported field\(s\): durationMinutes/],
+    ]
+    for (const [body, message] of cases) {
+      const result = await executeCanonicalTimerLifecycle(context, body, notify)
+      expect(result).toMatchObject({ status: 400, body: { error: { code: 'invalid_request' } } })
+      expect(result.body.error.message).toMatch(message)
+    }
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
   it('rejects service-role writes and tampered receipts', async () => {
     const first = harness(preview())
     await expect(first.executeCanonicalTimerLifecycle(

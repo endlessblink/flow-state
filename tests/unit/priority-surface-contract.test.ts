@@ -8,10 +8,14 @@ describe('priority surface contract', () => {
   it('offers every supported priority and an explicit no-priority action in the context menu', () => {
     const source = read('src/components/tasks/context-menu/PrioritySubmenu.vue')
 
+    // TASK-2080: options are rendered from the shared, ordered priority list
+    // (see priority-consistency.test.ts for the order/completeness contract).
+    expect(source).toContain('v-for="option in PRIORITY_OPTIONS"')
+    expect(source).toContain('currentPriority === option.value')
+    expect(source).toContain("$emit('select', option.value)")
+    expect(source).toContain('class="priority-dot" :class="option.value"')
     for (const priority of ['immediate', 'high', 'medium', 'low', 'relaxed']) {
-      expect(source).toContain(`currentPriority === '${priority}'`)
-      expect(source).toContain(`$emit('select', '${priority}')`)
-      expect(source).toContain(`priority-dot ${priority}`)
+      expect(source).toContain(`.priority-dot.${priority} {`)
     }
     expect(source).toContain('No Priority')
     expect(source).toContain("$emit('clearPriority')")

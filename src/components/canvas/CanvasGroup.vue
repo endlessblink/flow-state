@@ -714,19 +714,29 @@ onUnmounted(() => {
   text-transform: uppercase;
 }
 
+.priority-badge.immediate {
+  background: var(--priority-immediate-bg);
+  color: var(--color-priority-immediate);
+}
+
 .priority-badge.high {
-  background: var(--danger-bg-medium);
+  background: var(--priority-high-bg);
   color: var(--color-priority-high);
 }
 
 .priority-badge.medium {
-  background: var(--success-bg-subtle);
-  color: var(--color-work);
+  background: var(--priority-medium-bg);
+  color: var(--color-priority-medium);
 }
 
 .priority-badge.low {
-  background: var(--blue-bg-medium);
-  color: var(--brand-primary);
+  background: var(--priority-low-bg);
+  color: var(--color-priority-low);
+}
+
+.priority-badge.relaxed {
+  background: var(--priority-relaxed-bg);
+  color: var(--color-priority-relaxed);
 }
 
 .duration {

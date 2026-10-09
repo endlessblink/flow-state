@@ -237,6 +237,14 @@ const formatDueDateLabel = (dueDate: string) => {
 }
 
 /* Priority colors via inline-start border */
+.task-card[data-priority="immediate"] {
+  border-inline-start-color: var(--color-priority-immediate);
+}
+
+.task-card[data-priority="relaxed"] {
+  border-inline-start-color: var(--color-priority-relaxed);
+}
+
 .task-card[data-priority="high"] {
   border-inline-start-color: var(--color-priority-high);
 }
@@ -291,6 +299,16 @@ const formatDueDateLabel = (dueDate: string) => {
   font-weight: var(--font-bold);
   text-transform: uppercase;
   letter-spacing: 0;
+}
+
+.priority-badge--immediate {
+  color: var(--color-priority-immediate);
+  border-color: color-mix(in srgb, var(--color-priority-immediate) 42%, transparent);
+}
+
+.priority-badge--relaxed {
+  color: var(--color-priority-relaxed);
+  border-color: color-mix(in srgb, var(--color-priority-relaxed) 42%, transparent);
 }
 
 .priority-badge--high {

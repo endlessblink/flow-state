@@ -1897,11 +1897,11 @@ function isDailySummaryResult(result: { tool: string; data: ChatToolResultData }
 
 function priorityColor(priority?: string): string {
   switch (priority) {
-    case 'immediate': return 'var(--color-danger)'
+    case 'immediate': return 'var(--color-priority-immediate)'
     case 'high': return 'var(--color-priority-high)'
     case 'medium': return 'var(--color-priority-medium)'
     case 'low': return 'var(--color-priority-low)'
-    case 'relaxed': return 'var(--color-priority-low)'
+    case 'relaxed': return 'var(--color-priority-relaxed)'
     default: return 'var(--glass-handle)'
   }
 }

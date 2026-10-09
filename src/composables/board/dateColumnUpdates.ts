@@ -44,7 +44,7 @@ const rebasePastInstances = <T extends Pick<TaskInstance, 'scheduledDate' | 'sch
     const rebased = instances.map(instance => {
         if (instance.isLater || instance.status === 'completed' || instance.status === 'skipped') return instance
         const scheduled = parseDateKey(instance.scheduledDate)
-        if (!scheduled || scheduled > today || instance.scheduledDate === targetKey) return instance
+        if (!scheduled || scheduled > today || (instance.scheduledDate === targetKey && !instance.scheduledTime)) return instance
         changed = true
         return { ...instance, scheduledDate: targetKey, scheduledTime: undefined }
     })

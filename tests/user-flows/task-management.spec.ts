@@ -70,17 +70,49 @@ test.describe('Task Management', () => {
         await expect(page.getByText(taskTitle)).toBeVisible({ timeout: 10000 });
     });
 
-    test('should allow properly filtering tasks', async ({ page }) => {
-        // Check if ViewControls are present
-        await expect(page.locator('.view-controls')).toBeVisible();
+    test('shows and hides completed tasks without hiding active tasks', async ({ page }) => {
+        const activeTitle = 'Filter fixture — active';
+        const completedTitle = 'Filter fixture — completed';
+        await page.evaluate(({ activeTitle, completedTitle }) => {
+            const now = new Date().toISOString();
+            const base = {
+                description: '', priority: 'medium', progress: 0,
+                completedPomodoros: 0, subtasks: [], estimatedDuration: 25,
+                projectId: null, isInInbox: true, createdAt: now, updatedAt: now,
+            };
+            localStorage.setItem('flowstate-guest-tasks', JSON.stringify([
+                { ...base, id: '00000000-0000-4000-8000-000000000101', title: activeTitle, status: 'todo' },
+                { ...base, id: '00000000-0000-4000-8000-000000000102', title: completedTitle, status: 'done', completedAt: now },
+            ]));
+        }, { activeTitle, completedTitle });
+        await page.reload();
 
-        // Toggle "Hide Done" if it exists (it's a prop passed to ViewControls)
-        // We might need to find the specific button.
-        // Based on AllTasksView.vue code: .hide-done-toggle
-        // const hideDoneBtn = page.locator('.hide-done-toggle');
-        // if (await hideDoneBtn.isVisible()) {
-        //   await hideDoneBtn.click();
-        // }
+        const toolbar = page.getByTestId('catalog-toolbar');
+        const activeRow = page.locator('.hierarchical-task-row').filter({ hasText: activeTitle });
+        const completedRow = page.locator('.hierarchical-task-row').filter({ hasText: completedTitle });
+        await expect(toolbar).toBeVisible();
+        await expect(activeRow).toBeVisible();
+        await expect(completedRow).toBeVisible();
+
+        await toolbar.getByTestId('catalog-view-options').click();
+        await toolbar.getByRole('button', { name: 'Hide completed', exact: true }).click();
+        await expect(completedRow).toHaveCount(0);
+        await expect(activeRow).toBeVisible();
+
+        await toolbar.getByRole('button', { name: 'Show completed', exact: true }).click();
+        await expect(completedRow).toBeVisible();
+        await expect(activeRow).toBeVisible();
+
+        // Filtering is a view preference: neither task's canonical status changes.
+        await expect.poll(async () => page.evaluate(() => {
+            const tasks = JSON.parse(localStorage.getItem('flowstate-guest-tasks') || '[]');
+            return tasks.filter((task: any) => task.id.endsWith('000000000101') || task.id.endsWith('000000000102'))
+                .map((task: any) => ({ id: task.id, status: task.status }))
+                .sort((a: any, b: any) => a.id.localeCompare(b.id));
+        })).toEqual([
+            { id: '00000000-0000-4000-8000-000000000101', status: 'todo' },
+            { id: '00000000-0000-4000-8000-000000000102', status: 'done' },
+        ]);
     });
 
     test('right-click completion persists after reload', async ({ page }) => {
@@ -187,6 +219,13 @@ test.describe('Task Management', () => {
             completionDueDate: '2026-07-23',
             completionStatus: 'done',
         });
+
+        // Same durability race as right-click completion: reload only once the
+        // guest-storage authority holds the advanced occurrence.
+        await expect.poll(async () => page.evaluate((taskId) => {
+            const tasks = JSON.parse(localStorage.getItem('flowstate-guest-tasks') || '[]');
+            return tasks.find((task: any) => task.id === taskId)?.dueDate;
+        }, taskId)).toBe('2026-07-24');
 
         await page.reload();
         await page.waitForSelector('.all-tasks-view');

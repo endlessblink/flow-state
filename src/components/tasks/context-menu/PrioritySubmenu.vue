@@ -9,63 +9,15 @@
       @wheel.stop
     >
       <button
+        v-for="option in PRIORITY_OPTIONS"
+        :key="option.value"
         class="menu-item menu-item--sm"
-        :class="{ active: currentPriority === 'immediate' }"
-        @click.stop="$emit('select', 'immediate')"
+        :class="{ active: currentPriority === option.value }"
+        @click.stop="$emit('select', option.value)"
       >
-        <span class="priority-dot immediate" />
-        <span class="menu-text">Immediate</span>
-        <Check v-if="currentPriority === 'immediate'" :size="12" class="check-icon" />
-      </button>
-
-      <button
-        class="menu-item menu-item--sm"
-        :class="{ active: currentPriority === 'relaxed' }"
-        @click.stop="$emit('select', 'relaxed')"
-      >
-        <span class="priority-dot relaxed" />
-        <span class="menu-text">Relaxed</span>
-        <Check v-if="currentPriority === 'relaxed'" :size="12" class="check-icon" />
-      </button>
-
-      <button
-        class="menu-item menu-item--sm"
-        :class="{ active: currentPriority === 'high' }"
-        @click.stop="$emit('select', 'high')"
-      >
-        <span class="priority-dot high" />
-        <span class="menu-text">High</span>
-        <Check v-if="currentPriority === 'high'" :size="12" class="check-icon" />
-      </button>
-
-      <button
-        class="menu-item menu-item--sm"
-        :class="{ active: !currentPriority }"
-        @click.stop="$emit('clearPriority')"
-      >
-        <CircleOff :size="12" class="priority-none-icon" />
-        <span class="menu-text">No Priority</span>
-        <Check v-if="!currentPriority" :size="12" class="check-icon" />
-      </button>
-
-      <button
-        class="menu-item menu-item--sm"
-        :class="{ active: currentPriority === 'medium' }"
-        @click.stop="$emit('select', 'medium')"
-      >
-        <span class="priority-dot medium" />
-        <span class="menu-text">Medium</span>
-        <Check v-if="currentPriority === 'medium'" :size="12" class="check-icon" />
-      </button>
-
-      <button
-        class="menu-item menu-item--sm"
-        :class="{ active: currentPriority === 'low' }"
-        @click.stop="$emit('select', 'low')"
-      >
-        <span class="priority-dot low" />
-        <span class="menu-text">Low</span>
-        <Check v-if="currentPriority === 'low'" :size="12" class="check-icon" />
+        <span class="priority-dot" :class="option.value" />
+        <span class="menu-text">{{ option.label }}</span>
+        <Check v-if="currentPriority === option.value" :size="12" class="check-icon" />
       </button>
 
       <div class="submenu-divider" />
@@ -84,8 +36,11 @@
 
 <script setup lang="ts">
 import type { CSSProperties } from 'vue'
-import { Check, CircleOff, X } from 'lucide-vue-next'
+import { Check, X } from 'lucide-vue-next'
 import type { TaskPriority } from '@/types/tasks'
+import { priorityOptions } from '@/utils/taskPriority'
+
+const PRIORITY_OPTIONS = priorityOptions().map(option => ({ value: option.value as Exclude<TaskPriority, null>, label: option.label }))
 
 defineProps<{
   isVisible: boolean
@@ -163,8 +118,8 @@ defineEmits<{
 .priority-dot.high { background-color: var(--color-priority-high); }
 .priority-dot.medium { background-color: var(--color-priority-medium); }
 .priority-dot.low { background-color: var(--color-priority-low); }
-.priority-dot.immediate { background-color: var(--color-danger); }
-.priority-dot.relaxed { background-color: var(--text-muted); }
+.priority-dot.immediate { background-color: var(--color-priority-immediate); }
+.priority-dot.relaxed { background-color: var(--color-priority-relaxed); }
 
 .check-icon {
   flex-shrink: 0;

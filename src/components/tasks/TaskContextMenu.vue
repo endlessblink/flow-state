@@ -303,6 +303,7 @@ import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
 import { useSubmenuSafePolygon } from '@/composables/useSubmenuSafePolygon'
+import { isPriorityValue } from '@/utils/taskPriority'
 
 interface Props {
   isVisible: boolean
@@ -850,7 +851,7 @@ const closeAIAssist = () => {
 
 const handleAIAcceptPriority = (priority: string, duration: number) => {
   if (!currentTask.value) return
-  const validPriority = ['low', 'medium', 'high'].includes(priority) ? priority as 'low' | 'medium' | 'high' : undefined
+  const validPriority = isPriorityValue(priority) ? priority : undefined
   if (validPriority) setPriority(validPriority)
   if (duration) setDuration(duration)
   emit('close')
@@ -858,7 +859,7 @@ const handleAIAcceptPriority = (priority: string, duration: number) => {
 
 const handleAIAcceptBreakdown = async (tasks: Array<{ title: string; priority?: string }>) => {
   for (const t of tasks) {
-    const validPriority = ['low', 'medium', 'high'].includes(t.priority || '') ? t.priority as 'low' | 'medium' | 'high' : 'medium'
+    const validPriority = isPriorityValue(t.priority) ? t.priority : 'medium'
     await taskStore.createTaskWithUndo({
       title: t.title,
       priority: validPriority,
@@ -1427,8 +1428,8 @@ onUnmounted(() => {
 .priority-dot-sm.high { background: var(--color-priority-high); }
 .priority-dot-sm.medium { background: var(--color-priority-medium); }
 .priority-dot-sm.low { background: var(--color-priority-low); }
-.priority-dot-sm.immediate { background: var(--color-danger); }
-.priority-dot-sm.relaxed { background: var(--color-priority-low); }
+.priority-dot-sm.immediate { background: var(--color-priority-immediate); }
+.priority-dot-sm.relaxed { background: var(--color-priority-relaxed); }
 .priority-dot-sm.none { background: var(--text-muted); opacity: 0.4; }
 
 /* TASK-1485: Mark Done line is teal */

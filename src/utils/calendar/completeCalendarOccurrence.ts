@@ -18,7 +18,7 @@ export function buildCalendarDoneForTodayUpdate(
       dueTime: undefined,
       scheduledDate: undefined,
       scheduledTime: undefined,
-      instances: instances.filter(instance => instance.status === 'completed' || instance.status === 'skipped')
+      instances
     }
   }
 
@@ -32,6 +32,6 @@ export function buildCalendarDoneForTodayUpdate(
       instance.id === instanceId
         ? { ...instance, status: 'completed' as const }
         : instance
-    ).filter(instance => instance.status === 'completed' || instance.status === 'skipped')
+    )
   }
 }

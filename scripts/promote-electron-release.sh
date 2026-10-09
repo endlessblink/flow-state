@@ -44,6 +44,9 @@ done
 # consumers read the copy beside the Electron update directory.
 cp -f -- "$RECEIPT" "$(dirname "$TARGET_DIR")/release-receipt.json"
 cp -f -- "$RECEIPT" "$(dirname "$(dirname "$TARGET_DIR")")/release-receipt.json"
+# The web deploy also refreshes this copy; without it a desktop-only release
+# leaves the updater-side receipt at an older version.
+cp -f -- "$RECEIPT" "$TARGET_DIR/flowstate-release-receipt.json"
 
 # Publish this last: clients never observe a manifest before its files exist.
 mv "$STAGE_DIR/latest-linux.yml" "$TARGET_DIR/latest-linux.yml"

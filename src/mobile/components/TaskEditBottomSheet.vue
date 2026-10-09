@@ -539,6 +539,18 @@ function triggerHaptic(duration: number = 10) {
 }
 
 /* Priority-specific active colors */
+.pill.pill-immediate.active {
+  background: var(--priority-immediate-bg);
+  border-color: var(--color-priority-immediate);
+  color: var(--color-priority-immediate);
+}
+
+.pill.pill-relaxed.active {
+  background: var(--priority-relaxed-bg);
+  border-color: var(--color-priority-relaxed);
+  color: var(--color-priority-relaxed);
+}
+
 .pill.pill-high.active {
   background: var(--priority-high-bg);
   border-color: var(--color-priority-high);

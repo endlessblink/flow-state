@@ -33,7 +33,11 @@ export function reconcileStaleInstancesForDueDate(
   let changed = false
   const reconciled = instances.map(inst => {
     const dateOnly = inst?.scheduledDate?.split('T')[0]
-    if (dateOnly && dateOnly <= todayStr && dateOnly !== newDateOnly && inst.status !== 'completed' && inst.status !== 'skipped') {
+    if (
+      dateOnly && dateOnly <= todayStr &&
+      (dateOnly !== newDateOnly || inst.scheduledTime !== undefined) &&
+      inst.status !== 'completed' && inst.status !== 'skipped'
+    ) {
       changed = true
       return { ...inst, scheduledDate: newDateOnly, scheduledTime: undefined }
     }

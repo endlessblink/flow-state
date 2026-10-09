@@ -126,6 +126,37 @@ forwarded a session to the sidecar.
 { "active": false, "session": null }
 ```
 
+### `POST /api/timer/lifecycle`
+Bearer-authenticated, signed-in user only. Contract `timer-lifecycle-v1`.
+Actions: `start`, `pause`, `resume`, `stop`. Every call is preview first, then
+apply with the preview receipt. Only these body fields are accepted; any other
+field (for example a top-level `taskId`, `durationMinutes`) is rejected.
+
+Start a 50-minute focus timer on a task (preview):
+
+```json
+{
+  "operationId": "freelance-desk-timer-<unique>",
+  "sessionId": "<new random UUID v4 — the caller generates it>",
+  "baseRevision": 0,
+  "action": "start",
+  "payload": { "taskId": "<task uuid>", "duration": 3000, "isBreak": false },
+  "preview": true
+}
+```
+
+- `duration` is whole **seconds** (1..86400). `isBreak` is required; for a break
+  use `"taskId": "break", "isBreak": true`.
+- Apply: resend the exact same body with `"preview": false` plus
+  `previewDigest`, `previewExpiresAt` and `requestHash` copied from the preview
+  response. Then `GET /api/timer/current` shows the session.
+- `pause` / `resume` / `stop`: `sessionId` = the active session id,
+  `baseRevision` = its current revision (≥ 1), `payload: {}`.
+- Only one active timer at a time: `start` while another runs returns 409
+  `active_session_conflict` with `activeSessionId` and `currentRevision`;
+  stop that session first.
+- A 400 `invalid_request` message names the missing or invalid field.
+
 ### `GET /api/tasks?status=todo&due=today&limit=25`
 `status` optional (`todo` / `open` | `done`; omitted = all open). `due` optional
 (`today` | `overdue` | `open` for no due date | `YYYY-MM-DD`). Capped at 25 items.

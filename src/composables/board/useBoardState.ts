@@ -1,4 +1,5 @@
 import { computed } from 'vue'
+import { comparePriority } from '@/utils/taskPriority'
 import type { Task, TaskInstance, useTaskStore } from '@/stores/tasks'
 import { parseDateKey, getTaskInstances } from '@/stores/tasks'
 import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
@@ -11,20 +12,12 @@ interface BoardStateDependencies {
 
 export type BoardSortOption = 'manual' | 'priority_desc'
 
-const priorityRank: Record<NonNullable<Task['priority']>, number> = {
-    immediate: 0,
-    high: 1,
-    medium: 2,
-    low: 3,
-    relaxed: 4
-}
-
 export function sortTasksForBoard(tasks: Task[], sortOption: BoardSortOption = 'manual'): Task[] {
     const orderedTasks = [...tasks]
     if (sortOption === 'manual') return sortTasksBySharedOrder(orderedTasks)
 
     return orderedTasks.sort((a, b) => {
-  const priorityDifference = (a.priority ? priorityRank[a.priority] : 5) - (b.priority ? priorityRank[b.priority] : 5)
+  const priorityDifference = comparePriority(a.priority, b.priority)
         if (priorityDifference !== 0) return priorityDifference
         return sortTasksBySharedOrder([a, b])[0]?.id === a.id ? -1 : 1
     })

@@ -597,6 +597,9 @@ test.describe('local canvas geometry regressions', () => {
       const taskStore = pinia._s.get('tasks')!
       const canvasStore = pinia._s.get('canvas')!
 
+      // seedCanvas shows completed cards (for the Tidy cases); this case covers
+      // the "hide completed" mode, where the done card must leave the canvas.
+      taskStore.hideCanvasDoneTasks = true
       await taskStore.updateTask('done-shift-b', { status: 'done' }, 'USER')
       await canvasStore.requestSync?.('user:context-menu')
     })

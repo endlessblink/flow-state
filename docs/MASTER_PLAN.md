@@ -1,5 +1,9 @@
 # FlowState MASTER_PLAN.md
 
+### TASK-2113: Local API route to move one calendar instance (👀 REVIEW)
+
+Requested by the Freelance Desk mirror (N-1863): when a timeline block moves, the Desk had no way to move its FlowState calendar instance; appending a second one leaves a stale duplicate. **Added** `POST /api/tasks/:id/instances/:instanceId/move` — preview by default, apply bound to an HMAC preview digest + 10-minute expiry, compare-and-swap on `updated_at`, read-back of the stored instance, idempotent retry (`alreadyApplied`). Same bearer/user boundary as the instance POST; no task deletes. README documents exact request/response/error shapes. **Proof**: 11 behavioural unit tests + route/column contract tests (564 local-API/contract tests pass); local Supabase run moved 10:00→15:00 and `GET …/instances` returned one instance at 15:00. Branch `feat/local-api-move-instance`, not pushed or released.
+
 ### BUG-2112: Catalog date headings show raw keys like "task.overdue" (👀 REVIEW)
 
 **Priority**: P2 | **Status**: 👀 REVIEW (2026-10-09). Fixed in source; reaches the desktop app only with the next Electron release.

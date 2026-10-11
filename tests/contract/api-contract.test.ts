@@ -513,3 +513,23 @@ describe("TASK-1586: API Contract Tests — supabaseMappers.ts", () => {
     }
   });
 });
+
+describe("Local API task-instance move — DB column contract", () => {
+  const MOVE_SRC = readSrc("server/local-api/task-instance-move.cjs");
+
+  it("reads, filters, and writes only real tasks columns", () => {
+    const selects = [...MOVE_SRC.matchAll(/\.select\('([^']+)'\)/g)].flatMap(
+      (m) => m[1].split(","),
+    );
+    const filters = [...MOVE_SRC.matchAll(/\.eq\('([^']+)'/g)].map((m) => m[1]);
+    const updateKeys = [...MOVE_SRC.matchAll(/\.update\(\{([^}]+)\}\)/g)].flatMap(
+      (m) => m[1].split(",").map((part) => part.split(":")[0].trim()),
+    );
+
+    expect(selects.length).toBeGreaterThan(0);
+    expect(updateKeys).toEqual(["instances", "updated_at"]);
+    for (const column of [...selects, ...filters, ...updateKeys]) {
+      expect(VALID_TASK_COLUMNS.has(column), `unknown tasks column "${column}"`).toBe(true);
+    }
+  });
+});

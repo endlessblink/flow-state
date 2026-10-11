@@ -38,6 +38,7 @@ const { executeCanonicalTimerLifecycle } = require('./canonical-timer-lifecycle.
 const { executeCanonicalWorkBlock } = require('./canonical-work-block.cjs')
 const { executeCompleteTask } = require('./complete-task.cjs')
 const { executeSubtaskBatch } = require('./subtask-batch.cjs')
+const { executeTaskInstanceMove } = require('./task-instance-move.cjs')
 const { executeNotionActivation } = require('./notion-activation.cjs')
 const { classifyMissingAuthContext } = require('./auth-availability.cjs')
 const { buildApiReadiness } = require('./api-readiness.cjs')
@@ -898,6 +899,12 @@ async function handlePostTaskInstance(id, req, res) {
   send(res, 200, buildTaskInstanceResponse(existing, proposedInstance, false))
 }
 
+async function handleMoveTaskInstance(id, instanceId, req, res) {
+  const body = await readJsonBody(req)
+  const result = await executeTaskInstanceMove(ctx, id, instanceId, body, notifyTaskMutation)
+  send(res, result.status, result.body)
+}
+
 // --- Subtask handlers -------------------------------------------------------
 
 async function findTaskForSubtasks(id, fields = 'id,title,subtasks') {
@@ -1638,6 +1645,15 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && taskInstancesMatch) {
       return await handlePostTaskInstance(decodeURIComponent(taskInstancesMatch[1]), req, res)
+    }
+    const taskInstanceMoveMatch = path.match(/^\/api\/tasks\/([^/]+)\/instances\/([^/]+)\/move$/)
+    if (req.method === 'POST' && taskInstanceMoveMatch) {
+      return await handleMoveTaskInstance(
+        decodeURIComponent(taskInstanceMoveMatch[1]),
+        decodeURIComponent(taskInstanceMoveMatch[2]),
+        req,
+        res,
+      )
     }
     const recurrenceChainMatch = path.match(/^\/api\/tasks\/([^/]+)\/recurrence-chain$/)
     if (req.method === 'GET' && recurrenceChainMatch) {

@@ -733,8 +733,86 @@ Safety notes:
 - Validates `scheduledDate` as `YYYY-MM-DD`, `scheduledTime` as `HH:mm`, and `duration` as 1-1440 minutes.
 - Appends to `tasks.instances[]`, the same calendar instance shape FlowState renders.
 - Does not change task status, title, priority, due date, or project.
-- Does not overwrite existing instances and does not delete tasks.
+- Does not overwrite existing instances and does not delete tasks. To move an existing instance use the route below.
 - Response includes only task id/title plus the created/proposed instance; it never includes tokens, auth headers, sessions, subtasks, descriptions, or raw backlog dumps.
+
+### `POST /api/tasks/:id/instances/:instanceId/move`
+Moves ONE existing calendar instance of a user-owned, non-deleted task to a new
+date/time (and optionally a new duration), in place. The instance keeps its id;
+no second instance is created and no task is deleted. Same bearer token and
+user-ownership boundary as `POST /api/tasks/:id/instances`. `:instanceId` is the
+`id` returned by that POST (or listed by `GET /api/tasks/:id/instances`),
+URL-encoded.
+
+Preview (the default when `preview` is omitted or `true`; never writes):
+
+```json
+// body
+{ "scheduledDate": "2026-10-12", "scheduledTime": "15:00", "duration": 60, "preview": true }
+
+// 200
+{
+  "ok": true,
+  "preview": true,
+  "task": { "id": "task-uuid", "title": "Desk block" },
+  "before":   { "id": "instance-uuid", "scheduledDate": "2026-10-12", "scheduledTime": "10:00", "duration": 60 },
+  "instance": { "id": "instance-uuid", "scheduledDate": "2026-10-12", "scheduledTime": "15:00", "duration": 60 },
+  "previewDigest": "64-hex-chars",
+  "previewExpiresAt": "2026-10-11T08:10:00.000Z"
+}
+```
+
+`duration` is optional (integer 1-1440); when omitted the instance keeps its
+current duration. Only `scheduledDate`, `scheduledTime`, `duration`, `preview`,
+`previewDigest`, and `previewExpiresAt` are accepted; any other field is a 400.
+
+Apply only after approval, repeating the same date/time/duration plus the two
+preview fields:
+
+```json
+// body
+{
+  "scheduledDate": "2026-10-12",
+  "scheduledTime": "15:00",
+  "duration": 60,
+  "preview": false,
+  "previewDigest": "64-hex-chars",
+  "previewExpiresAt": "2026-10-11T08:10:00.000Z"
+}
+
+// 200 — `instance` is read back from the stored row after the write
+{
+  "ok": true,
+  "preview": false,
+  "task": { "id": "task-uuid", "title": "Desk block" },
+  "before":   { "id": "instance-uuid", "scheduledDate": "2026-10-12", "scheduledTime": "10:00", "duration": 60 },
+  "instance": { "id": "instance-uuid", "scheduledDate": "2026-10-12", "scheduledTime": "15:00", "duration": 60 }
+}
+
+// 200 — retrying an apply that already landed (no write; safe after a lost response)
+{ "ok": true, "preview": false, "alreadyApplied": true, "task": { … }, "before": { …new slot… }, "instance": { …new slot… } }
+```
+
+Errors are `{ "ok": false, "error": { "code": "...", "message": "..." } }`:
+
+| Status | `code` | Meaning |
+| --- | --- | --- |
+| 400 | `invalid_request` | bad date (`YYYY-MM-DD`), time (`HH:mm`), duration, `preview`, or an unknown field |
+| 400 | `approval_required` | apply without `previewDigest` + `previewExpiresAt` |
+| 404 | `not_found` | unknown, cross-user, or deleted task |
+| 404 | `instance_not_found` | the task has no instance with this id |
+| 409 | `no_change` | preview of a slot the instance already has |
+| 409 | `preview_expired` | the preview is older than 10 minutes — preview again |
+| 409 | `preview_mismatch` | the body differs from the preview, the instance changed since, or the sidecar restarted — preview again |
+| 409 | `state_conflict` | the task was written by something else between read and write — preview again |
+| 409 | `ambiguous_instance` | more than one instance carries this id (not moved) |
+
+Safety notes:
+
+- The digest is an HMAC bound to the user, task, the instance as it was at preview, the target slot, and the expiry; it cannot be forged or reused for another move, and it is invalidated by a sidecar restart.
+- The write replaces only the target instance's `scheduledDate`/`scheduledTime`/`duration`, keeps every other instance and every other field on the moved instance, and is a compare-and-swap on the task's `updated_at`.
+- Does not change task status, title, priority, due date, or project. The running app is told to refresh the task after a successful apply.
+- For the full canonical receipt contract (operation id, base revision, overlap evidence) use `POST /api/tasks/:id/work-blocks` with `action: "move"`; this route is the lightweight companion to `POST /api/tasks/:id/instances`.
 
 ### Subtasks
 

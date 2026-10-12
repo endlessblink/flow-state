@@ -457,6 +457,26 @@ describe("Local API sidecar timer endpoint regression contract", () => {
     );
   });
 
+  it("exposes the single-instance move route behind the bearer token boundary, before the bare task route", () => {
+    const tokenCheck = SERVER_CJS.indexOf("if (TOKEN)");
+    const moveRoute = SERVER_CJS.indexOf(
+      "path.match(/^\\/api\\/tasks\\/([^/]+)\\/instances\\/([^/]+)\\/move$/)",
+    );
+    const patchTaskRoute = SERVER_CJS.indexOf(
+      "req.method === 'PATCH' && taskMatch",
+    );
+
+    expect(moveRoute, "task instance move route not found").toBeGreaterThan(-1);
+    expect(moveRoute).toBeGreaterThan(tokenCheck);
+    expect(moveRoute).toBeLessThan(patchTaskRoute);
+    expect(SERVER_CJS).toContain("if (req.method === 'POST' && taskInstanceMoveMatch)");
+    expect(functionBody("handleMoveTaskInstance")).toContain(
+      "executeTaskInstanceMove(ctx, id, instanceId, body, notifyTaskMutation)",
+    );
+    expect(README).toContain("### `POST /api/tasks/:id/instances/:instanceId/move`");
+    expect(README).toContain('"previewDigest"');
+  });
+
   it("exposes the recurrence-chain read behind the external-app bearer token boundary", () => {
     const tokenCheck = SERVER_CJS.indexOf("if (TOKEN)");
     const chainRoute = SERVER_CJS.indexOf(

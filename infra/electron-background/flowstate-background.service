@@ -16,6 +16,9 @@ Environment=FLOWSTATE_UPDATE_EXIT_CODE=75
 # FlowState" shows this instance (second launch restores usable window bounds,
 # repairing KDE's collapsed 10x10 geometry) and "Quit FlowState" ends it.
 ExecStart=%h/.local/bin/FlowState-launch.sh --background --user-data-dir=%h/.config/flow-state
+# Logout/stop asks the app to save and exit first; the default TERM reaches the AppImage
+# runtime, which unmounts under the app (SIGBUS) without a durable flush.
+ExecStop=/bin/sh -c '%h/.local/bin/FlowState-launch.sh --quit >/dev/null 2>&1; n=0; while kill -0 $MAINPID 2>/dev/null && [ $$n -lt 30 ]; do sleep 0.5; n=$$((n+1)); done'
 # A quit exits successfully and must stay closed until next login; crashes still restart.
 Restart=on-failure
 RestartPreventExitStatus=75

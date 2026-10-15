@@ -24,7 +24,7 @@ describe('Electron main background-window integration', () => {
     expect(source.slice(activateStart, activateStart + 220)).toContain(
       'backgroundLifecycle.showOrCreate()',
     )
-    expect(source.slice(secondStart, secondStart + 180)).toContain(
+    expect(source.slice(secondStart, secondStart + 260)).toContain(
       'backgroundLifecycle.showOrCreate()',
     )
   })
@@ -66,8 +66,9 @@ describe('Electron main background-window integration', () => {
     expect(widget).toContain('onTriggered: executableDataSource.connectSource(root.backgroundQuitCmd)')
     expect(widget).toContain('        executableDataSource.connectSource(root.backgroundServiceStartCmd)\n        root.loadAuthTokens()')
     expect(widget).toContain('"systemctl --user start flowstate-background.service"')
-    // Quit must TERM the Electron main process (graceful flush, exit 0), never kill the service.
-    expect(widget).toContain("pkill -TERM -f '/[.]mount_FlowSt[^ ]*/flowstate --no-sandbox'")
+    // Quit asks the running app to save and exit (graceful flush, exit 0), never signals or stops the service.
+    expect(widget).toContain('FlowState-launch.sh\\" --quit')
+    expect(widget).not.toMatch(/backgroundQuitCmd: .*pkill/)
     expect(widget).not.toContain('systemctl --user stop flowstate-background.service')
     // Open keeps the TASK-1871 launcher flags by going through the launcher script.
     expect(widget).toContain('$HOME/.local/bin/FlowState-launch.sh')
@@ -84,6 +85,18 @@ describe('Electron main background-window integration', () => {
     expect(unit).toContain('Restart=on-failure')
     expect(unit).toContain('RestartPreventExitStatus=75')
     expect(unit).toContain('WantedBy=graphical-session.target')
+    // Logout/stop goes through the app's own quit request and waits for it to exit.
+    expect(unit).toContain("ExecStop=/bin/sh -c '%h/.local/bin/FlowState-launch.sh --quit")
+    expect(unit).toContain('kill -0 $MAINPID')
+  })
+
+  it('TASK-2114: --quit reaches a running app through the single-instance channel and never starts one', () => {
+    expect(source).toContain("const QUIT_ARG = '--quit'")
+    expect(source).toContain('if (!gotLock || process.argv.includes(QUIT_ARG)) {')
+    const secondStart = source.indexOf("app.on('second-instance'")
+    const handler = source.slice(secondStart, secondStart + 260)
+    expect(handler).toContain('if (argv.includes(QUIT_ARG)) {')
+    expect(handler.indexOf('forceQuit()')).toBeLessThan(handler.indexOf('backgroundLifecycle.showOrCreate()'))
   })
 
   it('keeps runtime visibility diagnostics bound to the current window', () => {

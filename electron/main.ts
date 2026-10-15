@@ -98,8 +98,13 @@ function pinUserDataToRealHome() {
 pinUserDataToRealHome()
 
 // Prevent multiple instances
+// TASK-2114: `--quit` asks a running FlowState (hidden background app included) to
+// save and exit through the normal quit path. With nothing running there is
+// nothing to quit, so never start the app for it.
+const QUIT_ARG = '--quit'
 const gotLock = app.requestSingleInstanceLock()
-if (!gotLock) {
+if (!gotLock || process.argv.includes(QUIT_ARG)) {
+  if (gotLock) app.releaseSingleInstanceLock()
   app.quit()
   process.exit(0)
 }
@@ -425,6 +430,10 @@ app.on('will-quit', () => {
 })
 
 // Handle second instance — focus existing window
-app.on('second-instance', () => {
+app.on('second-instance', (_event, argv) => {
+  if (argv.includes(QUIT_ARG)) {
+    forceQuit()
+    return
+  }
   backgroundLifecycle.showOrCreate()
 })

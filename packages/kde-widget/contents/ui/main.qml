@@ -19,9 +19,10 @@ PlasmoidItem {
     // It never restarts the app after a manual Quit; the next login brings it back.
     readonly property string backgroundServiceStartCmd: "systemctl --user start flowstate-background.service"
     readonly property string backgroundOpenCmd: "bash -c 'systemctl --user start flowstate-background.service; for i in $(seq 1 60); do curl -s -o /dev/null --max-time 1 http://127.0.0.1:5577/api/health && break; sleep 0.5; done; nohup \"$HOME/.local/bin/FlowState-launch.sh\" >/dev/null 2>&1 &'"
-    // TERM the Electron main process itself so it flushes and quits cleanly (exit 0 keeps the
-    // on-failure service stopped). "[.]" keeps the pattern from matching this shell.
-    readonly property string backgroundQuitCmd: "pkill -TERM -f '/[.]mount_FlowSt[^ ]*/flowstate --no-sandbox'"
+    // Ask the running app to save and exit through its own quit path (exit 0 keeps the
+    // on-failure service stopped). Signals proved unreliable: sometimes ignored, sometimes
+    // an unflushed kill.
+    readonly property string backgroundQuitCmd: "bash -c '\"$HOME/.local/bin/FlowState-launch.sh\" --quit >/dev/null 2>&1'"
 
     Plasmoid.contextualActions: [
         PlasmaCore.Action {

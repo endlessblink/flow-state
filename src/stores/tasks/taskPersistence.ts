@@ -26,6 +26,11 @@ type TaskStorageAuthState = {
     isRestoringSession?: boolean
 }
 
+/** BUG-2115: field-for-field equality of two task snapshots (Dates compare by value). */
+export function sameTaskContent(a: Task, b: Task): boolean {
+    return JSON.stringify(a) === JSON.stringify(b)
+}
+
 export function taskStorageOwner(auth: TaskStorageAuthState): 'restoring' | 'guest' | 'account' {
     if (auth.isRestoringSession && auth.user?.id) return 'restoring'
     if (auth.isAuthenticated && auth.user?.id) return 'account'
@@ -893,8 +898,11 @@ export function useTaskPersistence(
                 const existing = _rawTasks.value[i]
                 const merged = mergedMap.get(existing.id)
                 if (merged) {
-                    // Task exists in merged result - update in place if different
-                    if (existing !== merged) {
+                    // Task exists in merged result - update in place if different.
+                    // BUG-2115: a reload maps fresh objects for every row, so identity
+                    // always differs; replacing unchanged tasks re-fired every view's
+                    // computeds once per task on each 15s authoritative reload.
+                    if (existing !== merged && !sameTaskContent(existing, merged)) {
                         _rawTasks.value[i] = merged
                     }
                     logPermanentDeleteTraceIfActive(existing.id, 'task-load.apply-kept-existing', {

@@ -271,6 +271,16 @@ export async function quarantineUnscopedOperations(scope: {
 }
 
 /**
+ * BUG-2115: true when the operations table holds no rows at all. Counts the
+ * primary store (instant) instead of a status index: after heavy enqueue/delete
+ * churn an index scan of an EMPTY table took 60-700 ms in LevelDB, and the
+ * 5s queue pass ran several of them, keeping a CPU thread busy all day.
+ */
+export async function isOperationsTableEmpty(): Promise<boolean> {
+  return (await getWriteQueueDB().operations.count()) === 0;
+}
+
+/**
  * Get all pending operations ready for sync
  *
  * Returns operations that are:

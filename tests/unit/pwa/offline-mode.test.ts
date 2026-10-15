@@ -87,6 +87,7 @@ const mockDeleteOperation = vi.fn()
 vi.mock('@/services/offline/writeQueueDB', () => ({
   enqueueOperation: (...args: any[]) => mockEnqueue(...args),
   getPendingOperations: (...args: any[]) => mockGetPending(...args),
+  isOperationsTableEmpty: async () => false,
   getStats: () => mockGetStats(),
   markSyncing: (...args: any[]) => mockMarkSyncing(...args),
   markCompleted: (...args: any[]) => mockMarkCompleted(...args),

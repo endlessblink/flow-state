@@ -1155,6 +1155,17 @@ async function runProcessQueue(
   consecutiveAuthGateSkips = 0
 
   try {
+    // BUG-2115: nothing queued → skip the recovery/purge/pending scans below.
+    // Each is a status-index scan that LevelDB tombstones made slow even on an
+    // empty table, and this pass runs every 5s for as long as the app is open.
+    const writeQueue = await getWriteQueueModule()
+    if (writeQueue && await writeQueue.isOperationsTableEmpty()) {
+      if (state.value.status === 'syncing' || state.value.status === 'error') {
+        await updateStatus()
+      }
+      return
+    }
+
     if (!staleCanonicalPreviewRepairChecked) {
       try {
         await repairStaleCanonicalPreviewFailures()

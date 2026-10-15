@@ -73,6 +73,7 @@ const rpcMock = vi.hoisted(() => vi.fn())
 const writeQueueMocks = vi.hoisted(() => ({
   enqueueOperation: vi.fn(),
   getPendingOperations: vi.fn().mockResolvedValue([]),
+  isOperationsTableEmpty: vi.fn().mockResolvedValue(false),
   markSyncing: vi.fn(),
   markCompleted: vi.fn(),
   markFailed: vi.fn(),
@@ -444,6 +445,37 @@ afterEach(async () => {
 // ===========================================================================
 // CANONICAL TASK PATCH QUEUE
 // ===========================================================================
+describe('BUG-2115: empty queue fast path', () => {
+  it('skips the slow status-index scans when the queue table is empty', async () => {
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    writeQueueMocks.isOperationsTableEmpty.mockResolvedValue(true)
+    writeQueueMocks.getPendingOperations.mockClear()
+    writeQueueMocks.recoverStaleSyncing.mockClear()
+    writeQueueMocks.cleanupCompleted.mockClear()
+
+    await sync.forceSync()
+    await vi.advanceTimersByTimeAsync(15_000)
+
+    expect(writeQueueMocks.isOperationsTableEmpty).toHaveBeenCalled()
+    expect(writeQueueMocks.getPendingOperations).not.toHaveBeenCalled()
+    expect(writeQueueMocks.recoverStaleSyncing).not.toHaveBeenCalled()
+    expect(writeQueueMocks.cleanupCompleted).not.toHaveBeenCalled()
+    writeQueueMocks.isOperationsTableEmpty.mockResolvedValue(false)
+  })
+
+  it('still processes queued work once the table has rows', async () => {
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    writeQueueMocks.isOperationsTableEmpty.mockResolvedValue(false)
+    writeQueueMocks.getPendingOperations.mockClear()
+
+    await sync.forceSync()
+
+    expect(writeQueueMocks.getPendingOperations).toHaveBeenCalled()
+  })
+})
+
 describe('canonical task patch queue', () => {
   it('previews, applies, atomically completes, and projects the authoritative receipt', async () => {
     const receipt = canonicalReceipt()

@@ -11,12 +11,12 @@ Environment=HOME=%h
 Environment=XDG_CONFIG_HOME=%h/.config
 Environment=FLOWSTATE_SUPERVISED=1
 Environment=FLOWSTATE_UPDATE_EXIT_CODE=75
-# TASK-2114: Start hidden in the system tray so the Local API is reachable after
-# login without a window. Opening FlowState (tray or launcher) restores usable
-# window bounds, which repairs the collapsed 10x10 geometry KDE gives hidden windows.
+# TASK-2114: Start hidden (no window, no extra tray icon) so the Local API is
+# reachable after login. The PomoFlow panel widget is the single control: "Open
+# FlowState" shows this instance (second launch restores usable window bounds,
+# repairing KDE's collapsed 10x10 geometry) and "Quit FlowState" ends it.
 ExecStart=%h/.local/bin/FlowState-launch.sh --background --user-data-dir=%h/.config/flow-state
-# "Quit" from the tray exits successfully and must stay closed until next login;
-# crashes still restart.
+# A quit exits successfully and must stay closed until next login; crashes still restart.
 Restart=on-failure
 RestartPreventExitStatus=75
 RestartSec=5s

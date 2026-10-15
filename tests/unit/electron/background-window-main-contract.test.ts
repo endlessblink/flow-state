@@ -47,14 +47,20 @@ describe('Electron main background-window integration', () => {
     expect(handler).toContain('forceQuit()')
   })
 
-  it('TASK-2114: background launches live in the tray with Open and a real Quit', () => {
-    expect(source).toContain('if (backgroundEnabled) createTray()')
-    const trayStart = source.indexOf('function createTray()')
-    const trayBody = source.slice(trayStart, trayStart + 700)
-    expect(trayBody).toContain("join(__dirname, '../dist/icons/pwa-64x64.png')")
-    expect(trayBody).toContain("{ label: 'Open FlowState', click: () => backgroundLifecycle.showOrCreate() }")
-    expect(trayBody).toContain("{ label: 'Quit FlowState', click: forceQuit }")
-    expect(trayBody).toContain("tray.on('click', () => backgroundLifecycle.showOrCreate())")
+  it('TASK-2114: the hidden app adds no tray icon of its own; the PomoFlow widget is the one control', () => {
+    expect(source).not.toMatch(/new Tray\(/)
+    const widget = readFileSync(resolve(process.cwd(), 'packages/kde-widget/contents/ui/main.qml'), 'utf8')
+    expect(widget).toContain('Plasmoid.contextualActions: [')
+    expect(widget).toContain('text: "Open FlowState"')
+    expect(widget).toContain('onTriggered: executableDataSource.connectSource(root.backgroundOpenCmd)')
+    expect(widget).toContain('onTriggered: executableDataSource.connectSource(root.backgroundQuitCmd)')
+    expect(widget).toContain('        executableDataSource.connectSource(root.backgroundServiceStartCmd)\n        root.loadAuthTokens()')
+    expect(widget).toContain('"systemctl --user start flowstate-background.service"')
+    // Quit must TERM the Electron main process (graceful flush, exit 0), never kill the service.
+    expect(widget).toContain("pkill -TERM -f '/[.]mount_FlowSt[^ ]*/flowstate --no-sandbox'")
+    expect(widget).not.toContain('systemctl --user stop flowstate-background.service')
+    // Open keeps the TASK-1871 launcher flags by going through the launcher script.
+    expect(widget).toContain('$HOME/.local/bin/FlowState-launch.sh')
   })
 
   it('TASK-2114: the login service starts FlowState hidden in the tray', () => {

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain, Menu, globalShortcut, powerMonitor, Tray, nativeImage } from 'electron'
+import { app, BrowserWindow, shell, ipcMain, Menu, globalShortcut, powerMonitor } from 'electron'
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { userInfo } from 'os'
@@ -205,24 +205,6 @@ function registerAppMenu() {
   Menu.setApplicationMenu(menu)
 }
 
-// TASK-2114: A background launch lives in the system tray so the Local API stays reachable
-// while no window is shown. Closing the window hides it; only "Quit" from the tray ends it.
-let tray: Tray | null = null
-
-function createTray() {
-  const icon = nativeImage.createFromPath(join(__dirname, '../dist/icons/pwa-64x64.png'))
-  tray = new Tray(icon.isEmpty() ? icon : icon.resize({ width: 22, height: 22 }))
-  tray.setToolTip('FlowState')
-  tray.setContextMenu(
-    Menu.buildFromTemplate([
-      { label: 'Open FlowState', click: () => backgroundLifecycle.showOrCreate() },
-      { type: 'separator' },
-      { label: 'Quit FlowState', click: forceQuit },
-    ]),
-  )
-  tray.on('click', () => backgroundLifecycle.showOrCreate())
-}
-
 function createWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 1400,
@@ -360,7 +342,6 @@ ipcMain.handle('app:getHomeOverride', () => homeOverride)
 app.whenReady().then(() => {
   registerAppMenu()
   createWindow()
-  if (backgroundEnabled) createTray()
   globalShortcut.register('CommandOrControl+Shift+I', toggleMainWindowDevTools)
   registerUpdater()
 

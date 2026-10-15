@@ -2,7 +2,11 @@
 
 ### TASK-2114: Tray background process so the Desk can always read tasks (🔄 IN PROGRESS)
 
-Noam 15.10: the Freelance Desk read failed with "Connection refused" on the Local API whenever FlowState was closed. Spec: a low-resource process that always runs in the system tray, can be closed by hand, and starts again after restart. **Change**: background launches (`--background`) now create a tray icon (Open FlowState / Quit FlowState; click opens); closing the window hides it; Quit exits 0 so the `Restart=on-failure` login service stays closed until next login. The login service now starts with `--background`. Launcher flags (TASK-1871) kept. Regressions: tray + service contract tests.
+Noam 15.10: the Freelance Desk read failed with "Connection refused" on the Local API whenever FlowState was closed. Spec: a process that always runs in the background, can be closed by hand, and starts again after restart; 09:42 decision "כן, לאחד": ONE tray icon — the existing PomoFlow panel widget — no separate Electron tray icon. **Change**: the login service starts the app hidden (`--background`, no window, no tray icon); closing the window hides it. The PomoFlow widget starts the service when it loads and gains right-click "Open FlowState" (shows the instance through the launcher, TASK-1871 flags kept) and "Quit FlowState" (TERMs the Electron main process → graceful flush, exit 0, the `Restart=on-failure` service stays stopped until next login). Regressions: widget + service contract tests. **Not covered**: idle CPU cost of the renderer (BUG-2115, pre-existing in visible mode too); `systemctl stop`/logout kills via the AppImage runtime (SIGBUS) instead of a graceful flush.
+
+### BUG-2115: Idle FlowState renderer burns 60-100% of a core (📋 PLANNED)
+
+Found during TASK-2114 (15.10). Idle desktop app (hidden or visible, canvas route) uses ~60-115% of one core and ~350-600 MB. CDP profile: every authoritative task reload (BUG-2012 backstop every 15s via `createCanonicalChangePoller.afterRun`, plus other reload triggers) re-assigns the task list and triggers computeds that call `sortTasksBySharedOrder` (src/utils/taskOrdering.ts) thousands of times per reload (≈10k sorts / 5.6M comparator calls in 10s) — looks like a per-node/per-item computed sorting the whole list (O(N² log N)). Next: find the per-item caller among canvas/inbox/board consumers, memoize one shared sorted list, and add a call-count regression.
 
 ### TASK-2113: Local API route to move one calendar instance (👀 REVIEW)
 

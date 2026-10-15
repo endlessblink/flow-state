@@ -181,20 +181,6 @@ function registerAppMenu() {
     ]);
     electron_1.Menu.setApplicationMenu(menu);
 }
-// TASK-2114: A background launch lives in the system tray so the Local API stays reachable
-// while no window is shown. Closing the window hides it; only "Quit" from the tray ends it.
-let tray = null;
-function createTray() {
-    const icon = electron_1.nativeImage.createFromPath((0, path_1.join)(__dirname, '../dist/icons/pwa-64x64.png'));
-    tray = new electron_1.Tray(icon.isEmpty() ? icon : icon.resize({ width: 22, height: 22 }));
-    tray.setToolTip('FlowState');
-    tray.setContextMenu(electron_1.Menu.buildFromTemplate([
-        { label: 'Open FlowState', click: () => backgroundLifecycle.showOrCreate() },
-        { type: 'separator' },
-        { label: 'Quit FlowState', click: forceQuit },
-    ]));
-    tray.on('click', () => backgroundLifecycle.showOrCreate());
-}
 function createWindow() {
     const window = new electron_1.BrowserWindow({
         width: 1400,
@@ -324,8 +310,6 @@ electron_1.ipcMain.handle('app:getHomeOverride', () => homeOverride);
 electron_1.app.whenReady().then(() => {
     registerAppMenu();
     createWindow();
-    if (backgroundEnabled)
-        createTray();
     electron_1.globalShortcut.register('CommandOrControl+Shift+I', toggleMainWindowDevTools);
     (0, updater_1.registerUpdater)();
     electron_1.app.on('activate', () => {

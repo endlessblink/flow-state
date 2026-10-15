@@ -15,6 +15,7 @@ const updater_1 = require("./updater");
 const oauth_1 = require("./ipc/oauth");
 const localApi_1 = require("./ipc/localApi");
 const diagnostics_1 = require("./ipc/diagnostics");
+const timerSuggestionWindow_1 = require("./timerSuggestionWindow");
 const runtimeDiagnostics_1 = require("./runtimeDiagnostics");
 const backgroundWindowLifecycle_1 = require("./backgroundWindowLifecycle");
 function installBrokenPipeConsoleGuard() {
@@ -81,8 +82,14 @@ function pinUserDataToRealHome() {
 }
 pinUserDataToRealHome();
 // Prevent multiple instances
+// TASK-2114: `--quit` asks a running FlowState (hidden background app included) to
+// save and exit through the normal quit path. With nothing running there is
+// nothing to quit, so never start the app for it.
+const QUIT_ARG = '--quit';
 const gotLock = electron_1.app.requestSingleInstanceLock();
-if (!gotLock) {
+if (!gotLock || process.argv.includes(QUIT_ARG)) {
+    if (gotLock)
+        electron_1.app.releaseSingleInstanceLock();
     electron_1.app.quit();
     process.exit(0);
 }
@@ -299,6 +306,7 @@ function createWindow() {
 (0, localApi_1.registerLocalApiHandlers)();
 (0, diagnostics_1.registerDiagnosticsHandlers)();
 (0, runtimeDiagnostics_1.registerRuntimeDiagnostics)(() => mainWindow);
+(0, timerSuggestionWindow_1.registerTimerSuggestionWindow)(() => mainWindow);
 electron_1.ipcMain.handle('app:getVersion', () => electron_1.app.getVersion());
 electron_1.ipcMain.handle('app:getSystemIdleTime', () => electron_1.powerMonitor.getSystemIdleTime());
 // BUG-1932: null unless a launcher's HOME was overridden. Renderer surfaces it so a deliberate
@@ -341,8 +349,14 @@ electron_1.app.on('before-quit', (event) => {
             }
             await (0, localApi_1.shutdownLocalApi)();
             storeFlushedForQuit = true;
-            if (destroyWindowAfterStoreFlush && mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.destroy();
+            if (destroyWindowAfterStoreFlush) {
+                // TASK-2114: an explicit quit (Quit menu, Ctrl/Cmd+Q, the PomoFlow widget,
+                // logout SIGTERM) has already flushed the store and stopped the Local API.
+                // Asking the windows again let a racing listener cancel it and resume the
+                // API, leaving a hidden background app running after "Quit". Exit 0 keeps
+                // the on-failure login service stopped.
+                electron_1.app.exit(0);
+                return;
             }
             electron_1.app.quit();
             // If another lifecycle listener canceled the second quit, require a new
@@ -376,7 +390,11 @@ electron_1.app.on('will-quit', () => {
     (0, runtimeDiagnostics_1.stopRuntimeDiagnostics)();
 });
 // Handle second instance — focus existing window
-electron_1.app.on('second-instance', () => {
+electron_1.app.on('second-instance', (_event, argv) => {
+    if (argv.includes(QUIT_ARG)) {
+        forceQuit();
+        return;
+    }
     backgroundLifecycle.showOrCreate();
 });
 //# sourceMappingURL=main.js.map

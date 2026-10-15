@@ -271,6 +271,16 @@ export async function quarantineUnscopedOperations(scope: {
 }
 
 /**
+ * BUG-2115: true when the operations table holds no rows at all. Counts the
+ * primary store (instant) instead of a status index: after heavy enqueue/delete
+ * churn an index scan of an EMPTY table took 60-700 ms in LevelDB, and the
+ * 5s queue pass ran several of them, keeping a CPU thread busy all day.
+ */
+export async function isOperationsTableEmpty(): Promise<boolean> {
+  return (await getWriteQueueDB().operations.count()) === 0;
+}
+
+/**
  * Get all pending operations ready for sync
  *
  * Returns operations that are:
@@ -741,6 +751,7 @@ export async function deleteOperationsByType(
  */
 export async function getPendingCount(): Promise<number> {
   const db = getWriteQueueDB();
+  if ((await db.operations.count()) === 0) return 0; // BUG-2115 fast path
   return db.operations
     .where("status")
     .anyOf(["pending", "failed", "syncing"])
@@ -1051,14 +1062,27 @@ export async function getStats(): Promise<{
 }> {
   const db = getWriteQueueDB();
 
-  const [pending, syncing, failed, completed, conflicts, total] =
+  // BUG-2115: an empty queue needs no status-index scans (slow under LevelDB
+  // tombstones); the primary-store count answers instantly.
+  const total = await db.operations.count();
+  if (total === 0) {
+    return {
+      totalOperations: 0,
+      pendingCount: 0,
+      syncingCount: 0,
+      failedCount: 0,
+      completedCount: 0,
+      conflictCount: await db.conflicts.count(),
+    };
+  }
+
+  const [pending, syncing, failed, completed, conflicts] =
     await Promise.all([
       db.operations.where("status").equals("pending").count(),
       db.operations.where("status").equals("syncing").count(),
       db.operations.where("status").equals("failed").count(),
       db.operations.where("status").equals("completed").count(),
       db.conflicts.count(),
-      db.operations.count(),
     ]);
 
   return {

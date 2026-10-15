@@ -98,8 +98,13 @@ function pinUserDataToRealHome() {
 pinUserDataToRealHome()
 
 // Prevent multiple instances
+// TASK-2114: `--quit` asks a running FlowState (hidden background app included) to
+// save and exit through the normal quit path. With nothing running there is
+// nothing to quit, so never start the app for it.
+const QUIT_ARG = '--quit'
 const gotLock = app.requestSingleInstanceLock()
-if (!gotLock) {
+if (!gotLock || process.argv.includes(QUIT_ARG)) {
+  if (gotLock) app.releaseSingleInstanceLock()
   app.quit()
   process.exit(0)
 }
@@ -376,8 +381,14 @@ app.on('before-quit', (event) => {
       }
       await shutdownLocalApi()
       storeFlushedForQuit = true
-      if (destroyWindowAfterStoreFlush && mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.destroy()
+      if (destroyWindowAfterStoreFlush) {
+        // TASK-2114: an explicit quit (Quit menu, Ctrl/Cmd+Q, the PomoFlow widget,
+        // logout SIGTERM) has already flushed the store and stopped the Local API.
+        // Asking the windows again let a racing listener cancel it and resume the
+        // API, leaving a hidden background app running after "Quit". Exit 0 keeps
+        // the on-failure login service stopped.
+        app.exit(0)
+        return
       }
       app.quit()
       // If another lifecycle listener canceled the second quit, require a new
@@ -419,6 +430,10 @@ app.on('will-quit', () => {
 })
 
 // Handle second instance — focus existing window
-app.on('second-instance', () => {
+app.on('second-instance', (_event, argv) => {
+  if (argv.includes(QUIT_ARG)) {
+    forceQuit()
+    return
+  }
   backgroundLifecycle.showOrCreate()
 })

@@ -244,6 +244,7 @@ export function useAppInitialization() {
     // backstop; realtime and the change cursor remain the fast paths.
     let lastTaskProjectionRecoveryAt = 0
     const TASK_PROJECTION_RECOVERY_INTERVAL_MS = 15_000
+    const TASK_PROJECTION_RECOVERY_UNFOCUSED_INTERVAL_MS = 60_000
     const canonicalChangePoller = createCanonicalChangePoller({
         run: scope => canonicalChangeCatchup.run(scope),
         getScopes: () => {
@@ -267,7 +268,13 @@ export function useAppInitialization() {
         // otherwise the recovery read can erase a freshly seeded/tidied canvas.
         if (Date.now() - canvas.lastLocalSyncAt < 30_000) return
         const now = Date.now()
-        if (now - lastTaskProjectionRecoveryAt >= TASK_PROJECTION_RECOVERY_INTERVAL_MS) {
+        // BUG-2115: each authoritative reload reads the whole offline cache; while
+        // nobody is looking (hidden background window or unfocused), back off.
+        // Realtime and the change cursor stay the fast path either way.
+        const recoveryInterval = typeof document !== 'undefined' && !document.hasFocus()
+          ? TASK_PROJECTION_RECOVERY_UNFOCUSED_INTERVAL_MS
+          : TASK_PROJECTION_RECOVERY_INTERVAL_MS
+        if (now - lastTaskProjectionRecoveryAt >= recoveryInterval) {
           lastTaskProjectionRecoveryAt = now
           invalidateCache.tasks()
           await taskStore.loadFromDatabase({

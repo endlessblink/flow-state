@@ -51,6 +51,9 @@ describe('TASK-1947 app catch-up integration', () => {
     expect(source).toContain('invalidateCache.all()\n                await reloadCoreData()')
     expect(source).toContain('intervalMs: 5_000')
     expect(source).toContain('TASK_PROJECTION_RECOVERY_INTERVAL_MS = 15_000')
+    // BUG-2115: unfocused/hidden windows back off; focus still reloads at once (above).
+    expect(source).toContain('TASK_PROJECTION_RECOVERY_UNFOCUSED_INTERVAL_MS = 60_000')
+    expect(source).toContain('!document.hasFocus()')
     expect(source).toContain('requireRemoteAuthority: true')
     expect(source).toContain('lastTaskProjectionRecoveryAt')
   })

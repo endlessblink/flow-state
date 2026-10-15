@@ -12,6 +12,31 @@ import org.kde.kirigami as Kirigami
 PlasmoidItem {
     id: root
 
+    // ===== TASK-2114: ONE PANEL ICON KEEPS FLOWSTATE RUNNING IN THE BACKGROUND =====
+    // The desktop app runs hidden (no window, no tray icon of its own) so the Local API
+    // stays reachable for the Desk. This widget is the single control: it makes sure the
+    // background app is running when it loads (login), and offers Open / Quit.
+    // It never restarts the app after a manual Quit; the next login brings it back.
+    readonly property string backgroundServiceStartCmd: "systemctl --user start flowstate-background.service"
+    readonly property string backgroundOpenCmd: "bash -c 'systemctl --user start flowstate-background.service; for i in $(seq 1 60); do curl -s -o /dev/null --max-time 1 http://127.0.0.1:5577/api/health && break; sleep 0.5; done; nohup \"$HOME/.local/bin/FlowState-launch.sh\" >/dev/null 2>&1 &'"
+    // Ask the running app to save and exit through its own quit path (exit 0 keeps the
+    // on-failure service stopped). Signals proved unreliable: sometimes ignored, sometimes
+    // an unflushed kill.
+    readonly property string backgroundQuitCmd: "bash -c '\"$HOME/.local/bin/FlowState-launch.sh\" --quit >/dev/null 2>&1'"
+
+    Plasmoid.contextualActions: [
+        PlasmaCore.Action {
+            text: "Open FlowState"
+            icon.name: "window-new"
+            onTriggered: executableDataSource.connectSource(root.backgroundOpenCmd)
+        },
+        PlasmaCore.Action {
+            text: "Quit FlowState (stops the background app)"
+            icon.name: "application-exit"
+            onTriggered: executableDataSource.connectSource(root.backgroundQuitCmd)
+        }
+    ]
+
     // Tooltip: show calendar block info when active, otherwise default
     toolTipMainText: hasCurrentBlock ? currentBlockTitle : "PomoFlow Timer"
     toolTipSubText: hasCurrentBlock
@@ -6310,6 +6335,8 @@ PlasmoidItem {
     // ===== INITIALIZATION =====
 
     Component.onCompleted: {
+        // TASK-2114: make sure the background FlowState app is running (no-op if it is).
+        executableDataSource.connectSource(root.backgroundServiceStartCmd)
         root.loadAuthTokens()
         if (root.refreshToken !== "") {
             // TASK-1060: Always refresh token on startup to ensure it's valid

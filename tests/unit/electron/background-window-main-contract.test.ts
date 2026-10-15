@@ -24,7 +24,7 @@ describe('Electron main background-window integration', () => {
     expect(source.slice(activateStart, activateStart + 220)).toContain(
       'backgroundLifecycle.showOrCreate()',
     )
-    expect(source.slice(secondStart, secondStart + 180)).toContain(
+    expect(source.slice(secondStart, secondStart + 260)).toContain(
       'backgroundLifecycle.showOrCreate()',
     )
   })
@@ -38,6 +38,16 @@ describe('Electron main background-window integration', () => {
     )
   })
 
+  it('TASK-2114: an explicit quit exits after the flush instead of re-asking windows', () => {
+    const flushStart = source.indexOf('await shutdownLocalApi()')
+    const afterFlush = source.slice(flushStart, flushStart + 900)
+    const exitAt = afterFlush.indexOf('app.exit(0)')
+    expect(afterFlush).toContain('if (destroyWindowAfterStoreFlush) {')
+    expect(exitAt).toBeGreaterThan(-1)
+    // The exit must come before the racy resume-after-cancel timer.
+    expect(exitAt).toBeLessThan(afterFlush.indexOf('setTimeout('))
+  })
+
   it('routes supervisor termination signals through the durable quit gate', () => {
     expect(source).toContain("process.on('SIGTERM', requestGracefulSignalQuit)")
     expect(source).toContain("process.on('SIGINT', requestGracefulSignalQuit)")
@@ -45,6 +55,48 @@ describe('Electron main background-window integration', () => {
     const handler = source.slice(handlerStart, handlerStart + 240)
     expect(handler).toContain('signalQuitRequested = true')
     expect(handler).toContain('forceQuit()')
+  })
+
+  it('TASK-2114: the hidden app adds no tray icon of its own; the PomoFlow widget is the one control', () => {
+    expect(source).not.toMatch(/new Tray\(/)
+    const widget = readFileSync(resolve(process.cwd(), 'packages/kde-widget/contents/ui/main.qml'), 'utf8')
+    expect(widget).toContain('Plasmoid.contextualActions: [')
+    expect(widget).toContain('text: "Open FlowState"')
+    expect(widget).toContain('onTriggered: executableDataSource.connectSource(root.backgroundOpenCmd)')
+    expect(widget).toContain('onTriggered: executableDataSource.connectSource(root.backgroundQuitCmd)')
+    expect(widget).toContain('        executableDataSource.connectSource(root.backgroundServiceStartCmd)\n        root.loadAuthTokens()')
+    expect(widget).toContain('"systemctl --user start flowstate-background.service"')
+    // Quit asks the running app to save and exit (graceful flush, exit 0), never signals or stops the service.
+    expect(widget).toContain('FlowState-launch.sh\\" --quit')
+    expect(widget).not.toMatch(/backgroundQuitCmd: .*pkill/)
+    expect(widget).not.toContain('systemctl --user stop flowstate-background.service')
+    // Open keeps the TASK-1871 launcher flags by going through the launcher script.
+    expect(widget).toContain('$HOME/.local/bin/FlowState-launch.sh')
+  })
+
+  it('TASK-2114: the login service starts FlowState hidden in the tray', () => {
+    const unit = readFileSync(
+      resolve(process.cwd(), 'infra/electron-background/flowstate-background.service'),
+      'utf8',
+    )
+    expect(unit).toContain(
+      'ExecStart=%h/.local/bin/FlowState-launch.sh --background --user-data-dir=%h/.config/flow-state',
+    )
+    expect(unit).toContain('Restart=on-failure')
+    expect(unit).toContain('RestartPreventExitStatus=75')
+    expect(unit).toContain('WantedBy=graphical-session.target')
+    // Logout/stop goes through the app's own quit request and waits for it to exit.
+    expect(unit).toContain("ExecStop=/bin/sh -c '%h/.local/bin/FlowState-launch.sh --quit")
+    expect(unit).toContain('kill -0 $MAINPID')
+  })
+
+  it('TASK-2114: --quit reaches a running app through the single-instance channel and never starts one', () => {
+    expect(source).toContain("const QUIT_ARG = '--quit'")
+    expect(source).toContain('if (!gotLock || process.argv.includes(QUIT_ARG)) {')
+    const secondStart = source.indexOf("app.on('second-instance'")
+    const handler = source.slice(secondStart, secondStart + 260)
+    expect(handler).toContain('if (argv.includes(QUIT_ARG)) {')
+    expect(handler.indexOf('forceQuit()')).toBeLessThan(handler.indexOf('backgroundLifecycle.showOrCreate()'))
   })
 
   it('keeps runtime visibility diagnostics bound to the current window', () => {

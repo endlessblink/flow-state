@@ -1,5 +1,9 @@
 # FlowState MASTER_PLAN.md
 
+### TASK-2114: Tray background process so the Desk can always read tasks (🔄 IN PROGRESS)
+
+Noam 15.10: the Freelance Desk read failed with "Connection refused" on the Local API whenever FlowState was closed. Spec: a low-resource process that always runs in the system tray, can be closed by hand, and starts again after restart. **Change**: background launches (`--background`) now create a tray icon (Open FlowState / Quit FlowState; click opens); closing the window hides it; Quit exits 0 so the `Restart=on-failure` login service stays closed until next login. The login service now starts with `--background`. Launcher flags (TASK-1871) kept. Regressions: tray + service contract tests.
+
 ### TASK-2113: Local API route to move one calendar instance (👀 REVIEW)
 
 Requested by the Freelance Desk mirror (N-1863): when a timeline block moves, the Desk had no way to move its FlowState calendar instance; appending a second one leaves a stale duplicate. **Added** `POST /api/tasks/:id/instances/:instanceId/move` — preview by default, apply bound to an HMAC preview digest + 10-minute expiry, compare-and-swap on `updated_at`, read-back of the stored instance, idempotent retry (`alreadyApplied`). Same bearer/user boundary as the instance POST; no task deletes. README documents exact request/response/error shapes. **Proof**: 11 behavioural unit tests + route/column contract tests (564 local-API/contract tests pass); local Supabase run moved 10:00→15:00 and `GET …/instances` returned one instance at 15:00. Branch `feat/local-api-move-instance`, not pushed or released.

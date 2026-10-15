@@ -47,6 +47,29 @@ describe('Electron main background-window integration', () => {
     expect(handler).toContain('forceQuit()')
   })
 
+  it('TASK-2114: background launches live in the tray with Open and a real Quit', () => {
+    expect(source).toContain('if (backgroundEnabled) createTray()')
+    const trayStart = source.indexOf('function createTray()')
+    const trayBody = source.slice(trayStart, trayStart + 700)
+    expect(trayBody).toContain("join(__dirname, '../dist/icons/pwa-64x64.png')")
+    expect(trayBody).toContain("{ label: 'Open FlowState', click: () => backgroundLifecycle.showOrCreate() }")
+    expect(trayBody).toContain("{ label: 'Quit FlowState', click: forceQuit }")
+    expect(trayBody).toContain("tray.on('click', () => backgroundLifecycle.showOrCreate())")
+  })
+
+  it('TASK-2114: the login service starts FlowState hidden in the tray', () => {
+    const unit = readFileSync(
+      resolve(process.cwd(), 'infra/electron-background/flowstate-background.service'),
+      'utf8',
+    )
+    expect(unit).toContain(
+      'ExecStart=%h/.local/bin/FlowState-launch.sh --background --user-data-dir=%h/.config/flow-state',
+    )
+    expect(unit).toContain('Restart=on-failure')
+    expect(unit).toContain('RestartPreventExitStatus=75')
+    expect(unit).toContain('WantedBy=graphical-session.target')
+  })
+
   it('keeps runtime visibility diagnostics bound to the current window', () => {
     const runtimeSource = readFileSync(resolve(process.cwd(), 'electron/runtimeDiagnostics.ts'), 'utf8')
     expect(runtimeSource).toContain('const currentWindow = getWindow()')

@@ -18,7 +18,8 @@ describe('FlowState Electron background service', () => {
     expect(service).toContain('Environment=HOME=%h')
     expect(service).toContain('Environment=XDG_CONFIG_HOME=%h/.config')
     expect(service).toContain(
-      'ExecStart=%h/.local/bin/FlowState-launch.sh --user-data-dir=%h/.config/flow-state',
+      // TASK-2114: login start is hidden in the tray; the tray/launcher restores the window.
+      'ExecStart=%h/.local/bin/FlowState-launch.sh --background --user-data-dir=%h/.config/flow-state',
     )
     expect(service).not.toContain('ExecStart=%h/.local/bin/flowstate ')
   })

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, shallowRef, watch } from 'vue'
 import type { CanvasGroup } from '@/types/canvas'
 import type { Task } from '@/types/tasks'
 // TASK-1158: Shared bridge ref populated by tasks.ts (breaks circular dependency)
@@ -129,7 +129,7 @@ export const useCanvasStore = defineStore('canvas', () => {
   // Computing Today membership sorts tasks through the shared order itself;
   // the guard makes that inner sort ignore sections instead of recursing.
   let computingSyncedSections = false
-  const syncedSequenceSections = computed(() => {
+  const buildSyncedSequenceSections = () => {
     computingSyncedSections = true
     try {
       const groups = groupsModule._rawGroups.value
@@ -142,8 +142,19 @@ export const useCanvasStore = defineStore('canvas', () => {
     } finally {
       computingSyncedSections = false
     }
-  })
-  setSharedOrderSectionResolver(task => (computingSyncedSections ? undefined : syncedSequenceSections.value?.get(task.id)))
+  }
+  // BUG-2115: a lazy computed here was re-evaluated hundreds of times per task
+  // reload (each evaluation re-sorts every date bucket), pinning a CPU core even
+  // with the window hidden. Rebuild once per change instead: the watcher batches
+  // every change in a tick into one rebuild, and sorts read the cached map.
+  const syncedSequenceSections = shallowRef(buildSyncedSequenceSections())
+  watch(
+    [() => groupsModule._rawGroups.value, () => sharedTasksRef.value],
+    () => { syncedSequenceSections.value = buildSyncedSequenceSections() },
+    // [groups, tasks] -> each list -> each item -> its fields (parentId, dueDate, status...)
+    { deep: 3 },
+  )
+  setSharedOrderSectionResolver(task => (computingSyncedSections ? undefined : syncedSequenceSections.value.get(task.id)))
 
   // 5. Shared Canvas State
   const nodes = ref<Node[]>([])

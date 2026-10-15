@@ -376,8 +376,14 @@ app.on('before-quit', (event) => {
       }
       await shutdownLocalApi()
       storeFlushedForQuit = true
-      if (destroyWindowAfterStoreFlush && mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.destroy()
+      if (destroyWindowAfterStoreFlush) {
+        // TASK-2114: an explicit quit (Quit menu, Ctrl/Cmd+Q, the PomoFlow widget,
+        // logout SIGTERM) has already flushed the store and stopped the Local API.
+        // Asking the windows again let a racing listener cancel it and resume the
+        // API, leaving a hidden background app running after "Quit". Exit 0 keeps
+        // the on-failure login service stopped.
+        app.exit(0)
+        return
       }
       app.quit()
       // If another lifecycle listener canceled the second quit, require a new

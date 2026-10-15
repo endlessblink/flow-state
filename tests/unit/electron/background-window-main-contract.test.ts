@@ -38,6 +38,16 @@ describe('Electron main background-window integration', () => {
     )
   })
 
+  it('TASK-2114: an explicit quit exits after the flush instead of re-asking windows', () => {
+    const flushStart = source.indexOf('await shutdownLocalApi()')
+    const afterFlush = source.slice(flushStart, flushStart + 900)
+    const exitAt = afterFlush.indexOf('app.exit(0)')
+    expect(afterFlush).toContain('if (destroyWindowAfterStoreFlush) {')
+    expect(exitAt).toBeGreaterThan(-1)
+    // The exit must come before the racy resume-after-cancel timer.
+    expect(exitAt).toBeLessThan(afterFlush.indexOf('setTimeout('))
+  })
+
   it('routes supervisor termination signals through the durable quit gate', () => {
     expect(source).toContain("process.on('SIGTERM', requestGracefulSignalQuit)")
     expect(source).toContain("process.on('SIGINT', requestGracefulSignalQuit)")

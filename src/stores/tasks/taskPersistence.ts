@@ -880,10 +880,20 @@ export function useTaskPersistence(
             // Canonical cursor advancement requires a durable projection. Cache
             // before mutating the visible store and re-check scope afterward so
             // an old workspace load cannot become visible in a new workspace.
-            await cacheTasks(mergedTasks, {
-                throwOnError: requireRemoteAuthority,
-                scopeToken: readCacheScopeToken ?? undefined,
-            })
+            // BUG-2115: the 15s authoritative reload usually changes nothing; rewriting
+            // the whole cache each time kept the disk and a CPU thread busy all day.
+            const currentById = new Map(_rawTasks.value.map(t => [t.id, t]))
+            const projectionUnchanged = mergedTasks.length === _rawTasks.value.length
+                && mergedTasks.every(t => {
+                    const current = currentById.get(t.id)
+                    return !!current && sameTaskContent(current, t)
+                })
+            if (!projectionUnchanged) {
+                await cacheTasks(mergedTasks, {
+                    throwOnError: requireRemoteAuthority,
+                    scopeToken: readCacheScopeToken ?? undefined,
+                })
+            }
             assertReadCacheScope()
             assertAuthorityScope()
 

@@ -16,6 +16,14 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     // App info
     getVersion: () => electron_1.ipcRenderer.invoke('app:getVersion'),
     getSystemIdleTime: () => electron_1.ipcRenderer.invoke('app:getSystemIdleTime'),
+    // TASK-2102: desktop "Ready to focus?" popup outside the main window
+    showTimerSuggestionWindow: (message) => electron_1.ipcRenderer.invoke('timerSuggestion:show', message),
+    hideTimerSuggestionWindow: () => electron_1.ipcRenderer.invoke('timerSuggestion:hide'),
+    onTimerSuggestionAction: (callback) => {
+        const listener = (_event, action) => callback(action);
+        electron_1.ipcRenderer.on('timerSuggestion:action', listener);
+        return () => electron_1.ipcRenderer.removeListener('timerSuggestion:action', listener);
+    },
     // BUG-1932: `{ home, pinnedTo }` when a launcher rewrote HOME and userData was pinned back to the
     // real home; null otherwise.
     getHomeOverride: () => electron_1.ipcRenderer.invoke('app:getHomeOverride'),

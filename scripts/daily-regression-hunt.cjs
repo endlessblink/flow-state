@@ -125,7 +125,9 @@ const FIXED_DAILY_CHECKS = [
     title: 'Offline create, edit, completion, and delete convergence',
     command: ['npm', 'run', 'test:offline-reconnect-flows'],
     failureClass: 'task consistency/offline sync queue',
-    timeoutMs: 360_000,
+    // 25 in-order browser tests take 277-331s on a loaded host (measured
+    // 2026-10-22, BUG-2114); leave room for one legitimate 90s test retry.
+    timeoutMs: 480_000,
   },
   {
     id: 'canonical-assistant-contract',
@@ -387,7 +389,9 @@ function runCommand(check, dryRun) {
     maxBuffer: 8 * 1024 * 1024,
     env: { ...process.env, FORCE_COLOR: '0', CI: process.env.CI || '1' },
   })
-  const combined = `${result.stdout || ''}\n${result.stderr || ''}`.trim()
+  // stderr first: the test runner's verdict is on stdout and must survive the
+  // tail even when a dev server floods stderr with warnings (BUG-2114).
+  const combined = `${collapseRepeats(result.stderr || '')}\n${result.stdout || ''}`.trim()
   const exitCode = result.status ?? (result.signal ? 124 : 1)
   const status = exitCode === 0 ? 'pass' : 'fail'
 
@@ -422,6 +426,20 @@ function readCheckoutProvenance() {
   }
 
   return { branch, commit: commit.stdout.trim() }
+}
+
+function collapseRepeats(text) {
+  const counts = new Map()
+  for (const line of text.split('\n')) counts.set(line, (counts.get(line) || 0) + 1)
+  const seen = new Set()
+  const out = []
+  for (const line of text.split('\n')) {
+    if (seen.has(line)) continue
+    seen.add(line)
+    const count = counts.get(line)
+    out.push(count > 1 && line.trim() ? `${line} [repeated ${count}x]` : line)
+  }
+  return out.join('\n')
 }
 
 function tail(text, limit) {

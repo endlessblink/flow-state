@@ -108,5 +108,8 @@ export default defineConfig({
     // that was started with a different backend configuration.
     reuseExistingServer: false,
     timeout: 120 * 1000,
+    // index.html interpolates %VITE_SITE_URL%; without it Vite warns on every
+    // page load and the noise buries real failures in hunt reports (BUG-2114).
+    env: { VITE_SITE_URL: process.env.VITE_SITE_URL || e2eBaseUrl },
   },
 });

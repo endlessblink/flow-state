@@ -249,7 +249,42 @@ describe('daily regression hunt script', () => {
       /id: 'offline-reconnect-convergence'[\s\S]*?timeoutMs: ([\d_]+)/,
     )
 
-    expect(offlineCheck?.[1]).toBe('360_000')
+    expect(offlineCheck?.[1]).toBe('480_000')
+  })
+
+  it('retries only the failed offline convergence test instead of the whole pack', () => {
+    const spec = readFileSync('tests/e2e/canvas-sync-regressions.spec.ts', 'utf8')
+
+    // BUG-2114: serial mode re-ran all 25 tests after any single flake.
+    expect(spec).not.toMatch(/describe\.configure\(\{\s*mode:\s*["']serial["']/)
+    expect(spec).toMatch(/describe\.configure\(\{\s*mode:\s*["']default["']/)
+  })
+
+  it('keeps the test verdict in the report when stderr floods with warnings', () => {
+    const root = mkdtempSync(join(tmpdir(), 'flowstate-hunt-noise-'))
+    const binDir = join(root, 'bin')
+    mkdirSync(binDir)
+    writeFileSync(
+      join(binDir, 'npm'),
+      '#!/usr/bin/env bash\n'
+        + 'for i in $(seq 1 2000); do echo "(!) %VITE_SITE_URL% is not defined in env variables" >&2; done\n'
+        + 'echo "1) R12 - offline delete drains after reconnect"\n'
+        + 'echo "  1 failed"\n'
+        + 'exit 1\n',
+    )
+    chmodSync(join(binDir, 'npm'), 0o755)
+
+    const result = spawnSync(
+      'node',
+      [scriptPath, '--only', 'offline-reconnect-convergence', '--json', '--report-dir', join(root, 'reports')],
+      { cwd: process.cwd(), encoding: 'utf8', env: { ...process.env, PATH: `${binDir}:${process.env.PATH}` } },
+    )
+    const check = JSON.parse(result.stdout).checks[0]
+
+    expect(check.status).toBe('fail')
+    expect(check.outputSnippet).toContain('R12 - offline delete drains after reconnect')
+    expect(check.outputSnippet).toContain('1 failed')
+    expect(check.outputSnippet).toContain('[repeated 2000x]')
   })
 
   it('keeps rotated flow scripts pointed at existing test targets', () => {

@@ -1,5 +1,31 @@
 # FlowState MASTER_PLAN.md
 
+### ~~BUG-2114~~: Daily hunt offline-reconnect check times out (✅ DONE)
+
+**Failure mode fixed (harness/test-infra, not a sync regression)**: 2026-10-17 and 2026-10-22 daily hunts killed `offline-reconnect-convergence` at 360s (exit 124); 2026-10-20 failed with exit 1. Clean runs pass 25/25 in 277-331s on a loaded host (load avg ~28, up to 42% iowait). The pack ran in Playwright `serial` mode, so under the hunt's CI retries any single flake re-ran all 25 tests (reproduced: 4.6m -> 9.8m). Flakes came from local Supabase stalling under host disk load (seed statement timeout 57014, GoTrue `AuthRetryableFetchError` from DB i/o timeouts in auth logs, one slow offline-delete drain). The report tail also hid every verdict under hundreds of `%VITE_SITE_URL%` stderr warnings.
+**Changes**: spec `mode: "default"` (still in order, retries only the failed test); hunt budget 360s -> 480s (measured, room for one 90s retry); hunt report keeps stdout last and collapses repeated lines; Playwright webServer sets `VITE_SITE_URL`; `ensureAuthUser` retries only `AuthRetryableFetchError` (5 tries). Regression tests in `daily-regression-hunt.test.ts`.
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | `npm run test:offline-reconnect-flows` via `daily-regression-hunt.cjs --only offline-reconnect-convergence` (CI=1, retries 2) | Yes |
+| Data shape / persisted row shape | Yes | Seed statement timeout 57014 came from DB stall, not row shape; all 25 convergence assertions pass | N/A (no data change) |
+| Renderer store/state | Yes | No renderer assertion failed apart from one slow R12 drain under load | No (R12 slow drain not root-caused) |
+| Electron main/preload bridge | N/A | Browser-only Playwright pack | N/A |
+| Localhost sidecar endpoint | N/A | Pack does not touch the sidecar | N/A |
+| KDE polling/control path | N/A | Not exercised | N/A |
+| Supabase persistence/realtime | Yes | GoTrue logs: DB connect i/o timeouts; host iowait up to 42% | Partly (auth sign-in retry; host contention remains) |
+| Updater/runtime version | N/A | Test harness only, nothing shipped | N/A |
+| Stale live process/cache state | Yes | `reuseExistingServer: false`, fresh Vite each run | N/A |
+
+**Exact failure mode fixed**: serial-mode whole-pack retry amplification blowing the 360s hunt budget, plus verdicts hidden by stderr noise in the report.
+
+**Explicitly not covered**: host disk contention itself; R12 offline delete drain occasionally >20s under that load (passed on retry, not root-caused).
+
+**Regression added for reported repro**: `daily-regression-hunt.test.ts` — spec must not use serial mode; flooded-stderr fake run must keep the verdict in the report; budget 480s.
+
+**Live boundary proof**: two consecutive nightly-runner runs on 2026-10-22 under load avg ~19: 25/25 in 231s and 248s, zero `%VITE_SITE_URL%` warnings.
+
 ### TASK-2113: Local API route to move one calendar instance (👀 REVIEW)
 
 Requested by the Freelance Desk mirror (N-1863): when a timeline block moves, the Desk had no way to move its FlowState calendar instance; appending a second one leaves a stale duplicate. **Added** `POST /api/tasks/:id/instances/:instanceId/move` — preview by default, apply bound to an HMAC preview digest + 10-minute expiry, compare-and-swap on `updated_at`, read-back of the stored instance, idempotent retry (`alreadyApplied`). Same bearer/user boundary as the instance POST; no task deletes. README documents exact request/response/error shapes. **Proof**: 11 behavioural unit tests + route/column contract tests (564 local-API/contract tests pass); local Supabase run moved 10:00→15:00 and `GET …/instances` returned one instance at 15:00. Branch `feat/local-api-move-instance`, not pushed or released.

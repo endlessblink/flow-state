@@ -20,10 +20,19 @@ export async function ensureAuthUser(
   // Seed through the disposable signed-in user and normal RLS. Clean Supabase
   // stacks do not grant direct table writes to service_role, and tests should
   // exercise the same identity boundary as the UI rather than broaden grants.
-  const { data: signIn, error: signInError } = await client.auth.signInWithPassword({
-    email: attributes.email,
-    password: attributes.password,
-  })
+  // BUG-2114: on a loaded host local GoTrue briefly loses its Postgres
+  // connection and answers with a retryable fetch error. Retry only that
+  // class; wrong-password and other API errors still fail immediately.
+  let signIn: Awaited<ReturnType<typeof client.auth.signInWithPassword>>['data']
+  let signInError: Awaited<ReturnType<typeof client.auth.signInWithPassword>>['error']
+  for (let attempt = 1; ; attempt++) {
+    ;({ data: signIn, error: signInError } = await client.auth.signInWithPassword({
+      email: attributes.email,
+      password: attributes.password,
+    }))
+    if (!signInError || signInError.name !== 'AuthRetryableFetchError' || attempt === 5) break
+    await new Promise((resolve) => setTimeout(resolve, attempt * 1_000))
+  }
   if (signInError || !signIn.user) {
     throw signInError ?? new Error('Existing test user sign-in returned no user')
   }

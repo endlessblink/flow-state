@@ -187,10 +187,13 @@ async function createMobileTasksClient(sourcePage: Page) {
 }
 
 test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
-  // Serial: every test re-seeds the SAME fixed IDs in beforeEach. Under parallel
+  // In order: every test re-seeds the SAME fixed IDs in beforeEach. Under parallel
   // workers two tests would delete/insert the same rows concurrently and flake.
+  // Not "serial": each test is self-seeded, so a retry must re-run only the failed
+  // test. Serial mode re-ran the whole 25-test pack on any single flake and blew
+  // the daily hunt's time budget (BUG-2114).
   // Longer timeout absorbs a one-time Vite cold-start reload on the first test.
-  test.describe.configure({ mode: "serial", timeout: 90_000 });
+  test.describe.configure({ mode: "default", timeout: 90_000 });
   test.skip(
     !SERVICE_ROLE_KEY,
     "requires SUPABASE_SERVICE_ROLE_KEY (set by scripts/run-e2e.sh)",

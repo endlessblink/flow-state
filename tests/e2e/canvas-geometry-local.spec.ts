@@ -670,8 +670,10 @@ test.describe('local canvas geometry regressions', () => {
       localStorage.setItem('flowstate-canvas-viewport', JSON.stringify({ x: -20000, y: -20000, zoom: 1 }))
     })
 
-    await page.reload()
-    await expect(page.locator('.vue-flow')).toHaveClass(/canvas-startup-pending/, { timeout: 1_000 })
+    // Return at navigation commit: a full 'load' wait can outlast the startup
+    // repair window, so the pending state would no longer be observable.
+    await page.reload({ waitUntil: 'commit' })
+    await expect(page.locator('.vue-flow')).toHaveClass(/canvas-startup-pending/, { timeout: 10_000 })
     await setupCanvas(page)
 
     await expect.poll(async () => {

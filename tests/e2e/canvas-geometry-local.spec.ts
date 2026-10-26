@@ -39,15 +39,21 @@ const setupCanvas = async (page: Page) => {
     localStorage.setItem('flowstate-settings-v2', JSON.stringify({ aiSetupComplete: true, weekStartsOn: 1 }))
     localStorage.setItem('flowstate-onboarding-v2', 'true')
     localStorage.setItem('flowstate-welcome-seen', 'true')
+    // Geometry fixtures include undated inbox tasks; do not inherit Today mode.
+    localStorage.setItem('flowstate:inbox-time-filter-v2-canvas', JSON.stringify('all'))
   })
 
   await page.goto('/#/canvas')
   await page.waitForFunction(() => {
     const root = document.querySelector('#app') as { __vue_app__?: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, unknown> } } } } } } | null
     const pinia = root?.__vue_app__?._context.config.globalProperties.$pinia
-    return !!pinia?._s.get('tasks') && !!pinia?._s.get('canvas') && !!pinia?._s.get('settings')
+    // The pane mounts before auth/guest hydration finishes. Seeding before both
+    // initial loads complete races clearAll/loadFromDatabase and loses tasks.
+    const taskStore = pinia?._s.get('tasks') as { _hasInitializedOnce?: boolean } | undefined
+    const canvasStore = pinia?._s.get('canvas') as { _hasInitializedOnce?: boolean } | undefined
+    return taskStore?._hasInitializedOnce && canvasStore?._hasInitializedOnce && !!pinia?._s.get('settings')
       && !!document.querySelector('.vue-flow__pane')
-  }, { timeout: 30_000 })
+  }, undefined, { timeout: 30_000 })
 }
 
 const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], options: { refreshOnMissing?: boolean; sync?: boolean; hiddenTaskIds?: string[] } = {}) => {
@@ -63,7 +69,7 @@ const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], op
     taskStore.hideCanvasDoneTasks = false
     taskStore.clearAll()
     canvasStore.clearAll()
-    canvasStore.setViewport?.({ x: 0, y: 0, zoom: 1 })
+    canvasStore.setViewport?.(0, 0, 1)
 
     canvasStore.setGroups(groups.map((group) => ({
       id: group.id,
@@ -247,6 +253,9 @@ const readRenderedNodePositions = async (page: Page, ids: string[]) => page.eval
 
 const dragRenderedNode = async (page: Page, id: string, dx: number, dy: number) => {
   const node = page.locator(`.vue-flow__node[data-id="${id}"]`)
+  // A bounding box exists while startup layout hides the canvas. Wait for the
+  // same visibility/stability/hit-target checks as a real pointer interaction.
+  await node.hover()
   const box = await node.boundingBox({ timeout: 10_000 })
   expect(box, `Node not found for drag: ${id}`).not.toBeNull()
   await page.mouse.move(box!.x + box!.width / 2, box!.y + Math.min(box!.height / 2, 60))
@@ -359,6 +368,36 @@ const expectedWeekdayNames = (availableNames: string[], startFrom: number) => {
   return Array.from({ length: 7 }, (_, index) => dayNameByIndex[(startFrom + index) % 7])
     .filter((name) => available.has(name))
 }
+
+test('canvas setup waits for delayed guest hydration before seeding', async ({ page }) => {
+  let delayedStartup = false
+  await page.route('**/src/services/offline/writeQueueDB.ts', async (route) => {
+    const response = await route.fetch()
+    delayedStartup = true
+    // Hold the real guest-startup dependency after the canvas shell can mount.
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    await route.fulfill({ response })
+  })
+
+  await setupCanvas(page)
+  const initialized = await page.evaluate(() => {
+    const root = document.querySelector('#app') as any
+    const stores = root.__vue_app__._context.config.globalProperties.$pinia._s
+    return {
+      tasks: stores.get('tasks')._hasInitializedOnce,
+      canvas: stores.get('canvas')._hasInitializedOnce,
+    }
+  })
+  expect(delayedStartup).toBe(true)
+  expect(initialized).toEqual({ tasks: true, canvas: true })
+  await seedCanvas(page, [], [
+    { id: 'hydrated-seed-a', title: 'Hydrated Seed A', x: 240, y: 240 },
+    { id: 'hydrated-seed-b', title: 'Hydrated Seed B', x: 240, y: 400 },
+  ])
+  await page.reload()
+  await expect(page.locator('[data-id="hydrated-seed-a"]')).toBeAttached()
+  await expect(page.locator('[data-id="hydrated-seed-b"]')).toBeAttached()
+})
 
 test.describe('local canvas geometry regressions', () => {
   test.describe.configure({ mode: 'serial' })
@@ -1116,8 +1155,15 @@ test.describe('local canvas geometry regressions', () => {
 
     await expect.poll(async () => {
       const geometry = await readTidyGeometry()
-      return geometry.groups.every((group) => group.width === 400)
-        && geometry.tasks.every((task) => Number.isFinite(task.x) && Number.isFinite(task.y))
+      // Widths/finite coordinates already match the seed. Wait for the actual
+      // asynchronous tidy result before taking the snapshot to survive reload.
+      return geometry.groups.length === 2 && geometry.tasks.length === 3
+        && geometry.groups.every((group) => group.width === 400)
+        && Math.abs(geometry.groups[0].x - geometry.groups[1].x) === 416
+        && geometry.tasks.every((task) => {
+          const group = geometry.groups.find((candidate) => candidate.id === task.parentId)
+          return group && task.x === group.x + 20 && task.y < 560
+        })
     }).toBe(true)
     const afterTidy = await readTidyGeometry()
 

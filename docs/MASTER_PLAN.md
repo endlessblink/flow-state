@@ -1,5 +1,34 @@
 # FlowState MASTER_PLAN.md
 
+### ~~BUG-2115~~: Canvas flow fixtures race guest hydration (✅ DONE — local harness)
+
+**Scope**: local Playwright harness only; user explicitly requested commit without push or deployment.
+**Root cause**: setup treated mounted stores/pane as ready before guest startup cleared/reloaded them, replacing seeded tasks with a partial persisted snapshot. Additional fixture defects: invalid viewport reset arguments, clipped raw-pointer drag targets at 1280×720, and undated inbox fixtures hidden by the default Today filter.
+**Changes**: wait for both store initialization flags; correct positional viewport arguments; use a 1920×1080 desktop viewport with pointer actionability checks; explicitly select All inbox dates; wait for actual asynchronous tidy geometry before taking reload snapshots. Added a delayed-real-startup regression that fails before the readiness fix and passes afterward, including seed survival after reload.
+**Acceptance**: three consecutive complete `npm run test:canvas-flows` passes: 33/33 (3.1m), 33/33 (2.9m), 33/33 (2.7m); local commit only. Evidence and coverage boundary: `reports/regression-hunt/2026-10-26-canvas-flows.md`.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Full local canvas suite; delayed guest startup reproduces incomplete initialization | Yes, local harness |
+| Data shape / persisted row shape | Yes | Guest reload replaced newly seeded tasks with a partial local snapshot | Yes, seed after hydration |
+| Renderer store/state | Yes | Both initial-load flags now precede fixture creation; tidy completion precedes snapshots | Yes, test readiness |
+| Electron main/preload bridge | N/A | No desktop code changed or released | N/A |
+| Localhost sidecar endpoint | N/A | Browser suite does not call the sidecar | N/A |
+| KDE polling/control path | N/A | Not involved in canvas fixtures | N/A |
+| Supabase persistence/realtime | N/A | Guest-only suite; no signed-in convergence claim | N/A |
+| Updater/runtime version | N/A | Explicit local-commit-only task | N/A |
+| Stale live process/cache state | Yes | Fresh guest browser contexts; acceptance begins after interrupted Vite exited | Yes, local test setup |
+
+**Exact failure mode fixed**: guest hydration racing fixture creation, plus clipped pointer targets, unintended Today filtering, invalid viewport arguments, and a premature tidy snapshot in the harness.
+
+**Explicitly not covered**: smaller-window canvas behavior, signed-in persistence, installed Electron, sidecar, KDE, or updater delivery.
+
+**Regression added for reported repro**: delayed real guest startup must finish before seeding; seeded tasks must survive reload. Existing geometry assertions remain intact, including tidy widths.
+
+**Live boundary proof**: local real-browser acceptance results are recorded in the linked investigation report; no production release is requested.
+
 ### ~~BUG-2114~~: Daily hunt offline-reconnect check times out (✅ DONE)
 
 **Failure mode fixed (harness/test-infra, not a sync regression)**: 2026-10-17 and 2026-10-22 daily hunts killed `offline-reconnect-convergence` at 360s (exit 124); 2026-10-20 failed with exit 1. Clean runs pass 25/25 in 277-331s on a loaded host (load avg ~28, up to 42% iowait). The pack ran in Playwright `serial` mode, so under the hunt's CI retries any single flake re-ran all 25 tests (reproduced: 4.6m -> 9.8m). Flakes came from local Supabase stalling under host disk load (seed statement timeout 57014, GoTrue `AuthRetryableFetchError` from DB i/o timeouts in auth logs, one slow offline-delete drain). The report tail also hid every verdict under hundreds of `%VITE_SITE_URL%` stderr warnings.
@@ -4245,6 +4274,8 @@ _Original plan below._
 
 ## Active Tasks
 
+- **BUG-2115 — ✅ DONE (local harness)**: full canvas check passes 33/33 three consecutive times; local commit only, no push or release. See the BUG-2115 entry at the top.
+
 ### BUG-1973: Cancelled Electron quit permanently disables the Local Task API (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-22) | **Depends on**: TASK-1797, TASK-1930 | **Related**: TASK-1943
@@ -7417,6 +7448,8 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 ---
 
 ## Test Failures (P2)
+
+- **BUG-2115 — ✅ DONE (local harness)**: canvas fixture hydration race and interaction readiness; 33/33 three consecutive runs. Full failure-class matrix and evidence are in the BUG-2115 entry at the top.
 
 ### ~~BUG-1568~~: WebKitGTK CSS safety test fails — text-overflow: clip in CategorySelector (✅ DONE)
 

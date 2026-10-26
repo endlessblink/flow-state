@@ -9,6 +9,9 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:5548',
     ...devices['Desktop Chrome'],
+    // Geometry fixtures extend to y=540 below the app header and planning banner.
+    // Keep their drag targets inside the canvas rather than its clipped overflow.
+    viewport: { width: 1920, height: 1080 },
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     trace: 'retain-on-failure',
